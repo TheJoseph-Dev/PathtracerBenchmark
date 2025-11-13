@@ -3,9 +3,15 @@
 
 #include <vector>
 #include <iostream>
+#include <array>
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+
+struct MeshGeometry {
+	std::vector<glm::vec3> positions;
+	std::vector<std::array<uint32_t, 3>> triangles;
+};
 
 struct Vertex {
 	glm::vec3 position;
@@ -21,6 +27,8 @@ class OBJLoader {
 	std::vector<glm::vec3> positions = std::vector<glm::vec3>();
 	std::vector<glm::vec2> textureCoords = std::vector<glm::vec2>();
 	std::vector<glm::vec3> normals = std::vector<glm::vec3>();
+
+	std::vector<std::array<uint32_t, 3>> triangles = std::vector<std::array<uint32_t, 3>>();
 
 	struct VertexData {
 		float* vertices = nullptr;
@@ -52,6 +60,10 @@ public:
 	VertexData GetVertices() const { return vData; }
 
 	std::vector<glm::vec3> GetPositions() const { return positions; }
+
+	std::vector<std::array<uint32_t, 3>> GetTriangles() const { return this->triangles; }
+
+	MeshGeometry GetMeshGeometry() const { return {this->positions, this->triangles}; }
 };
 
 #endif // !OBJLOADER_H

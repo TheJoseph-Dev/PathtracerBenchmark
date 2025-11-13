@@ -70,10 +70,14 @@ std::vector<Vertex> OBJLoader::LoadFace(const std::string& face) {
 
 	triangle.erase(triangle.begin());
 
+	int tidx = 0;
+	std::array<uint32_t, 3> triIdx;
 	for (std::string vIndicies : triangle) {
+		triIdx[tidx++] = stoi(split(vIndicies, "/")[0]);
 		vertices.push_back(CreateVertex(vIndicies));
 	}
 
+	this->triangles.push_back(triIdx);
 	return vertices;
 }
 
@@ -89,6 +93,7 @@ Vertex OBJLoader::CreateVertex(const std::string& indicies) {
 	int texCoordIndex = stoi(vertexIndicies.at(1)) - 1;
 	int normIndex = stoi(vertexIndicies.at(2)) - 1;
 
+	
 	vertex.position = this->positions.at(posIndex);
 	vertex.textureCoord = this->textureCoords.at(texCoordIndex);
 	vertex.normal = this->normals.at(normIndex);
