@@ -1,38 +1,31 @@
-#VERTEX_SHADER
-#version 460 core
+#version 450
 
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec2 texCoords;
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0, rgba32f) uniform image2D outImage;
 
-uniform mat4 MVP;
-
-out vec2 TexCoords;
-
-void main() {
-	TexCoords = texCoords;
-	//TexCoords.y = 1.0-texCoords.y;
-	gl_Position = MVP*vec4(position.xy, 0.0, 1.0);
+struct CameraUBO {
+    vec4 cameraPos;
+    vec4 cameraRot;
 }
 
-#FRAGMENT_SHADER
-#version 460 core
+struct PathtracerUBO { 
+    vec2 iResolution;
+    float iTime;
+    int iFrame;
+    //int accumulate;
+    //vec3 pad0;
+    CameraUBO camera;
+}
 
-layout(location = 0) out vec4 fragColor;
+vec2 iResolution;
+float iTime;
+int iFrame;
+vec3 cameraPos;
+vec3 cameraRot;
+int accumulate = 1;
 
-uniform vec2 iResolution;
-uniform float iTime;
-uniform int iFrame;
+uniform PathtracerUBO pathtracerState;
 uniform sampler2D lastFrameTex;
-
-in vec2 TexCoords;
-
-uniform vec3 cameraPos;
-uniform vec3 cameraRot;
-
-struct MeshInfo {
-    vec4 vCount; // vec4 because gotta satisfy std430
-    vec4 gPos;
-};
 
 struct Vertex {
 	vec4 position;
@@ -40,6 +33,7 @@ struct Vertex {
     vec4 normal;
 };
 
+/*
 struct ObjectInfo {
     vec4 pos;
     float type;
@@ -47,19 +41,28 @@ struct ObjectInfo {
     float size;
     float w;
 };
+*/
 
-layout (std430, binding=10) readonly buffer meshInfoData {
-   MeshInfo mInfo[];
+struct Node {
+    vec4 bboxMin;
+    vec4 bboxMax;
+    int left;
+    int right;
+    uint triIdx;
+    uint triCount;
 };
+
+layout(std430, binding = 0) readonly buffer BVHNodes { Node nodes[]; };
+layout(std430, binding = 1) readonly buffer TriIndices { uint triIndices[]; };
 
 layout (std430, binding=11) readonly buffer meshData
 { 
   Vertex vertices[];
 };
 
-layout (std430, binding=12) readonly buffer objsData {
-    ObjectInfo objsInfo[];
-};
+// layout (std430, binding=12) readonly buffer objsData {
+//     ObjectInfo objsInfo[];
+// };
 
 // Pathtracing
 
@@ -67,8 +70,6 @@ layout (std430, binding=12) readonly buffer objsData {
 #define PI 3.14159265
 //#define ACCUMULATE
 #define EXPOSURE 0.5
-
-uniform int accumulate;
 
 mat2 rotation(float angle) {
     return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
@@ -199,8 +200,6 @@ struct RenderData {
 
 vec3 lightPos = (vec3(2.0, 3.0, 3.0))*1.0;
 
-
-
 float iSphere(in Ray ray, in Sphere sph, out float d2)
 {
 	//sphere at origin has equation |xyz| = r
@@ -257,8 +256,6 @@ vec3 triIntersect( in vec3 ro, in vec3 rd, in vec3 v0, in vec3 v1, in vec3 v2 )
 
 bool miss(float hit) { return hit <= MIN_TRACE_DIST || hit > MAX_DIST; }
 
-uniform sampler2D meshTexture;
-//uniform int mCount; // The meshes count coming from SSBO
 #define SPHERE_TYPE 0
 #define BOX_TYPE 1
 
@@ -281,6 +278,7 @@ Scene world(Ray ray) {
     
     Material[] mats = Material[] ( m1, m2, tranM, wRefM, pRefM, wlm, lm, rLight, gLight, bLight );
 
+    /*
     for(int i = 0; i < objsInfo.length(); i++) {
         ObjectInfo objInfo = objsInfo[i];
         if(objInfo.type == SPHERE_TYPE) {
@@ -307,27 +305,44 @@ Scene world(Ray ray) {
             if (scene.d == boxHit) scene.closestHit = obj;
         }
     }
+    */
 
-    Material texM = Material(vec4(0.0), 0.0, 1.0, 0.5, 0.0, 0.0, vec3(0.0), 0.0);
-    for(int m = 0; m < mInfo.length(); m++) {
-        for (int i = int(mInfo[m-1].vCount.x); i < mInfo[m].vCount.x; i+=3) {
-            vec3 posOffset = mInfo[m].gPos.xyz;
-            float size = 3.0;
-            vec3 v1 = vertices[i].position.xyz * size;
-            vec3 v2 = vertices[i+1].position.xyz * size;
-            vec3 v3 = vertices[i+2].position.xyz * size;
-            //v1.xz *= rotation(3.14/4.0); v2.xz *= rotation(3.14/4.0); v3.xz *= rotation(3.14/4.0);
-            vec3 n = normalize(vertices[i].normal).xyz;
-            //n.xz *=  rotation(3.14/4.0);
-            float triHit = triIntersect(ray.origin - posOffset, ray.dir, v1, v2, v3).x;
-            if (miss(triHit)) continue;
-            scene.d = min(scene.d, triHit);
+    //Material texM = Material(vec4(0.0), 0.0, 1.0, 0.5, 0.0, 0.0, vec3(0.0), 0.0);
+    int stack[64];
+    int stkptr = 0;
+    stack[stkptr++] = 0;
 
-            vec2 tC = vertices[i].uv.xy;
-            vec4 texColor = texture(meshTexture, tC);
-            texM.albedo = texColor;
-            SceneObject obj = SceneObject(posOffset, n, vec3(0.0), texM);
-            if (scene.d == triHit) scene.closestHit = obj;
+    while(stkptr) {
+        int nodeIdx = stack[--stkptr];
+        Node n = nodes[nodeIdx];
+
+        // Ray-AABB intersection
+        vec3 invDir = 1.0 / ray.dir;
+        vec3 t0s = (n.bboxMin.xyz - ray.origin) * invDir;
+        vec3 t1s = (n.bboxMax.xyz - ray.origin) * invDir;
+        vec3 tsmaller = min(t0s, t1s);
+        vec3 tbigger  = max(t0s, t1s);
+        float tmin = max(max(tsmaller.x, tsmaller.y), max(tsmaller.z, 0.0));
+        float tmax = min(min(tbigger.x, tbigger.y), tbigger.z);
+        if(tmax < tmin) continue; // miss
+
+        if(n.left < 0 && n.right < 0) {
+            // Leaf: test triangles
+            for(uint i = 0; i < n.triCount; ++i) {
+                uint triIdx = triIndices[n.triIdx + i];
+                vec3 v1 = vertices[triIdx*3+0].position.xyz;
+                vec3 v2 = vertices[triIdx*3+1].position.xyz;
+                vec3 v3 = vertices[triIdx*3+2].position.xyz;
+                float triHit = triIntersect(ray.origin, ray.dir, v1, v2, v3).x;
+                if (miss(triHit)) continue;
+                scene.d = min(scene.d, triHit);
+
+                SceneObject obj = SceneObject(vec3(0.0), normalize(vertices[triIdx*3+0].normal.xyz), vec3(0.0), mats[0]);
+                if (scene.d == triHit) scene.closestHit = obj;
+            }
+        } else {
+            if(n.left >= 0) stack[stkptr++] = n.left;
+            if(n.right >= 0) stack[stkptr++] = n.right;
         }
     }
 
@@ -356,7 +371,7 @@ vec4 skyColor(vec2 uv) {
 
 uint seed = 0u;
 void genSeed() {
-    seed = uint(uint(uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277) + uint(iFrame) * uint(26699)) | uint(1));
+    seed = uint(uint(uint(gl_GlobalInvocationID.x) * uint(1973) + uint(gl_GlobalInvocationID.y) * uint(9277) + uint(iFrame) * uint(26699)) | uint(1));
 }
 
 RenderData worldRender(vec2 uv, Ray ray) {
@@ -416,27 +431,6 @@ RenderData worldRender(vec2 uv, Ray ray) {
         if(doRefraction == 1.0f) {
             ray.origin -= 2*NORMAL_OFFSET*normals;
             ray.dir = normalize(refract(ray.dir, normals, 1.01/scene.closestHit.mat.IOR));
-
-            //Scene preRefTrace = world(ray);
-            ///normals2 = preRefTrace.closestHit.normal2;
-            //closestHit = preRefTrace.closestHit.pos;
-            //hitPoint2 = ray.origin - closestHit + (ray.dir*preRefTrace.d2);
-            //ray.origin = hitPoint2 + closestHit + normals2*NORMAL_OFFSET;
-            //ray.dir = normalize(refract(ray.dir, -normals2, preRefTrace.closestHit.mat.IOR/1.01));
-            //hitColor = preRefTrace.closestHit.mat.albedo;
-        
-            //throughput *= hitColor.rgb + preRefTrace.closestHit.mat.emissiveColor;
-            //light += preRefTrace.closestHit.mat.emissivePower * (throughput + preRefTrace.closestHit.mat.emissiveColor*0.25);
-
-            /*
-            vec3 randomSpread = RandomUnitVector(seed);
-            vec3 diffuseRayDir = normalize(-normals2 + randomSpread);
-            vec3 specularRayDir = reflect(ray.dir, -normals2);
-            float sqrRoughness = preRefTrace.closestHit.mat.roughness * preRefTrace.closestHit.mat.roughness;
-            vec3 glossyDir = mix(specularRayDir, diffuseRayDir, sqrRoughness);
-            specularRayDir = normalize(glossyDir);
-            ray.dir = mix(ray.dir, mix(diffuseRayDir, specularRayDir, doSpecular), 0.5);*/
-
         }
         else {
         // Calculate a new ray direction.
@@ -473,8 +467,14 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
 void main()
 {
+    iResolution = pathtracerState.iResolution;
+    iTime = pathtracerState.iTime;
+    iFrame = pathtracerState.iFrame;
+    cameraPos = pathtracerState.camera.cameraPos.xyz;
+    cameraRot = pathtracerState.camera.cameraRot.xyz;
+    uvec2 pixel = gl_GlobalInvocationID.xy;
     // Normalized pixel coordinates (from 0 to 1)
-    vec2 uv = gl_FragCoord.xy/iResolution.xy * 2.0 - 1.0;
+    vec2 uv = vec2(pixel)/iResolution.xy * 2.0 - 1.0;
     float aspect = iResolution.x / iResolution.y;
     uv.x *= aspect;
     lightPos = vec3(sin(3.14/2.0), 1.0, cos(3.14/2.0)) * 4.0;
@@ -482,10 +482,10 @@ void main()
     
     // calculate subpixel camera jitter for anti aliasing
     vec2 jitter = vec2(RandomFloat01(seed), RandomFloat01(seed)) - 0.5f;
-    vec2 jitteredUV = (gl_FragCoord.xy+jitter)/iResolution.xy * 2.0 - 1.0;
+    vec2 jitteredUV = (vec2(pixel)+jitter)/iResolution.xy * 2.0 - 1.0;
     jitteredUV.x *= aspect;
     
-    vec3 ro = cameraPos;
+    vec3 ro = cameraPos.xyz;
     vec3 rd = normalize(vec3(jitteredUV, 1.0));
     rd.yz *= rotation(cameraRot.x);
     rd.xz *= rotation(cameraRot.y);
@@ -498,10 +498,10 @@ void main()
     Ray ray = Ray(ro, rd);
     
     vec4 finalRender = worldRender(uv, ray).color;
-    vec3 lastFrame = texture(lastFrameTex, gl_FragCoord.xy/iResolution.xy).rgb;
+    vec3 lastFrame = texture(lastFrameTex, vec2(pixel)/iResolution.xy).rgb;
     vec3 finalColor = finalRender.rgb;
     
     if(accumulate == 1) finalColor += lastFrame;
     
-    fragColor = vec4(finalColor, 1.0);
+    imageStore(outImage, ivec2(pixel), finalColor);
 }
