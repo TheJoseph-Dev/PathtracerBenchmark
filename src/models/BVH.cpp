@@ -2,17 +2,18 @@
 
 #include <algorithm>
 
-BVH::BVH(const MeshGeometry& meshgeo) {
-    this->triangles.reserve(meshgeo.triangles.size());
-    for(auto& triIdx : meshgeo.triangles) {
+BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) {
+    static_assert(sizeof(Node) == 48);
+    this->triangles.reserve(meshgeo.triangles.size()/3);
+    for (size_t i = 0; i < meshgeo.triangles.size(); i += 3) {
         Triangle tri;
-        tri.v0 = triIdx[0];
-        tri.v1 = triIdx[1];
-        tri.v2 = triIdx[2];
+        tri.v0 = meshgeo.triangles[i];
+        tri.v1 = meshgeo.triangles[i + 1];
+        tri.v2 = meshgeo.triangles[i + 2];
 
-        const glm::vec3& a = meshgeo.positions[tri.v0];
-        const glm::vec3& b = meshgeo.positions[tri.v1];
-        const glm::vec3& c = meshgeo.positions[tri.v2];
+        const glm::vec4& a = meshgeo.vertices[tri.v0].position;
+        const glm::vec4& b = meshgeo.vertices[tri.v1].position;
+        const glm::vec4& c = meshgeo.vertices[tri.v2].position;
 
         tri.bbox = AABB(glm::min(glm::min(a,b), c), glm::max(glm::max(a,b), c));
         triangles.push_back(tri);

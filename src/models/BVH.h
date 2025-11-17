@@ -5,18 +5,18 @@
 class BVH {
 
     struct AABB {
-        glm::vec3 min;
-        glm::vec3 max;
+        glm::vec4 min;
+        glm::vec4 max;
 
         AABB() {
-            min = glm::vec3(FLT_MAX);
-            max = glm::vec3(-FLT_MAX);
+            min = glm::vec4(FLT_MAX);
+            max = glm::vec4(-FLT_MAX);
         }
 
-        AABB(const glm::vec3& min_, const glm::vec3& max_) 
+        AABB(const glm::vec4& min_, const glm::vec4& max_) 
             : min(min_), max(max_) {}
 
-        void expand(const glm::vec3& p) {
+        void expand(const glm::vec4& p) {
             min = glm::min(min, p);
             max = glm::max(max, p);
         }
@@ -26,16 +26,16 @@ class BVH {
             max = glm::max(max, box.max);
         }
 
-        glm::vec3 centroid() const {
+        glm::vec4 centroid() const {
             return (min + max) * 0.5f;
         }
 
-        glm::vec3 extent() const {
+        glm::vec4 extent() const {
             return max - min;
         }
 
         float surfaceArea() const {
-            glm::vec3 e = extent();
+            glm::vec4 e = extent();
             return 2.0f * (e.x * e.y + e.x * e.z + e.y * e.z);
         }
     };
@@ -69,7 +69,7 @@ class BVH {
 
 public:
 
-    BVH(const MeshGeometry& meshgeo);
+    BVH(const OBJLoader::MeshGeometry& meshgeo);
     ~BVH();
 
 private:

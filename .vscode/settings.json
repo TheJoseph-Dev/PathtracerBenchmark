@@ -71,5 +71,7 @@
         "xtr1common": "cpp",
         "xtree": "cpp",
         "xutility": "cpp"
-    }
+    },
+
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

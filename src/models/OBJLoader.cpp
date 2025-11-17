@@ -26,7 +26,6 @@ OBJLoader::OBJLoader(const char* filepath) {
 
 	if (!stream) { std::cout << "ERROR: OBJLoader got a NULL directory\n"; return; }
 
-	std::vector<Vertex> objVertices;
 	std::string line;
 
 	while (getline(stream, line)) {
@@ -42,14 +41,16 @@ OBJLoader::OBJLoader(const char* filepath) {
 		}
 	}
 
-	CreateVertexArray(objVertices);
-	CreateSSBuffer(objVertices);
+	this->triangles.reserve(objVertices.size());
+	for (int i = 0; i < objVertices.size(); i++) this->triangles.push_back(i);
+	//CreateVertexArray(objVertices);
+	//CreateSSBuffer(objVertices);
 }
 
 // v, vt, vn
-glm::vec3 OBJLoader::LoadVertexData(const std::string& data) {
+glm::vec4 OBJLoader::LoadVertexData(const std::string& data) {
 	const std::string separator = " ";
-	glm::vec3 vData = glm::vec3(0);
+	glm::vec4 vData = glm::vec4(0);
 	auto values = split(data, separator);
 	values.erase(values.begin());
 	
@@ -61,7 +62,7 @@ glm::vec3 OBJLoader::LoadVertexData(const std::string& data) {
 }
 
 // f
-std::vector<Vertex> OBJLoader::LoadFace(const std::string& face) {
+std::vector<OBJLoader::Vertex> OBJLoader::LoadFace(const std::string& face) {
 	std::vector<Vertex> vertices;
 
 	// f 1/2/3 4/5/6 7/8/9 => (1/2/3), (4/5/6), (7/8/9),
@@ -70,19 +71,16 @@ std::vector<Vertex> OBJLoader::LoadFace(const std::string& face) {
 
 	triangle.erase(triangle.begin());
 
-	int tidx = 0;
-	std::array<uint32_t, 3> triIdx;
 	for (std::string vIndicies : triangle) {
-		triIdx[tidx++] = stoi(split(vIndicies, "/")[0]);
+		//this->triangles.push_back(stoi(split(vIndicies, "/")[0])-1);
 		vertices.push_back(CreateVertex(vIndicies));
 	}
 
-	this->triangles.push_back(triIdx);
 	return vertices;
 }
 
 // indicies
-Vertex OBJLoader::CreateVertex(const std::string& indicies) {
+OBJLoader::Vertex OBJLoader::CreateVertex(const std::string& indicies) {
 	Vertex vertex = Vertex();
 
 	// (1/2/3)
@@ -102,7 +100,7 @@ Vertex OBJLoader::CreateVertex(const std::string& indicies) {
 }
 
 
-void OBJLoader::CreateVertexArray(const std::vector<Vertex>& loadedVertices) {
+void OBJLoader::CreateVertexArray(const std::vector<OBJLoader::Vertex>& loadedVertices) {
 	uint32_t arrSize = Vertex::GetStride() * loadedVertices.size();
 	this->vData.vertices = new float[arrSize];
 	this->vData.verticesSize = arrSize;
@@ -113,7 +111,7 @@ void OBJLoader::CreateVertexArray(const std::vector<Vertex>& loadedVertices) {
 	float* vertices = (this->vData.vertices);
 	std::ofstream outfile("Project/Resources/vertices.txt");
 
-	for (int i = 0, k = 0; k < lv.size(); i += Vertex::GetStride(), k++) {
+	for (int i = 0, k = 0; k < lv.size(); i += OBJLoader::Vertex::GetStride(), k++) {
 		*(vertices + i + 0) = lv.at(k).position.x;
 		*(vertices + i + 1) = lv.at(k).position.y;
 		*(vertices + i + 2) = lv.at(k).position.z;
@@ -144,7 +142,7 @@ void OBJLoader::CreateVertexArray(const std::vector<Vertex>& loadedVertices) {
 
 }
 
-void OBJLoader::CreateSSBuffer(const std::vector<Vertex>& loadedVertices) {
+void OBJLoader::CreateSSBuffer(const std::vector<OBJLoader::Vertex>& loadedVertices) {
 	// SSBData
 	constexpr uint32_t fill = 4;
 	const uint32_t filledStride = Vertex::GetStride() + fill;
