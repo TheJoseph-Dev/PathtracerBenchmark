@@ -3,6 +3,11 @@
 #include "OBJLoader.h"
 
 class BVH {
+    static constexpr uint32_t BINS = 12; // Makes SAH viable by reducing build time complexity from O(n^2) to O(BINS*n)
+    static constexpr float Ct = 1.0f;
+    static constexpr float Ci = 1.0f;
+    
+    static constexpr uint8_t leafSize = 8;
 
     struct AABB {
         glm::vec4 min;

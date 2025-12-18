@@ -253,6 +253,125 @@ bool miss(float hit) { return hit <= MIN_TRACE_DIST || hit > MAX_DIST; }
 #define SPHERE_TYPE 0
 #define BOX_TYPE 1
 
+struct IsecInfo {
+    float tmin;
+    float tmax;
+};
+
+IsecInfo RayAABBIsec(Ray ray, Node n) {
+    IsecInfo info;
+    vec3 invDir = 1.0 / ray.dir;
+    vec3 t0s = (n.bboxMin.xyz - ray.origin) * invDir;
+    vec3 t1s = (n.bboxMax.xyz - ray.origin) * invDir;
+    vec3 tsmaller = min(t0s, t1s);
+    vec3 tbigger  = max(t0s, t1s);
+    float tmin = max(max(tsmaller.x, tsmaller.y), max(tsmaller.z, 0.0));
+    float tmax = min(min(tbigger.x, tbigger.y), tbigger.z);
+    info.tmin = tmin;
+    info.tmax = tmax;
+    return info;
+}
+
+/* Optimizations
+    - Reduce the amount of RayAABBIsec
+    - Wide BVHs (BVH4 / BVH8)
+    - SOA layout instead of structs
+    - Precomputed inverse ray direction
+    - Pre-sorted triangles in leaves
+    - Quantized bounds
+*/
+void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
+    int stack[128];
+    int stkptr = 0;
+    stack[stkptr++] = 0;
+
+    while (stkptr > 0) {
+        int nodeIdx = stack[--stkptr];
+        Node n = nodes[nodeIdx];
+
+        // Test current node
+        IsecInfo isec = RayAABBIsec(ray, n);
+        if (isec.tmax < isec.tmin || isec.tmin > scene.d)
+            continue;
+
+        bool isLeaf = (n.triCount > 0);
+
+        if (isLeaf) {
+            for (uint i = 0; i < n.triCount; ++i) {
+                uint triIdx = (n.triIdx + i) * 3;
+
+                vec3 v0 = vertices[triIndices[triIdx + 0]].position.xyz;
+                vec3 v1 = vertices[triIndices[triIdx + 1]].position.xyz;
+                vec3 v2 = vertices[triIndices[triIdx + 2]].position.xyz;
+
+                float t = triIntersect(ray.origin, ray.dir, v0, v1, v2).x;
+                if (miss(t)) continue;
+
+                if (t < scene.d) {
+                    scene.d = t;
+                    scene.closestHit.normal = normalize(cross(v1 - v0, v2 - v0));
+                    scene.closestHit.mat = mats[1];
+                }
+            }
+        } else {
+            int left = n.left;
+            int right = n.right;
+
+            bool hitL = false, hitR = false;
+            IsecInfo lIsec, rIsec;
+
+            if (left >= 0) {
+                lIsec = RayAABBIsec(ray, nodes[left]);
+                hitL = !(lIsec.tmax < lIsec.tmin || lIsec.tmin > scene.d);
+            }
+
+            if (right >= 0) {
+                rIsec = RayAABBIsec(ray, nodes[right]);
+                hitR = !(rIsec.tmax < rIsec.tmin || rIsec.tmin > scene.d);
+            }
+
+            if (hitL && hitR) {
+                // push far first, near last
+                if (lIsec.tmin < rIsec.tmin) {
+                    stack[stkptr++] = right;
+                    stack[stkptr++] = left;
+                } else {
+                    stack[stkptr++] = left;
+                    stack[stkptr++] = right;
+                }
+            } else if (hitL) {
+                stack[stkptr++] = left;
+            } else if (hitR) {
+                stack[stkptr++] = right;
+            }
+        }
+    }
+}
+
+
+void TraversalBruteForce(Ray ray, inout Scene scene, Material mats[10]) {
+    uint numTris = triIndices.length() / 3;
+    for (uint tri = 0; tri < numTris; ++tri) {
+        uint triIdx = tri * 3;
+        uint i0 = triIndices[triIdx + 0];
+        uint i1 = triIndices[triIdx + 1];
+        uint i2 = triIndices[triIdx + 2];
+        vec3 v0 = vertices[i0].position.xyz;
+        vec3 v1 = vertices[i1].position.xyz;
+        vec3 v2 = vertices[i2].position.xyz;
+        vec3 hit = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+        float t = hit.x;
+        if (miss(t)) continue;
+        vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
+        if (t < scene.d) {
+            scene.d = t;
+            scene.closestHit.pos = v0;
+            scene.closestHit.normal = Ng;
+            scene.closestHit.mat = mats[1];
+        }
+    }
+}
+
 Scene world(Ray ray) {
     Scene scene;
     scene.d = MAX_DIST;
@@ -300,62 +419,7 @@ Scene world(Ray ray) {
     }
 
     //Material texM = Material(vec4(0.0), 0.0, 1.0, 0.5, 0.0, 0.0, vec3(0.0), 0.0);
-    int stack[64];
-    int stkptr = 0;
-    stack[stkptr++] = 0;
-    
-    while(stkptr > 0) {
-        //if(stkptr > 64) {
-        //    scene.d = 0;
-        //    scene.d2 = 0;
-        //    return scene;
-        //}
-        int nodeIdx = stack[--stkptr];
-        Node n = nodes[nodeIdx];
-
-        // Ray-AABB intersection
-        vec3 invDir = 1.0 / ray.dir;
-        vec3 t0s = (n.bboxMin.xyz - ray.origin) * invDir;
-        vec3 t1s = (n.bboxMax.xyz - ray.origin) * invDir;
-        vec3 tsmaller = min(t0s, t1s);
-        vec3 tbigger  = max(t0s, t1s);
-        float tmin = max(max(tsmaller.x, tsmaller.y), max(tsmaller.z, 0.0));
-        float tmax = min(min(tbigger.x, tbigger.y), tbigger.z);
-        if(tmax < tmin) continue; // miss
-        
-        bool isLeaf = (n.triCount > 0);
-        if(isLeaf) {
-            // Leaf: test triangles
-            for(uint i = 0; i < n.triCount; ++i) {
-                uint triIdx = (n.triIdx + i)*3;
-
-                uint i0 = triIndices[triIdx + 0];
-                uint i1 = triIndices[triIdx + 1];
-                uint i2 = triIndices[triIdx + 2];
-
-                vec3 v0 = vertices[i0].position.xyz;
-                vec3 v1 = vertices[i1].position.xyz;
-                vec3 v2 = vertices[i2].position.xyz;
-
-                vec3 hit = triIntersect(ray.origin, ray.dir, v0, v1, v2);
-                float t = hit.x;
-                if (miss(t)) continue;
-
-                // Correct geometric normal
-                vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
-
-                if (t < scene.d) {
-                    scene.d = t;
-                    scene.closestHit.pos = v0;     // Material space pos (optional)
-                    scene.closestHit.normal = Ng;
-                    scene.closestHit.mat = mats[1];
-                }
-            }
-        } else {
-            if(n.left >= 0) stack[stkptr++] = n.left;
-            if(n.right >= 0) stack[stkptr++] = n.right;
-        }
-    }
+    TraversalBVH(ray, scene, mats);
 
     return scene;
 }

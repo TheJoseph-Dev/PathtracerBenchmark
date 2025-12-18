@@ -21,7 +21,8 @@ namespace Pathtracer {
 // MAX_FRAMES_IN_FLIGHT: How many frames the CPU can work on at once
 // Swap Chain: How many images are available to render into
 // They are not directly tied, but you need to consider things like: MAX_FRAMES_IN_FLIGHT = min(MAX_FRAMES_IN_FLIGHT, SC.size())
-constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+constexpr uint32_t SWAPCHAIN_IMAGE_COUNT = 3;
+constexpr uint32_t MAX_FRAMES_IN_FLIGHT = SWAPCHAIN_IMAGE_COUNT - 1;
 
 std::string RESOURCE_PATH_PREFIX = std::string("..\\..\\..\\src\\resources\\");
 #define RESOURCE(filepath) "..\\..\\..\\src\\resources\\" filepath
@@ -81,6 +82,7 @@ class Vulkan {
     VkSwapchainKHR swapChain;
     std::vector<VkImage> swapChainImages;
     std::vector<VkImageView> swapChainImageViews;
+    VkImageLayout swapchainImageLayouts[MAX_FRAMES_IN_FLIGHT];
 
     VkViewport viewport;
     VkRect2D scissor; // Cut viewport filter >:/
@@ -458,6 +460,8 @@ public:
                 std::cerr << "VkImageView Creation Error\n";
                 return;
             }
+
+            this->swapchainImageLayouts[i] = VK_IMAGE_LAYOUT_UNDEFINED;
         }
     }
 
@@ -1144,7 +1148,7 @@ public:
             updateCombinedImageSamplerDescriptorSet(fragDescriptorSet[i], 0, fragImageSampler, pathtracerImageViews[i]);
         }
 
-        OBJLoader objloader = OBJLoader(RESOURCE("3DModels\\lpKnight.obj"));
+        OBJLoader objloader = OBJLoader(RESOURCE("3DModels\\wolves.obj"));
 
         BVH bvh = BVH(objloader.GetMeshGeometry());
         auto tree = bvh.GetTree();
@@ -1485,7 +1489,7 @@ public:
         VkImageMemoryBarrier barrier{}; // Transition of Layouts
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         //printf("=== LAYOUT: %d ===\n", pathtracerImageLayouts[textureIndex]);
-        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.oldLayout = swapchainImageLayouts[imageIndex];
         barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -1508,6 +1512,7 @@ public:
             0, nullptr,
             1, &barrier
         );
+        swapchainImageLayouts[imageIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         updateUniformBuffer(pathtracerUBO, &pathtracerState, sizeof(PathtracerUBO));
         transitionCompute(this->commandBuffers[currentFrame], pathtracerImages[textureIndex], currentFrame);
@@ -1580,6 +1585,7 @@ public:
             0, nullptr,
             1, &barrier
         );
+        swapchainImageLayouts[imageIndex] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         if (vkEndCommandBuffer(this->commandBuffers[currentFrame]) != VK_SUCCESS) {
             std::cerr << "Failed to record VkEndCommandBuffer\n";
@@ -1596,7 +1602,7 @@ public:
         submitInfo.pWaitDstStageMask = waitStages;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &this->commandBuffers[currentFrame];
-        VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[currentFrame] };
+        VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[imageIndex] };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
