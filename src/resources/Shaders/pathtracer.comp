@@ -3,6 +3,11 @@
 layout(local_size_x = 8, local_size_y = 8) in;
 layout(binding = 0, rgba32f) writeonly uniform image2D outImage;
 
+layout(push_constant) uniform ComputeTile {
+    uvec2 tileSize;
+    uvec2 tileOffset;
+} ct;
+
 struct CameraUBO {
     vec4 cameraPos;
     vec4 cameraRot;
@@ -188,7 +193,7 @@ struct RenderData {
 };
 
 #define MAX_DIST 100.0
-#define MAX_LIGHT_BOUNCES 8
+#define MAX_LIGHT_BOUNCES 4 /*8*/
 #define MIN_TRACE_DIST 0.001
 #define NORMAL_OFFSET 0.001
 
@@ -258,9 +263,8 @@ struct IsecInfo {
     float tmax;
 };
 
-IsecInfo RayAABBIsec(Ray ray, Node n) {
+IsecInfo RayAABBIsec(Ray ray, Node n, vec3 invDir) {
     IsecInfo info;
-    vec3 invDir = 1.0 / ray.dir;
     vec3 t0s = (n.bboxMin.xyz - ray.origin) * invDir;
     vec3 t1s = (n.bboxMax.xyz - ray.origin) * invDir;
     vec3 tsmaller = min(t0s, t1s);
@@ -281,6 +285,7 @@ IsecInfo RayAABBIsec(Ray ray, Node n) {
     - Quantized bounds
 */
 void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
+    vec3 invDir = 1.0 / ray.dir;
     int stack[128];
     int stkptr = 0;
     stack[stkptr++] = 0;
@@ -290,7 +295,7 @@ void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
         Node n = nodes[nodeIdx];
 
         // Test current node
-        IsecInfo isec = RayAABBIsec(ray, n);
+        IsecInfo isec = RayAABBIsec(ray, n, invDir);
         if (isec.tmax < isec.tmin || isec.tmin > scene.d)
             continue;
 
@@ -308,9 +313,14 @@ void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
                 if (miss(t)) continue;
 
                 if (t < scene.d) {
+                    vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
+                    vec3 hitPos = ray.origin + ray.dir * t;
+                    scene.closestHit.pos = hitPos;
+                    scene.closestHit.normal = Ng;
+                    scene.closestHit.normal2 = Ng;
                     scene.d = t;
-                    scene.closestHit.normal = normalize(cross(v1 - v0, v2 - v0));
-                    scene.closestHit.mat = mats[1];
+                    scene.d2 = t;
+                    scene.closestHit.mat = mats[(v0.y > 0.73 && v0.y < 0.74) ? 5 : 1];
                 }
             }
         } else {
@@ -321,12 +331,12 @@ void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
             IsecInfo lIsec, rIsec;
 
             if (left >= 0) {
-                lIsec = RayAABBIsec(ray, nodes[left]);
+                lIsec = RayAABBIsec(ray, nodes[left], invDir);
                 hitL = !(lIsec.tmax < lIsec.tmin || lIsec.tmin > scene.d);
             }
 
             if (right >= 0) {
-                rIsec = RayAABBIsec(ray, nodes[right]);
+                rIsec = RayAABBIsec(ray, nodes[right], invDir);
                 hitR = !(rIsec.tmax < rIsec.tmin || rIsec.tmin > scene.d);
             }
 
@@ -390,7 +400,8 @@ Scene world(Ray ray) {
     Material gLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.2, 0.9, 0.8), 1.0);
     
     Material[] mats = Material[] ( m1, m2, tranM, wRefM, pRefM, wlm, lm, rLight, gLight, bLight );
-    ObjectInfo[] objsInfo = ObjectInfo[] (ObjectInfo(vec4(1.0, 1.0, -1.0, 0.0), SPHERE_TYPE, 5, 0.3, 0.0), ObjectInfo(vec4(0.0, -0.25, 0.0, 0.0), SPHERE_TYPE, 0, 0.25, 0.0));
+    /*
+    ObjectInfo[] objsInfo = ObjectInfo[] (); //(ObjectInfo(vec4(1.0, 1.0, -1.0, 0.0), SPHERE_TYPE, 5, 0.3, 0.0), ObjectInfo(vec4(0.0, -0.25, 0.0, 0.0), SPHERE_TYPE, 0, 0.25, 0.0));
     for(int i = 0; i < objsInfo.length(); i++) {
         ObjectInfo objInfo = objsInfo[i];
         if(objInfo.type == SPHERE_TYPE) {
@@ -417,6 +428,7 @@ Scene world(Ray ray) {
             if (scene.d == boxHit) scene.closestHit = obj;
         }
     }
+    */
 
     //Material texM = Material(vec4(0.0), 0.0, 1.0, 0.5, 0.0, 0.0, vec3(0.0), 0.0);
     TraversalBVH(ray, scene, mats);
@@ -547,7 +559,12 @@ void main()
     iFrame = pathtracerState.iFrame;
     cameraPos = pathtracerState.camera.cameraPos.xyz;
     cameraRot = pathtracerState.camera.cameraRot.xyz;
-    uvec2 pixel = gl_GlobalInvocationID.xy;
+    uvec2 localID = gl_GlobalInvocationID.xy;
+    uvec2 pixel = ct.tileOffset + localID;
+
+    if (pixel.x >= iResolution.x || pixel.y >= iResolution.y)
+        return;
+
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = vec2(pixel)/iResolution.xy * 2.0 - 1.0;
     float aspect = iResolution.x / iResolution.y;

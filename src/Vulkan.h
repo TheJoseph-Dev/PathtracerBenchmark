@@ -13,16 +13,17 @@
 #include "models/BVH.h"
 
 namespace Pathtracer {
-    constexpr uint32_t WIDTH = 1080;
-    constexpr uint32_t HEIGHT = 720;
-}
+    constexpr uint32_t WIDTH = 640;//1440; //640; //1080;
+    constexpr uint32_t HEIGHT = 480;//810; //480; //720;
 
-// How many frames you let the CPU start rendering before the GPU is done
-// MAX_FRAMES_IN_FLIGHT: How many frames the CPU can work on at once
-// Swap Chain: How many images are available to render into
-// They are not directly tied, but you need to consider things like: MAX_FRAMES_IN_FLIGHT = min(MAX_FRAMES_IN_FLIGHT, SC.size())
-constexpr uint32_t SWAPCHAIN_IMAGE_COUNT = 3;
-constexpr uint32_t MAX_FRAMES_IN_FLIGHT = SWAPCHAIN_IMAGE_COUNT - 1;
+    constexpr uint32_t TILE_X = 16;
+    constexpr uint32_t TILE_Y = 16;
+
+    struct ComputeTile {
+        glm::uvec2 tileSize;
+        glm::uvec2 tileOffset;
+    };
+}
 
 std::string RESOURCE_PATH_PREFIX = std::string("..\\..\\..\\src\\resources\\");
 #define RESOURCE(filepath) "..\\..\\..\\src\\resources\\" filepath
@@ -64,12 +65,21 @@ struct Vertex {
 };
 
 class Vulkan {
+
+    // How many frames you let the CPU start rendering before the GPU is done
+    // MAX_FRAMES_IN_FLIGHT: How many frames the CPU can work on at once
+    // Swap Chain: How many images are available to render into
+    // They are not directly tied, but you need to consider things like: MAX_FRAMES_IN_FLIGHT = min(MAX_FRAMES_IN_FLIGHT, SC.size())
+    static constexpr uint32_t SWAPCHAIN_IMAGE_COUNT = 2;
+    static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2; //SWAPCHAIN_IMAGE_COUNT - 1;
+    static constexpr uint32_t PING_PONG_FRAMES = 2;
     
     VkInstance instance; // Connection between Vulkan and the main program
     VkPhysicalDevice physicalDevice;
     VkDevice device; // After selecting a Physical Device, create a logical device to interface with it
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        //VK_KHR_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME - Not available
     };
 
     uint32_t graphicsQueueFamilyIndex = 0, presentQueueFamilyIndex = 0, computeQueueFamilyIndex = 0;
@@ -82,7 +92,7 @@ class Vulkan {
     VkSwapchainKHR swapChain;
     std::vector<VkImage> swapChainImages;
     std::vector<VkImageView> swapChainImageViews;
-    VkImageLayout swapchainImageLayouts[MAX_FRAMES_IN_FLIGHT];
+    VkImageLayout swapchainImageLayouts[SWAPCHAIN_IMAGE_COUNT];
 
     VkViewport viewport;
     VkRect2D scissor; // Cut viewport filter >:/
@@ -90,13 +100,13 @@ class Vulkan {
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSetLayout computeDescriptorSetLayout;
     VkDescriptorPool descriptorPool;
-    VkDescriptorSet fragDescriptorSet[2];
-    VkDescriptorSet computeDescriptorSet[2];
+    VkDescriptorSet fragDescriptorSet[PING_PONG_FRAMES];
+    VkDescriptorSet computeDescriptorSet[PING_PONG_FRAMES];
 
-    VkImage pathtracerImages[2];
-    VkDeviceMemory pathtracerImagesMemory[2];
-    VkImageView pathtracerImageViews[2];
-    VkImageLayout pathtracerImageLayouts[2];
+    VkImage pathtracerImages[PING_PONG_FRAMES];
+    VkDeviceMemory pathtracerImagesMemory[PING_PONG_FRAMES];
+    VkImageView pathtracerImageViews[PING_PONG_FRAMES];
+    VkImageLayout pathtracerImageLayouts[PING_PONG_FRAMES];
     VkSampler pathtracerImageSampler;
     VkSampler fragImageSampler;
     int textureIndex = 0;
@@ -110,8 +120,9 @@ class Vulkan {
     VkCommandPool commandPool;
     VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
 
-    VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
-    VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
+    VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT]; // Ensures the submit waits until the acquired image is ready (from vkAcquireNextImageKHR)
+    VkSemaphore renderFinishedSemaphores[SWAPCHAIN_IMAGE_COUNT]; // Ensures the present (vkQueuePresentKHR) waits until rendering to that image is done.
+
     VkFence inFlightFences[MAX_FRAMES_IN_FLIGHT];
     std::vector<VkFence> imagesInFlight;
 
@@ -265,6 +276,7 @@ public:
             for (const auto& extension : availableExtensions) requiredExtensions.erase(extension.extensionName);
 
             if (requiredExtensions.empty()) std::cout << " (Extensions Available)";
+            else std::cerr << "ERROR: EXTENSIONS REQUIRED NOT AVAILABLE - " << *requiredExtensions.begin();
 
             uint32_t apiVersion = deviceProperties.apiVersion;
             uint32_t major = VK_VERSION_MAJOR(apiVersion);
@@ -399,7 +411,7 @@ public:
             this->extent = actualExtent;
         }
 
-        uint32_t imageCount = MAX_FRAMES_IN_FLIGHT; // How many images to have in the swap chain
+        uint32_t imageCount = SWAPCHAIN_IMAGE_COUNT; // How many images to have in the swap chain
         //(capabilities.maxImageCount > 0 && capabilities.minImageCount + 1 > capabilities.maxImageCount) ?
         //capabilities.maxImageCount : capabilities.minImageCount + 1; 
 
@@ -735,7 +747,7 @@ public:
         bufferInfo.offset = 0;
         bufferInfo.range = VK_WHOLE_SIZE;
 
-        for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < PING_PONG_FRAMES; i++)
         {
             VkWriteDescriptorSet write{};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -796,7 +808,7 @@ public:
     void createImage2D(uint32_t width, uint32_t height) {
 
         // Double Buffer
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < PING_PONG_FRAMES; i++) {
             this->pathtracerImages[i] = {};
             this->pathtracerImagesMemory[i] = {};
             this->pathtracerImageViews[i] = {};
@@ -846,33 +858,6 @@ public:
             vkCreateImageView(this->device, &dataTextureInfo, nullptr, &pathtracerImageViews[i]);
             transitionImageLayout(this->pathtracerImages[i], VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             pathtracerImageLayouts[i] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-            /*
-            VkDescriptorSetLayoutBinding imageSamplerBinding{};
-            imageSamplerBinding.binding = this->pathtracerImages[i].size();
-            imageSamplerBinding.descriptorCount = 1;
-            imageSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            imageSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-            imageSamplerBinding.pImmutableSamplers = nullptr;
-            */
-
-            // Could be commented out too as texture is updated every frame.
-            /*
-            VkDescriptorImageInfo descriptorImageInfo{};
-            descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            descriptorImageInfo.imageView = pathtracerImageViews[i];
-            descriptorImageInfo.sampler = pathtracerImageSampler;
-
-            VkWriteDescriptorSet samplerWrite{};
-            samplerWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            samplerWrite.dstSet = descriptorSet;
-            samplerWrite.dstBinding = binding;
-            samplerWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            samplerWrite.pImageInfo = &descriptorImageInfo;
-            samplerWrite.descriptorCount = 1;
-
-            vkUpdateDescriptorSets(this->device, 1, &samplerWrite, 0, nullptr);
-            */
         }
     }
 
@@ -993,10 +978,22 @@ public:
         // Bind compute pipeline and dispatch
         // Bind compute pipeline and descriptors
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSet[currentFrame], 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSet[currentFrame%PING_PONG_FRAMES], 0, nullptr);
 
         // Dispatch compute
-        vkCmdDispatch(commandBuffer, (Pathtracer::WIDTH + 7) / 8, (Pathtracer::HEIGHT + 7) / 8, 1);
+        // Tiling to avoid TDR
+        //vkCmdDispatch(commandBuffer, (Pathtracer::WIDTH + 7) / 8, (Pathtracer::HEIGHT + 7) / 8, 1);
+
+        for (uint32_t tileY = 0; tileY < Pathtracer::HEIGHT; tileY += Pathtracer::TILE_Y) {
+            for (uint32_t tileX = 0; tileX < Pathtracer::WIDTH; tileX += Pathtracer::TILE_X) {
+                Pathtracer::ComputeTile ct{};
+                ct.tileOffset = { tileX, tileY };
+                ct.tileSize = { Pathtracer::TILE_X, Pathtracer::TILE_Y };
+
+                vkCmdPushConstants( commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::ComputeTile), &ct );
+                vkCmdDispatch( commandBuffer, (Pathtracer::TILE_X + 7) / 8, (Pathtracer::TILE_Y + 7) / 8, 1 );
+            }
+        }
 
         // Transition GENERAL -> SHADER_READ_ONLY_OPTIMAL for graphics
         barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -1095,7 +1092,7 @@ public:
         pathtracerState.iFrame = 0;
         pathtracerState.iResolution = glm::vec2(Pathtracer::WIDTH, Pathtracer::HEIGHT);
         pathtracerState.iTime = 0;
-        pathtracerState.camera.cameraPos = glm::vec4(-0.2f, 0.1f, -0.4f, 0.0);
+        pathtracerState.camera.cameraPos = glm::vec4(0.0f, 0.1f, -0.4f, 0.0);
         pathtracerState.camera.cameraRot = glm::vec4(0, 0,0,0);
         pathtracerUBO = createUniformBuffer(sizeof(PathtracerUBO), &pathtracerState);
 
@@ -1117,23 +1114,23 @@ public:
 
         
         std::vector<VkDescriptorPoolSize> poolSizes = {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 * MAX_FRAMES_IN_FLIGHT },         // Only for compute UBO
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * MAX_FRAMES_IN_FLIGHT }, // 1 lastFrameTex + 2 fragment textures (double buffering)
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 * MAX_FRAMES_IN_FLIGHT },          // compute output image (2 because of double buffering)
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * MAX_FRAMES_IN_FLIGHT }          // SSBOs
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 * PING_PONG_FRAMES },         // Only for compute UBO
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * PING_PONG_FRAMES }, // 1 lastFrameTex + 2 fragment textures (double buffering)
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 * PING_PONG_FRAMES },          // compute output image (2 because of double buffering)
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * PING_PONG_FRAMES }          // SSBOs
         };
-        createDescriptorPool(poolSizes, 2 * MAX_FRAMES_IN_FLIGHT);
+        createDescriptorPool(poolSizes, 2 * PING_PONG_FRAMES);
 
         createImage2D(Pathtracer::WIDTH, Pathtracer::HEIGHT);
         create2DLinearImageSampler();
         create2DNearestImageSampler();
 
-        for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        for (int i = 0; i < PING_PONG_FRAMES; i++) {
             this->computeDescriptorSet[i] = allocateDescriptorSet(&computeDescriptorSetLayout);
             this->fragDescriptorSet[i] = allocateDescriptorSet(&descriptorSetLayout);
         }
 
-        for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        for (int i = 0; i < PING_PONG_FRAMES; i++) {
 
             // Compute descriptor set
             updateUniformBufferDescriptorSet(computeDescriptorSet[i], 1, pathtracerUBO.buffer, sizeof(PathtracerUBO));
@@ -1148,7 +1145,7 @@ public:
             updateCombinedImageSamplerDescriptorSet(fragDescriptorSet[i], 0, fragImageSampler, pathtracerImageViews[i]);
         }
 
-        OBJLoader objloader = OBJLoader(RESOURCE("3DModels\\wolves.obj"));
+        OBJLoader objloader = OBJLoader(RESOURCE("3DModels\\cornell_box_bad.obj"));
 
         BVH bvh = BVH(objloader.GetMeshGeometry());
         auto tree = bvh.GetTree();
@@ -1364,6 +1361,14 @@ public:
         computePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         computePipelineLayoutInfo.setLayoutCount = 1;
         computePipelineLayoutInfo.pSetLayouts = &computeDescriptorSetLayout;
+
+        VkPushConstantRange pushConstantRange{};
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = sizeof(Pathtracer::ComputeTile); // 16 bytes
+        computePipelineLayoutInfo.pushConstantRangeCount = 1;
+        computePipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+        
         vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &computePipelineLayout);
 
         // Compute pipeline
@@ -1402,8 +1407,14 @@ public:
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             if (vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, this->imageAvailableSemaphores + i) != VK_SUCCESS ||
-                vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, this->renderFinishedSemaphores + i) != VK_SUCCESS ||
                 vkCreateFence(this->device, &fenceInfo, nullptr, this->inFlightFences + i) != VK_SUCCESS) {
+                std::cerr << "Failed to create a VkSemaphore or VkFence\n";
+                return;
+            }
+        }
+
+        for (size_t i = 0; i < SWAPCHAIN_IMAGE_COUNT; ++i) {
+            if (vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, this->renderFinishedSemaphores + i) != VK_SUCCESS) {
                 std::cerr << "Failed to create a VkSemaphore or VkFence\n";
                 return;
             }
@@ -1446,24 +1457,34 @@ public:
     void loop(uint32_t& currentFrame) {
         //puts("=== START LOOP ===");
 
-        // 1. Wait for *frame's* fence (makes command buffer safe to reuse)
-        vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        // 1. Wait for frame's fence (makes command buffer safe to reuse)
+        VkResult waitResult = vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        if (waitResult != VK_SUCCESS) {
+            // GPU is still processing => early return
+            puts("inFlightFences waiting");
+            return;
+        }
 
         // 2. Acquire swapchain image
         uint32_t imageIndex;
-        VkResult acquireResult = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+        VkResult acquireResult = vkAcquireNextImageKHR(device, swapChain, 2000000000ULL, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-        if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR || acquireResult == VK_SUBOPTIMAL_KHR) return; // Recreate swapchain here
+        if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR || acquireResult == VK_SUBOPTIMAL_KHR) return;
         if (acquireResult != VK_SUCCESS) {
             fprintf(stderr, "vkAcquireNextImageKHR failed: %d\n", acquireResult);
+            vkDeviceWaitIdle(device);
             return;
         }
 
 
         // 3. If this swapchain image is already in-flight, wait for it
-        if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
-            vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
-
+        if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
+            waitResult = vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, 2000000000ULL);
+            if (waitResult != VK_SUCCESS) {
+                vkDeviceWaitIdle(device);
+                return;
+            }
+        }
 
         // 5. Reset the fence AFTER it is no longer used
         vkResetFences(device, 1, &inFlightFences[currentFrame]);
@@ -1550,7 +1571,7 @@ public:
             VK_PIPELINE_BIND_POINT_GRAPHICS,
             this->pipelineLayout,
             0,              // First set
-            1, &this->fragDescriptorSet[currentFrame],
+            1, &this->fragDescriptorSet[currentFrame%PING_PONG_FRAMES],
             0, nullptr
         );
 
