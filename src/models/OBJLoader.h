@@ -5,6 +5,7 @@
 #include <iostream>
 #include <array>
 #include <unordered_map>
+#include <numeric>
 
 
 #include "glm/glm.hpp"
@@ -15,8 +16,6 @@ class OBJLoader {
 	std::vector<glm::vec4> positions = std::vector<glm::vec4>();
 	std::vector<glm::vec4> textureCoords = std::vector<glm::vec4>();
 	std::vector<glm::vec4> normals = std::vector<glm::vec4>();
-
-	std::vector<uint32_t> triangles = std::vector<uint32_t>();
 
 	struct VertexData {
 		float* vertices = nullptr;
@@ -67,10 +66,16 @@ public:
 		}
 	};
 
+	struct Triangle {
+		glm::uvec4 indices;
+		glm::vec4 area;
+	};
+
 	std::vector<Vertex> objVertices;
+	std::vector<Triangle> triangles = std::vector<Triangle>();
 	struct MeshGeometry {
 		std::vector<Vertex> vertices;
-		std::vector<uint32_t> triangles;
+		std::vector<glm::uvec3> triangles;
 	};
 
 private:
@@ -86,9 +91,13 @@ public:
 	VertexData GetVertices() const { return vData; }
 
 	std::vector<glm::vec4> GetPositions() const { return positions; }
-	std::vector<uint32_t> GetTriangles() const { return this->triangles; }
+	std::vector<Triangle> GetTriangles() const { return this->triangles; }
 
-	MeshGeometry GetMeshGeometry() const { return {this->objVertices, this->triangles}; }
+	MeshGeometry GetMeshGeometry() const {
+		std::vector<glm::uvec3> triIdxs(triangles.size());
+		for (int i = 0; i < triangles.size(); i++) triIdxs[i] = triangles[i].indices;
+		return { this->objVertices, triIdxs };
+	}
 };
 
 #endif // !OBJLOADER_H

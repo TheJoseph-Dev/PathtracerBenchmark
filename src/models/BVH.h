@@ -112,4 +112,8 @@ public:
     std::vector<Node> GetTree() const {
         return this->Flatten();
     }
+    
+    std::vector<Triangle> GetTriangles() const {
+        return this->triangles;
+    }
 };

@@ -4,12 +4,12 @@
 
 BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) {
     static_assert(sizeof(Node) == 48);
-    this->triangles.reserve(meshgeo.triangles.size()/3);
-    for (size_t i = 0; i < meshgeo.triangles.size(); i += 3) {
+    this->triangles.reserve(meshgeo.triangles.size());
+    for (size_t i = 0; i < meshgeo.triangles.size(); i++) {
         Triangle tri;
-        tri.v0 = meshgeo.triangles[i];
-        tri.v1 = meshgeo.triangles[i + 1];
-        tri.v2 = meshgeo.triangles[i + 2];
+        tri.v0 = meshgeo.triangles[i].x;
+        tri.v1 = meshgeo.triangles[i].y;
+        tri.v2 = meshgeo.triangles[i].z;
 
         const glm::vec4& a = meshgeo.vertices[tri.v0].position;
         const glm::vec4& b = meshgeo.vertices[tri.v1].position;

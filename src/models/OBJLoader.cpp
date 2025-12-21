@@ -41,8 +41,16 @@ OBJLoader::OBJLoader(const char* filepath) {
 		}
 	}
 
-	this->triangles.reserve(objVertices.size());
-	for (int i = 0; i < objVertices.size(); i++) this->triangles.push_back(i);
+	this->triangles.reserve(objVertices.size()/3);
+	for (int i = 0; i < objVertices.size(); i += 3) {
+		uint32_t matIdx = 1;
+		glm::uvec4 indices = {i, i+1, i+2, matIdx};
+		glm::vec3 v0 = objVertices[i].position;
+		glm::vec3 v1 = objVertices[i + 1].position;
+		glm::vec3 v2 = objVertices[i + 2].position;
+		float area = 0.5f * glm::length(glm::cross(v1 - v0, v2 - v0));
+		this->triangles.push_back({ indices, { area, 0,0,0 } });
+	}
 	//CreateVertexArray(objVertices);
 	//CreateSSBuffer(objVertices);
 }

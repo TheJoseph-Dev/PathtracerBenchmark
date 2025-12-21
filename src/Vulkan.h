@@ -19,9 +19,14 @@ namespace Pathtracer {
     constexpr uint32_t TILE_X = 16;
     constexpr uint32_t TILE_Y = 16;
 
-    struct ComputeTile {
-        glm::uvec2 tileSize;
-        glm::uvec2 tileOffset;
+    struct PushConstants {
+        struct ComputeTile {
+            glm::uvec2 tileSize;
+            glm::uvec2 tileOffset;
+        };
+
+        ComputeTile ct;
+        uint32_t emissiveGeometryIndex;
     };
 }
 
@@ -554,6 +559,8 @@ public:
         CameraUBO camera;
     };
 
+    Pathtracer::PushConstants pathtracerPC;
+
     void createDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayout* dsl) {
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -986,11 +993,8 @@ public:
 
         for (uint32_t tileY = 0; tileY < Pathtracer::HEIGHT; tileY += Pathtracer::TILE_Y) {
             for (uint32_t tileX = 0; tileX < Pathtracer::WIDTH; tileX += Pathtracer::TILE_X) {
-                Pathtracer::ComputeTile ct{};
-                ct.tileOffset = { tileX, tileY };
-                ct.tileSize = { Pathtracer::TILE_X, Pathtracer::TILE_Y };
-
-                vkCmdPushConstants( commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::ComputeTile), &ct );
+                this->pathtracerPC.ct.tileOffset = { tileX, tileY };
+                vkCmdPushConstants( commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::PushConstants), &this->pathtracerPC );
                 vkCmdDispatch( commandBuffer, (Pathtracer::TILE_X + 7) / 8, (Pathtracer::TILE_Y + 7) / 8, 1 );
             }
         }
@@ -1145,18 +1149,43 @@ public:
             updateCombinedImageSamplerDescriptorSet(fragDescriptorSet[i], 0, fragImageSampler, pathtracerImageViews[i]);
         }
 
-        OBJLoader objloader = OBJLoader(RESOURCE("3DModels\\cornell_box_bad.obj"));
+        this->pathtracerPC.ct.tileSize = { Pathtracer::TILE_X, Pathtracer::TILE_Y };
 
-        BVH bvh = BVH(objloader.GetMeshGeometry());
+        OBJLoader objloader(RESOURCE("3DModels\\cornell_box.obj"));
+        std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
+        std::vector<OBJLoader::Vertex> objVertices = objloader.objVertices;
+
+        // Load light geometry
+        OBJLoader lightLoader(RESOURCE("3DModels\\cornell_box-light.obj"));
+        std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
+        for (auto& lt : lightTris) lt.indices.w = 5;
+        std::vector<OBJLoader::Vertex> lightVerts = lightLoader.objVertices;
+
+        // Keep track of where light triangles start
+        uint32_t lightTriStartIndex = triangles.size();
+        this->pathtracerPC.emissiveGeometryIndex = lightTriStartIndex;
+
+        // Merge light triangles into main triangle buffer
+        triangles.insert(triangles.end(), lightTris.begin(), lightTris.end());
+
+        // Merge light vertices (and update triangle indices!)
+        uint32_t vertexOffset = objVertices.size();
+        objVertices.insert(objVertices.end(), lightVerts.begin(), lightVerts.end());
+        for (size_t i = lightTriStartIndex; i < triangles.size(); ++i)
+            triangles[i].indices += glm::uvec4(vertexOffset, vertexOffset, vertexOffset, 0); // shift indices
+
+        // Create SSBOs
+        std::vector<glm::uvec3> meshTris(triangles.size());
+        for (size_t i = 0; i < triangles.size(); i++) meshTris[i] = { triangles[i].indices.x, triangles[i].indices.y, triangles[i].indices.z };
+        OBJLoader::MeshGeometry mergedMesh{ objVertices, meshTris };
+        BVH bvh = BVH(mergedMesh);
         auto tree = bvh.GetTree();
         StorageBuffer treeSBO = createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data());
         createSSBO(treeSBO.buffer, 3); // BVH Nodes
 
-        std::vector<uint32_t> triangles = objloader.GetTriangles();
         StorageBuffer trianglesSBO = createStorageBuffer(triangles.size() * sizeof(triangles[0]), triangles.data());
-        createSSBO(trianglesSBO.buffer, 4); // Tri Indices
+        createSSBO(trianglesSBO.buffer, 4); // Triangles
 
-        std::vector<OBJLoader::Vertex> objVertices = objloader.objVertices;
         StorageBuffer positionsSBO = createStorageBuffer(objVertices.size() * sizeof(objVertices[0]), objVertices.data());
         createSSBO(positionsSBO.buffer, 5); // Vertices
 
@@ -1365,7 +1394,7 @@ public:
         VkPushConstantRange pushConstantRange{};
         pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
         pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(Pathtracer::ComputeTile); // 16 bytes
+        pushConstantRange.size = sizeof(Pathtracer::PushConstants);
         computePipelineLayoutInfo.pushConstantRangeCount = 1;
         computePipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
         

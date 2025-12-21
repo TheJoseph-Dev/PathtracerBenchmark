@@ -3,10 +3,15 @@
 layout(local_size_x = 8, local_size_y = 8) in;
 layout(binding = 0, rgba32f) writeonly uniform image2D outImage;
 
-layout(push_constant) uniform ComputeTile {
+struct ComputeTile {
     uvec2 tileSize;
     uvec2 tileOffset;
-} ct;
+};
+
+layout(push_constant) uniform PushConstants {
+    ComputeTile ct;
+    uint emissiveGeometryIndex;
+} pc;
 
 struct CameraUBO {
     vec4 cameraPos;
@@ -55,9 +60,40 @@ struct Node {
     uint triCount;
 };
 
+struct Triangle {
+    uvec4 indices;
+    vec4 area;
+};
+
 layout(std430, binding = 3) readonly buffer BVHNodes { Node nodes[]; };
-layout(std430, binding = 4) readonly buffer TriIndices { uint triIndices[]; };
+layout(std430, binding = 4) readonly buffer Triangles { Triangle triangles[]; };
 layout (std430, binding = 5) readonly buffer MeshData { Vertex vertices[]; };
+
+struct Material {
+    vec4 albedo;
+    float specular;
+    float roughness;
+    float metalicness;
+    float IOR;
+    float transmission;
+    
+    vec3 emissiveColor;
+    float emissivePower;
+};
+
+Material m1 = Material(vec4(0.1, 0.7, 0.9, 1.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.0), 0.0);
+Material m2 = Material(vec4(0.9, 0.6, 0.4, 1.0), 0.0, 2.0, 0.0, 0.0, 0.0, vec3(0.0), 0.0);
+Material tranM = Material(vec4(1.0), 0.7, 0.2, 0.0, 1.0, 0.4, vec3(0.0), 0.0);
+Material wRefM = Material(vec4(0.9), 0.9, 0.9, 0.0, 1.0, 0.0, vec3(0.0), 0.0);
+    
+Material wlm = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(1.0), 20.0);
+Material lm = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.9, 0.5, 0.1), 50.0);
+Material bLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.0, 0.5, 1.0), 5.0); 
+Material pRefM = Material(vec4(0.9, 0.5, 0.8, 1.0), 0.8, 0.7, 0.0, 1.0, 0.0, vec3(0.0), 0.0);
+Material rLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(1.0, 0.2, 0.1), 2.0); 
+Material gLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.2, 0.9, 0.8), 1.0);
+    
+Material[] mats = Material[] ( m1, m2, tranM, wRefM, pRefM, wlm, lm, rLight, gLight, bLight );
 
 // layout (std430, binding=12) readonly buffer objsData {
 //     ObjectInfo objsInfo[];
@@ -67,6 +103,7 @@ layout (std430, binding = 5) readonly buffer MeshData { Vertex vertices[]; };
 
 // Common
 #define PI 3.14159265
+#define INV_PI 0.3183098
 //#define ACCUMULATE
 #define EXPOSURE 0.5
 
@@ -147,19 +184,6 @@ float FresnelReflectAmount(float n1, float n2, vec3 normal, vec3 incident, float
 struct Ray {
   vec3 origin;
   vec3 dir;
-};
-
-struct Material {
-    vec4 albedo;
-    float specular;
-    float roughness;
-    float metalicness;
-    float IOR;
-    float transmission;
-    
-    
-    vec3 emissiveColor;
-    float emissivePower;
 };
 
 struct SceneObject {
@@ -284,7 +308,7 @@ IsecInfo RayAABBIsec(Ray ray, Node n, vec3 invDir) {
     - Pre-sorted triangles in leaves
     - Quantized bounds
 */
-void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
+void TraversalBVH(Ray ray, inout Scene scene) {
     vec3 invDir = 1.0 / ray.dir;
     int stack[128];
     int stkptr = 0;
@@ -299,15 +323,15 @@ void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
         if (isec.tmax < isec.tmin || isec.tmin > scene.d)
             continue;
 
-        bool isLeaf = (n.triCount > 0);
+        bool isLeaf = (n.left != -1 && n.right != -1);
 
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
-                uint triIdx = (n.triIdx + i) * 3;
+                Triangle tri = triangles[n.triIdx + i];
 
-                vec3 v0 = vertices[triIndices[triIdx + 0]].position.xyz;
-                vec3 v1 = vertices[triIndices[triIdx + 1]].position.xyz;
-                vec3 v2 = vertices[triIndices[triIdx + 2]].position.xyz;
+                vec3 v0 = vertices[tri.indices.x].position.xyz;
+                vec3 v1 = vertices[tri.indices.y].position.xyz;
+                vec3 v2 = vertices[tri.indices.z].position.xyz;
 
                 float t = triIntersect(ray.origin, ray.dir, v0, v1, v2).x;
                 if (miss(t)) continue;
@@ -320,7 +344,7 @@ void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
                     scene.closestHit.normal2 = Ng;
                     scene.d = t;
                     scene.d2 = t;
-                    scene.closestHit.mat = mats[(v0.y > 0.73 && v0.y < 0.74) ? 5 : 1];
+                    scene.closestHit.mat = mats[tri.indices.w];
                 }
             }
         } else {
@@ -359,16 +383,12 @@ void TraversalBVH(Ray ray, inout Scene scene, Material mats[10]) {
 }
 
 
-void TraversalBruteForce(Ray ray, inout Scene scene, Material mats[10]) {
-    uint numTris = triIndices.length() / 3;
-    for (uint tri = 0; tri < numTris; ++tri) {
-        uint triIdx = tri * 3;
-        uint i0 = triIndices[triIdx + 0];
-        uint i1 = triIndices[triIdx + 1];
-        uint i2 = triIndices[triIdx + 2];
-        vec3 v0 = vertices[i0].position.xyz;
-        vec3 v1 = vertices[i1].position.xyz;
-        vec3 v2 = vertices[i2].position.xyz;
+void TraversalBruteForce(Ray ray, inout Scene scene) {
+    for (uint tIdx = 0; tIdx < triangles.length(); ++tIdx) {
+        Triangle tri = triangles[tIdx];
+        vec3 v0 = vertices[tri.indices.x].position.xyz;
+        vec3 v1 = vertices[tri.indices.y].position.xyz;
+        vec3 v2 = vertices[tri.indices.z].position.xyz;
         vec3 hit = triIntersect(ray.origin, ray.dir, v0, v1, v2);
         float t = hit.x;
         if (miss(t)) continue;
@@ -377,7 +397,7 @@ void TraversalBruteForce(Ray ray, inout Scene scene, Material mats[10]) {
             scene.d = t;
             scene.closestHit.pos = v0;
             scene.closestHit.normal = Ng;
-            scene.closestHit.mat = mats[1];
+            scene.closestHit.mat = mats[tri.indices.w];
         }
     }
 }
@@ -387,19 +407,6 @@ Scene world(Ray ray) {
     scene.d = MAX_DIST;
     scene.d2 = MAX_DIST;
     
-    Material m1 = Material(vec4(0.1, 0.7, 0.9, 1.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.0), 0.0);
-    Material m2 = Material(vec4(0.9, 0.6, 0.4, 1.0), 0.0, 2.0, 0.0, 0.0, 0.0, vec3(0.0), 0.0);
-    Material tranM = Material(vec4(1.0), 0.7, 0.2, 0.0, 1.0, 0.4, vec3(0.0), 0.0);
-    Material wRefM = Material(vec4(0.9), 0.9, 0.9, 0.0, 1.0, 0.0, vec3(0.0), 0.0);
-    
-    Material wlm = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(1.0), 20.0);
-    Material lm = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.9, 0.5, 0.1), 50.0);
-    Material bLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.0, 0.5, 1.0), 5.0); 
-    Material pRefM = Material(vec4(0.9, 0.5, 0.8, 1.0), 0.8, 0.7, 0.0, 1.0, 0.0, vec3(0.0), 0.0);
-    Material rLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(1.0, 0.2, 0.1), 2.0); 
-    Material gLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.2, 0.9, 0.8), 1.0);
-    
-    Material[] mats = Material[] ( m1, m2, tranM, wRefM, pRefM, wlm, lm, rLight, gLight, bLight );
     /*
     ObjectInfo[] objsInfo = ObjectInfo[] (); //(ObjectInfo(vec4(1.0, 1.0, -1.0, 0.0), SPHERE_TYPE, 5, 0.3, 0.0), ObjectInfo(vec4(0.0, -0.25, 0.0, 0.0), SPHERE_TYPE, 0, 0.25, 0.0));
     for(int i = 0; i < objsInfo.length(); i++) {
@@ -431,7 +438,7 @@ Scene world(Ray ray) {
     */
 
     //Material texM = Material(vec4(0.0), 0.0, 1.0, 0.5, 0.0, 0.0, vec3(0.0), 0.0);
-    TraversalBVH(ray, scene, mats);
+    TraversalBVH(ray, scene);
 
     return scene;
 }
@@ -461,13 +468,71 @@ void genSeed() {
     seed = uint(uint(uint(gl_GlobalInvocationID.x) * uint(1973) + uint(gl_GlobalInvocationID.y) * uint(9277) + uint(iFrame) * uint(26699)) | uint(1));
 }
 
+// Next Event Estimation
+// PDF: p = p(triangle) x p(point|triangle)
+// “Pick a point on a light, check visibility, and add its contribution now instead of hoping to hit it randomly later.”
+// Mathematically: Lnee = \frac{Le \cdot f(\omega_i, \omega_o) \cdot \cos \theta_s \cos theta_l}{p(light)}
+
+vec3 computeNEE(vec3 hitPos, vec3 normal, Material mat ) {
+    uint lightStart = pc.emissiveGeometryIndex;
+    uint lightCount = triangles.length() - lightStart;
+    if (lightCount == 0) return vec3(0.0);
+
+    // 1. Pick a random light triangle
+    uint lidx = lightStart + uint(RandomFloat01(seed) * lightCount);
+    Triangle tri = triangles[lidx];
+
+    // 2. Sample a point uniformly on the triangle
+    vec3 v0 = vertices[tri.indices.x].position.xyz;
+    vec3 v1 = vertices[tri.indices.y].position.xyz;
+    vec3 v2 = vertices[tri.indices.z].position.xyz;
+
+    float u = RandomFloat01(seed);
+    float v = RandomFloat01(seed);
+    if (u + v > 1.0) { u = 1.0 - u; v = 1.0 - v; }
+    vec3 lightPos = v0 + u * (v1 - v0) + v * (v2 - v0);
+
+    vec3 lightNormal = normalize(cross(v1 - v0, v2 - v0));
+
+    // 3. Geometry term
+    vec3 toLight = lightPos - hitPos;
+    float dist2 = dot(toLight, toLight);
+    float dist = sqrt(dist2);
+    vec3 wi = toLight / dist;
+
+    float cosS = max(dot(normal, wi), 0.0);
+    float cosL = max(dot(lightNormal, -wi), 0.0);
+    if (cosS <= 0.0 || cosL <= 0.0) return vec3(0.0);
+
+    // 4. Shadow ray
+    Ray shadow;
+    shadow.origin = hitPos + normal * NORMAL_OFFSET;
+    shadow.dir = wi;
+
+    Scene shadowHit = world(shadow);
+    if (shadowHit.d < dist - NORMAL_OFFSET)
+        return vec3(0.0); // occluded
+
+    // 5. PDF
+    float area = max(tri.area.x, 1e-6);
+    float pdf = (1.0 / lightCount) * (1.0 / area);
+    // Convert area PDF to solid angle PDF
+    pdf *= dist2 / max(cosL, 1e-6);
+
+    // 6. Evaluate lighting (Lambert)
+    vec3 Le = mats[tri.indices.w].emissiveColor * mats[tri.indices.w].emissivePower;
+
+    vec3 f = mat.albedo.rgb * INV_PI;
+
+    return Le * f * cosS / pdf;
+}
+
 RenderData worldRender(vec2 uv, Ray ray) {
     
     //worldLight();
     
     Scene scene;
-    
-    vec3 color = vec3(0.0);
+
     vec3 light = vec3(0.0);
     vec3 throughput = vec3(1.0);
 
@@ -477,25 +542,31 @@ RenderData worldRender(vec2 uv, Ray ray) {
         vec3 closestHit = scene.closestHit.pos;
         vec3 normals = scene.closestHit.normal;
         vec3 normals2 = scene.closestHit.normal2;
-        
-        if(i == MAX_LIGHT_BOUNCES-1 ) { light *= 0.0; break; }
 
-        vec3 hitPoint = ray.origin - closestHit + (ray.dir*scene.d);
-        vec3 hitPoint2 = ray.origin - closestHit + (ray.dir*scene.d2);
+        vec3 hitPoint = ray.origin + (ray.dir*scene.d);
+        vec3 hitPoint2 = ray.origin + (ray.dir*scene.d2);
 
         vec4 hitColor = scene.closestHit.mat.albedo;
         
-        throughput *= hitColor.rgb + scene.closestHit.mat.emissiveColor;
-        light += scene.closestHit.mat.emissivePower * (throughput + scene.closestHit.mat.emissiveColor*0.25);
-        
-        color = normals;
+        bool isDelta = scene.closestHit.mat.specular > 0.0 || scene.closestHit.mat.transmission > 0.0;
+        // Direct lighting via NEE
+        if (!isDelta) light += throughput * computeNEE(hitPoint, normals, scene.closestHit.mat);
+
+        // Emission if we HIT a light directly
+        if (scene.closestHit.mat.emissivePower > 0.0) {
+            light += throughput * scene.closestHit.mat.emissiveColor * scene.closestHit.mat.emissivePower;
+            break; // terminate path on light hit
+        }
+
+        // Update throughput for indirect bounce
+        throughput *= scene.closestHit.mat.albedo.rgb;
 
         // do absorption if we are hitting from inside the object
         // if (hitInfo.fromInside)
         //    throughput *= exp(-hitInfo.material.refractionColor * hitInfo.dist);
         
         // Trace
-        ray.origin = hitPoint + closestHit + normals*NORMAL_OFFSET;
+        ray.origin = hitPoint + normals*NORMAL_OFFSET;
 
         genSeed();
         
@@ -560,7 +631,7 @@ void main()
     cameraPos = pathtracerState.camera.cameraPos.xyz;
     cameraRot = pathtracerState.camera.cameraRot.xyz;
     uvec2 localID = gl_GlobalInvocationID.xy;
-    uvec2 pixel = ct.tileOffset + localID;
+    uvec2 pixel = pc.ct.tileOffset + localID;
 
     if (pixel.x >= iResolution.x || pixel.y >= iResolution.y)
         return;
