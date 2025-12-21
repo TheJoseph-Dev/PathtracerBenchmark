@@ -10,7 +10,6 @@ struct ComputeTile {
 
 layout(push_constant) uniform PushConstants {
     ComputeTile ct;
-    uint emissiveGeometryIndex;
 } pc;
 
 struct CameraUBO {
@@ -67,7 +66,8 @@ struct Triangle {
 
 layout(std430, binding = 3) readonly buffer BVHNodes { Node nodes[]; };
 layout(std430, binding = 4) readonly buffer Triangles { Triangle triangles[]; };
-layout (std430, binding = 5) readonly buffer MeshData { Vertex vertices[]; };
+layout(std430, binding = 5) readonly buffer MeshData { Vertex vertices[]; };
+layout(std430, binding = 6) readonly buffer EmissiveGeometry { Triangle eTriangles[]; };
 
 struct Material {
     vec4 albedo;
@@ -218,6 +218,7 @@ struct RenderData {
 
 #define MAX_DIST 100.0
 #define MAX_LIGHT_BOUNCES 4 /*8*/
+#define MAX_TRAVERSAL_DEPTH 64
 #define MIN_TRACE_DIST 0.001
 #define NORMAL_OFFSET 0.001
 
@@ -304,17 +305,16 @@ IsecInfo RayAABBIsec(Ray ray, Node n, vec3 invDir) {
     - Reduce the amount of RayAABBIsec
     - Wide BVHs (BVH4 / BVH8)
     - SOA layout instead of structs
-    - Precomputed inverse ray direction
     - Pre-sorted triangles in leaves
     - Quantized bounds
 */
 void TraversalBVH(Ray ray, inout Scene scene) {
     vec3 invDir = 1.0 / ray.dir;
-    int stack[128];
-    int stkptr = 0;
+    int stack[MAX_TRAVERSAL_DEPTH];
+    int stkptr = 0, it = 0;
     stack[stkptr++] = 0;
 
-    while (stkptr > 0) {
+    while (stkptr > 0 && stkptr < MAX_TRAVERSAL_DEPTH && it++ < 2*MAX_TRAVERSAL_DEPTH) {
         int nodeIdx = stack[--stkptr];
         Node n = nodes[nodeIdx];
 
@@ -323,7 +323,7 @@ void TraversalBVH(Ray ray, inout Scene scene) {
         if (isec.tmax < isec.tmin || isec.tmin > scene.d)
             continue;
 
-        bool isLeaf = (n.left != -1 && n.right != -1);
+        bool isLeaf = (n.left == -1 && n.right == -1);
 
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
@@ -402,6 +402,25 @@ void TraversalBruteForce(Ray ray, inout Scene scene) {
     }
 }
 
+void EmissiveTraversalBF(Ray ray, inout Scene scene) {
+    for (uint tIdx = 0; tIdx < eTriangles.length(); ++tIdx) {
+        Triangle tri = eTriangles[tIdx];
+        vec3 v0 = vertices[tri.indices.x].position.xyz;
+        vec3 v1 = vertices[tri.indices.y].position.xyz;
+        vec3 v2 = vertices[tri.indices.z].position.xyz;
+        vec3 hit = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+        float t = hit.x;
+        if (miss(t)) continue;
+        vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
+        if (t < scene.d) {
+            scene.d = t;
+            scene.closestHit.pos = v0;
+            scene.closestHit.normal = Ng;
+            scene.closestHit.mat = mats[tri.indices.w];
+        }
+    }
+}
+
 Scene world(Ray ray) {
     Scene scene;
     scene.d = MAX_DIST;
@@ -439,6 +458,7 @@ Scene world(Ray ray) {
 
     //Material texM = Material(vec4(0.0), 0.0, 1.0, 0.5, 0.0, 0.0, vec3(0.0), 0.0);
     TraversalBVH(ray, scene);
+    EmissiveTraversalBF(ray, scene);
 
     return scene;
 }
@@ -474,13 +494,12 @@ void genSeed() {
 // Mathematically: Lnee = \frac{Le \cdot f(\omega_i, \omega_o) \cdot \cos \theta_s \cos theta_l}{p(light)}
 
 vec3 computeNEE(vec3 hitPos, vec3 normal, Material mat ) {
-    uint lightStart = pc.emissiveGeometryIndex;
-    uint lightCount = triangles.length() - lightStart;
+    uint lightCount = eTriangles.length();
     if (lightCount == 0) return vec3(0.0);
 
     // 1. Pick a random light triangle
-    uint lidx = lightStart + uint(RandomFloat01(seed) * lightCount);
-    Triangle tri = triangles[lidx];
+    uint lidx = uint(RandomFloat01(seed) * lightCount);
+    Triangle tri = eTriangles[lidx];
 
     // 2. Sample a point uniformly on the triangle
     vec3 v0 = vertices[tri.indices.x].position.xyz;
@@ -591,18 +610,18 @@ RenderData worldRender(vec2 uv, Ray ray) {
             ray.dir = normalize(refract(ray.dir, normals, 1.01/scene.closestHit.mat.IOR));
         }
         else {
-        // Calculate a new ray direction.
-        // Diffuse uses a normal oriented cosine weighted hemisphere sample.
-        // Perfectly smooth specular uses the reflection ray.
-        // Rough (glossy) specular lerps from the smooth specular to the rough diffuse by the material roughness squared
-        // Squaring the roughness is just a convention to make roughness feel more linear perceptually.
-        vec3 randomSpread = RandomUnitVector(seed);
-        vec3 diffuseRayDir = normalize(normals + randomSpread);
-        vec3 specularRayDir = reflect(ray.dir, normals);
-        float sqrRoughness = scene.closestHit.mat.roughness * scene.closestHit.mat.roughness;
-        vec3 glossyDir = mix(specularRayDir, diffuseRayDir, sqrRoughness);
-        specularRayDir = normalize(glossyDir);
-        ray.dir = mix(diffuseRayDir, specularRayDir, doSpecular);
+            // Calculate a new ray direction.
+            // Diffuse uses a normal oriented cosine weighted hemisphere sample.
+            // Perfectly smooth specular uses the reflection ray.
+            // Rough (glossy) specular lerps from the smooth specular to the rough diffuse by the material roughness squared
+            // Squaring the roughness is just a convention to make roughness feel more linear perceptually.
+            vec3 randomSpread = RandomUnitVector(seed);
+            vec3 diffuseRayDir = normalize(normals + randomSpread);
+            vec3 specularRayDir = reflect(ray.dir, normals);
+            float sqrRoughness = scene.closestHit.mat.roughness * scene.closestHit.mat.roughness;
+            vec3 glossyDir = mix(specularRayDir, diffuseRayDir, sqrRoughness);
+            specularRayDir = normalize(glossyDir);
+            ray.dir = mix(diffuseRayDir, specularRayDir, doSpecular);
         }
         //vec3 normalShift = scene.closestHit.mat.roughness * randomSpread;
         //ray.dir = normalize(ray.dir + normalShift); //normalize(reflect(ray.dir, normals + normalShift));

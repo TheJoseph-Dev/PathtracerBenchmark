@@ -14,16 +14,20 @@ class BVH {
         glm::vec4 max;
 
         AABB() {
-            min = glm::vec4(FLT_MAX);
-            max = glm::vec4(-FLT_MAX);
+            min = glm::vec4({ FLT_MAX,FLT_MAX,FLT_MAX,0 });
+            max = glm::vec4({ -FLT_MAX,-FLT_MAX,-FLT_MAX,0 });
         }
 
         AABB(const glm::vec4& min_, const glm::vec4& max_) 
             : min(min_), max(max_) {}
 
+        AABB(const glm::vec3& min_, const glm::vec3& max_)
+            : min({min_.x,min_.y,min_.z,0}), max({max_.x,max_.y,max_.z,0}) {}
+
         void expand(const glm::vec4& p) {
             min = glm::min(min, p);
             max = glm::max(max, p);
+            min.w = max.w = 0;
         }
 
         void expand(const AABB& box) {
@@ -44,13 +48,6 @@ class BVH {
             return 2.0f * (e.x * e.y + e.x * e.z + e.y * e.z);
         }
     };
-
-    struct Triangle {
-        uint32_t v0, v1, v2;
-        AABB bbox;
-    };
-
-    std::vector<Triangle> triangles;
 
     struct DynamicNode {
         int32_t id;
@@ -76,6 +73,12 @@ public:
 
     BVH(const OBJLoader::MeshGeometry& meshgeo);
     ~BVH();
+
+    struct Triangle {
+        uint32_t oIdx;
+        uint32_t v0, v1, v2;
+        AABB bbox;
+    };
 
 private:
 
@@ -107,12 +110,19 @@ void FreeTree(DynamicNode* root) {
     delete root;
 }
 
+std::vector<Triangle> triangles;
+
 public:
 
     std::vector<Node> GetTree() const {
         return this->Flatten();
     }
-    
+
+    void Print() const {
+        auto tree = this->GetTree();
+        for (size_t i = 0; i < tree.size(); i++) printf("%d | (%d, %d | %d, %d) => bbmin(%.2f %.2f %.2f) bbmax(%.2f %.2f %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].bbox.min.x, tree[i].bbox.min.y, tree[i].bbox.min.z, tree[i].bbox.max.x, tree[i].bbox.max.y, tree[i].bbox.max.z);
+    }
+
     std::vector<Triangle> GetTriangles() const {
         return this->triangles;
     }

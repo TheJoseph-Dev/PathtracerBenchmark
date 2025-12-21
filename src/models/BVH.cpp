@@ -7,6 +7,7 @@ BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) {
     this->triangles.reserve(meshgeo.triangles.size());
     for (size_t i = 0; i < meshgeo.triangles.size(); i++) {
         Triangle tri;
+        tri.oIdx = i;
         tri.v0 = meshgeo.triangles[i].x;
         tri.v1 = meshgeo.triangles[i].y;
         tri.v2 = meshgeo.triangles[i].z;
@@ -15,7 +16,7 @@ BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) {
         const glm::vec4& b = meshgeo.vertices[tri.v1].position;
         const glm::vec4& c = meshgeo.vertices[tri.v2].position;
 
-        tri.bbox = AABB(glm::min(glm::min(a,b), c), glm::max(glm::max(a,b), c));
+        tri.bbox = AABB(glm::min(glm::min(a, b), c), glm::max(glm::max(a, b), c));
         triangles.push_back(tri);
     }
 
@@ -173,9 +174,8 @@ void BVH::Build(DynamicNode** root, int l, int r) {
 
     Build(&node->left, l, mid);
     Build(&node->right, mid, r);
-    node->triIdx = l;
-    node->triCount = (node->left ? node->left->triCount : 0) +
-                     (node->right ? node->right->triCount : 0);
+    node->triIdx = 0;
+    node->triCount = 0;
 }
 
 BVH::~BVH() {

@@ -13,11 +13,11 @@
 #include "models/BVH.h"
 
 namespace Pathtracer {
-    constexpr uint32_t WIDTH = 640;//1440; //640; //1080;
+    constexpr uint32_t WIDTH = 720;//1440; //640; //1080;
     constexpr uint32_t HEIGHT = 480;//810; //480; //720;
 
-    constexpr uint32_t TILE_X = 16;
-    constexpr uint32_t TILE_Y = 16;
+    constexpr uint32_t TILE_X = 8;
+    constexpr uint32_t TILE_Y = 8;
 
     struct PushConstants {
         struct ComputeTile {
@@ -26,7 +26,6 @@ namespace Pathtracer {
         };
 
         ComputeTile ct;
-        uint32_t emissiveGeometryIndex;
     };
 }
 
@@ -1107,6 +1106,7 @@ public:
             { 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { 6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
         };
         createDescriptorSetLayout(computeBindings, &this->computeDescriptorSetLayout);
 
@@ -1121,7 +1121,7 @@ public:
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 * PING_PONG_FRAMES },         // Only for compute UBO
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * PING_PONG_FRAMES }, // 1 lastFrameTex + 2 fragment textures (double buffering)
             { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 * PING_PONG_FRAMES },          // compute output image (2 because of double buffering)
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * PING_PONG_FRAMES }          // SSBOs
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 * PING_PONG_FRAMES }          // SSBOs
         };
         createDescriptorPool(poolSizes, 2 * PING_PONG_FRAMES);
 
@@ -1151,43 +1151,44 @@ public:
 
         this->pathtracerPC.ct.tileSize = { Pathtracer::TILE_X, Pathtracer::TILE_Y };
 
-        OBJLoader objloader(RESOURCE("3DModels\\cornell_box.obj"));
+        OBJLoader objloader(RESOURCE("3DModels\\sibenik.obj"));
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
         std::vector<OBJLoader::Vertex> objVertices = objloader.objVertices;
 
         // Load light geometry
-        OBJLoader lightLoader(RESOURCE("3DModels\\cornell_box-light.obj"));
+        OBJLoader lightLoader(RESOURCE("3DModels\\sibenik-light.obj"));
         std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
-        for (auto& lt : lightTris) lt.indices.w = 5;
         std::vector<OBJLoader::Vertex> lightVerts = lightLoader.objVertices;
 
-        // Keep track of where light triangles start
-        uint32_t lightTriStartIndex = triangles.size();
-        this->pathtracerPC.emissiveGeometryIndex = lightTriStartIndex;
-
-        // Merge light triangles into main triangle buffer
-        triangles.insert(triangles.end(), lightTris.begin(), lightTris.end());
-
-        // Merge light vertices (and update triangle indices!)
+        // Merge light vertices
         uint32_t vertexOffset = objVertices.size();
         objVertices.insert(objVertices.end(), lightVerts.begin(), lightVerts.end());
-        for (size_t i = lightTriStartIndex; i < triangles.size(); ++i)
-            triangles[i].indices += glm::uvec4(vertexOffset, vertexOffset, vertexOffset, 0); // shift indices
+        for (auto& lt : lightTris) lt.indices += glm::uvec4(vertexOffset,vertexOffset,vertexOffset,4);
 
         // Create SSBOs
         std::vector<glm::uvec3> meshTris(triangles.size());
         for (size_t i = 0; i < triangles.size(); i++) meshTris[i] = { triangles[i].indices.x, triangles[i].indices.y, triangles[i].indices.z };
         OBJLoader::MeshGeometry mergedMesh{ objVertices, meshTris };
         BVH bvh = BVH(mergedMesh);
+        auto bvht = bvh.GetTriangles();
+
+        // Reordering to match BVH partitions (triIdx; triCount) in the shader
+        std::vector<OBJLoader::Triangle> reordered(triangles.size());
+        for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[bvht[i].oIdx];
+        triangles = std::move(reordered);
+
         auto tree = bvh.GetTree();
         StorageBuffer treeSBO = createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data());
         createSSBO(treeSBO.buffer, 3); // BVH Nodes
-
+        //bvh.Print();
         StorageBuffer trianglesSBO = createStorageBuffer(triangles.size() * sizeof(triangles[0]), triangles.data());
         createSSBO(trianglesSBO.buffer, 4); // Triangles
 
         StorageBuffer positionsSBO = createStorageBuffer(objVertices.size() * sizeof(objVertices[0]), objVertices.data());
         createSSBO(positionsSBO.buffer, 5); // Vertices
+
+        StorageBuffer emissiveTrianglesSBO = createStorageBuffer(lightTris.size() * sizeof(lightTris[0]), lightTris.data());
+        createSSBO(emissiveTrianglesSBO.buffer, 6); // Emissives/Light
 
 
         // Dynamic State
