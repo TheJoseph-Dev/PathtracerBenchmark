@@ -1151,12 +1151,12 @@ public:
 
         this->pathtracerPC.ct.tileSize = { Pathtracer::TILE_X, Pathtracer::TILE_Y };
 
-        OBJLoader objloader(RESOURCE("3DModels\\sibenik.obj"));
+        OBJLoader objloader(RESOURCE("3DModels\\cornell_box.obj"));
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
         std::vector<OBJLoader::Vertex> objVertices = objloader.objVertices;
 
         // Load light geometry
-        OBJLoader lightLoader(RESOURCE("3DModels\\sibenik-light.obj"));
+        OBJLoader lightLoader(RESOURCE("3DModels\\cornell_box-light.obj"));
         std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
         std::vector<OBJLoader::Vertex> lightVerts = lightLoader.objVertices;
 
