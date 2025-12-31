@@ -13,8 +13,8 @@
 #include "models/BVH.h"
 
 namespace Pathtracer {
-    constexpr uint32_t WIDTH = 720;//1440; //640; //1080;
-    constexpr uint32_t HEIGHT = 480;//810; //480; //720;
+    //constexpr uint32_t WIDTH = 720;//1440; //640; //1080;
+    //constexpr uint32_t HEIGHT = 480;//810; //480; //720;
 
     constexpr uint32_t TILE_X = 8;
     constexpr uint32_t TILE_Y = 8;
@@ -26,6 +26,93 @@ namespace Pathtracer {
         };
 
         ComputeTile ct;
+        uint32_t lightBounces;
+        // glm::uvec4 lightBounces
+    };
+
+    enum AccelerationStructure {
+        /*Binned SAH*/BVH = 0,
+        /*Havran SAH*/KD_TREE = 1
+    };
+
+    enum API {
+        VULKAN = 0, /*SPIR-V*/
+        CUDA = 1
+    };
+
+    enum Scene {
+        CORNELL_BOX = 0,
+        SIBENIK = 1,
+        /*Stanford*/BUNNY = 2,
+        DRAGON = 3
+    };
+
+    enum Resolution {
+        R480x320 = 0,
+        R720x480 = 1,
+        R1080x720 = 2,
+        R1440x810 = 3,
+        R1920x1080 = 4
+    };
+
+    class Config {
+        const AccelerationStructure accelerationStructure;
+        const API api;
+        const Scene scene;
+        const Resolution resolution;
+        const uint32_t lightBounces;
+    
+    public:
+
+        Config(AccelerationStructure as, API api, Scene scene, Resolution resolution, uint32_t lightBounces)
+        : accelerationStructure(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces)
+        {}
+
+        AccelerationStructure GetAccelerationStructure() const {
+            return accelerationStructure;
+        }
+
+        API GetAPI() const {
+            return api;
+        }
+
+        /*
+        Scene GetScene() const {
+            return scene;
+        }
+        */
+
+        std::string GetScene() const {
+            switch (this->scene) {
+                case Scene::CORNELL_BOX: return "cornell_box";
+                case Scene::SIBENIK: return "sibenik2";
+                case Scene::BUNNY: return "bunny-plane";
+                case Scene::DRAGON: return "dragon-plane";
+                default: throw std::runtime_error("Unknown resolution");
+            }
+        }
+
+        /*
+        Resolution GetResolution() const {
+            checkInitialized();
+            return resolution;
+        }
+        */
+
+        glm::uvec2 GetResolution() const {
+            switch (this->resolution) {
+                case Resolution::R480x320: return glm::uvec2(480, 320);
+                case Resolution::R720x480: return glm::uvec2(720, 480);
+                case Resolution::R1080x720: return glm::uvec2(1080, 720);
+                case Resolution::R1440x810: return glm::uvec2(1440, 810);
+                case Resolution::R1920x1080: return glm::uvec2(1920, 1080);
+                default: throw std::runtime_error("Unknown resolution");
+            }
+        }
+
+        uint32_t GetLightBounces() const {
+            return this->lightBounces;
+        }
     };
 }
 
@@ -165,8 +252,12 @@ class Vulkan {
     VkFence inFlightFences[MAX_FRAMES_IN_FLIGHT];
     std::vector<VkFence> imagesInFlight;
 
+    Pathtracer::Config pathtracerConfig;
+    const uint32_t WIDTH, HEIGHT;
 public:
-    Vulkan() {}
+    Vulkan(const Pathtracer::Config& pathtracerConfig):
+        pathtracerConfig(pathtracerConfig), WIDTH(pathtracerConfig.GetResolution().x), HEIGHT(pathtracerConfig.GetResolution().y)
+    {}
 
     void init(GLFWwindow* window) {
         createInstance();
@@ -1027,10 +1118,10 @@ public:
 
         // Dispatch compute
         // Tiling to avoid TDR
-        //vkCmdDispatch(commandBuffer, (Pathtracer::WIDTH + 7) / 8, (Pathtracer::HEIGHT + 7) / 8, 1);
+        //vkCmdDispatch(commandBuffer, (this->WIDTH + 7) / 8, (this->HEIGHT + 7) / 8, 1);
 
-        for (uint32_t tileY = 0; tileY < Pathtracer::HEIGHT; tileY += Pathtracer::TILE_Y) {
-            for (uint32_t tileX = 0; tileX < Pathtracer::WIDTH; tileX += Pathtracer::TILE_X) {
+        for (uint32_t tileY = 0; tileY < this->HEIGHT; tileY += Pathtracer::TILE_Y) {
+            for (uint32_t tileX = 0; tileX < this->WIDTH; tileX += Pathtracer::TILE_X) {
                 this->pathtracerPC.ct.tileOffset = { tileX, tileY };
                 vkCmdPushConstants( commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::PushConstants), &this->pathtracerPC );
                 vkCmdDispatch( commandBuffer, (Pathtracer::TILE_X + 7) / 8, (Pathtracer::TILE_Y + 7) / 8, 1 );
@@ -1132,7 +1223,7 @@ public:
 
         // Pathtracer Descriptor Set
         pathtracerState.iFrame = 0;
-        pathtracerState.iResolution = glm::vec2(Pathtracer::WIDTH, Pathtracer::HEIGHT);
+        pathtracerState.iResolution = glm::vec2(this->WIDTH, this->HEIGHT);
         pathtracerState.iTime = 0;
         pathtracerState.camera.cameraPos = glm::vec4(0.0f, 0.1f, -0.4f, 0.0);
         pathtracerState.camera.cameraRot = glm::vec4(0, 0,0,0);
@@ -1166,7 +1257,7 @@ public:
 
         createDescriptorPool(poolSizes, nDescriptorSets * PING_PONG_FRAMES);
 
-        createImage2D(Pathtracer::WIDTH, Pathtracer::HEIGHT);
+        createImage2D(this->WIDTH, this->HEIGHT);
         create2DLinearImageSampler();
         create2DNearestImageSampler();
 
@@ -1191,17 +1282,19 @@ public:
         }
 
         this->pathtracerPC.ct.tileSize = { Pathtracer::TILE_X, Pathtracer::TILE_Y };
+        this->pathtracerPC.lightBounces = this->pathtracerConfig.GetLightBounces();
 
-        OBJLoader objloader(RESOURCE("3DModels\\sibenik2.obj"));
+        std::string sceneFilepath = RESOURCE("3DModels\\") + this->pathtracerConfig.GetScene();
+        OBJLoader objloader((sceneFilepath + ".obj").c_str());
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
         std::vector<OBJLoader::Vertex> objVertices = objloader.objVertices;
 
         // Load light geometry
-        OBJLoader lightLoader(RESOURCE("3DModels\\sibenik-light.obj"));
+        OBJLoader lightLoader((sceneFilepath + "-light.obj").c_str());
         std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
         std::vector<OBJLoader::Vertex> lightVerts = lightLoader.objVertices;
 
-        OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(0.9f, 0.9f, 0.9f), 50.0f };
+        OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(0.9f, 0.9f, 0.9f), 20.0f };
         std::vector<OBJLoader::Material> materials = objloader.GetMaterials();
         materials.push_back(lightMat);
 

@@ -10,6 +10,7 @@ struct ComputeTile {
 
 layout(push_constant) uniform PushConstants {
     ComputeTile ct;
+    uint lightBounces;
 } pc;
 
 struct CameraUBO {
@@ -237,7 +238,7 @@ struct RenderData {
 };
 
 #define MAX_DIST 100.0
-#define MAX_LIGHT_BOUNCES 4 /*8*/
+//#define MAX_LIGHT_BOUNCES 4 /*8*/
 #define MAX_TRAVERSAL_DEPTH 64
 #define MIN_TRACE_DIST 0.001
 #define NORMAL_OFFSET 0.001
@@ -689,7 +690,7 @@ RenderData worldRender(vec2 uv, Ray ray) {
     vec3 throughput = vec3(1.0);
 
     genSeed();
-    for(int i = 0; i < MAX_LIGHT_BOUNCES; i++) {
+    for(int i = 0; i < pc.lightBounces; i++) {
         scene = world(ray);
         if(scene.d >= MAX_DIST) { 
             light += throughput * skyColor(uv).rgb; 
