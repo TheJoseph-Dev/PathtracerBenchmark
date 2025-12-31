@@ -713,47 +713,51 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
         float glossyWeight = max(0.0, mat.specular);
         float diffuseWeight = max(1e-3, 1.0 - glossyWeight);
-        //float glossyProb = clamp(F * glossyWeight, 0.0, 1.0);
-        //float diffuseProb = 1.0 - glossyProb;
 
         LightSample ls = sampleNEE(hitPoint, N);
         bool didNEE = ls.pdf > 0.0;
 
         if (rnd < glossyWeight) {
             vec3 V = normalize(-ray.dir);
+
             if (didNEE) {
-                // MIS
+                float cosS = max(dot(N, ls.wi), 0.0);
                 float pdfBRDF = glossyWeight * ggxPdf(N, V, ls.wi, mat.roughness);
                 float w = MISWeight(ls.pdf, pdfBRDF);
-                vec3 f = ggxBRDF(N, V, ls.wi, mat.roughness, mat.albedo.rgb);
 
-                light += throughput * f * ls.Le * max(dot(N, ls.wi), 0.0) * w / ls.pdf;
+                vec3 f = ggxBRDF(N, V, ls.wi, mat.roughness, mat.albedo.rgb);
+                light += throughput * f * ls.Le * cosS * w / ls.pdf;
             }
 
             float pdfGGX;
-            vec3 ggxDir = sampleGGX(N, V, mat.roughness, pdfGGX);
+            vec3 wi = sampleGGX(N, V, mat.roughness, pdfGGX);
             if (pdfGGX <= 0.0) break;
 
-            vec3 f = ggxBRDF(N, V, ggxDir, mat.roughness, mat.albedo.rgb);
+            float cosTheta = max(dot(N, wi), 0.0);
+            vec3 f = ggxBRDF(N, V, wi, mat.roughness, mat.albedo.rgb);
 
-            throughput *= f * max(dot(N, ggxDir), 0.0) / pdfGGX;
+            float pdf = glossyWeight * pdfGGX;
+            throughput *= f * cosTheta / pdf;
 
-            ray.dir = ggxDir;
+            ray.dir = wi;
         } else {
-            throughput *= mat.albedo.rgb;
-
             if (didNEE) {
-                // MIS
                 float cosS = max(dot(N, ls.wi), 0.0);
                 float pdfBRDF = diffuseWeight * cosS * INV_PI;
-
                 float w = MISWeight(ls.pdf, pdfBRDF);
 
                 vec3 f = mat.albedo.rgb * INV_PI;
                 light += throughput * f * ls.Le * cosS * w / ls.pdf;
             }
 
-            ray.dir = diffuseSample(N);
+            vec3 wi = diffuseSample(N);
+            float cosTheta = max(dot(N, wi), 0.0);
+            float pdf = diffuseWeight * cosTheta * INV_PI;
+
+            vec3 f = mat.albedo.rgb * INV_PI;
+            throughput *= f * cosTheta / pdf;
+
+            ray.dir = wi;
         }
 
         updateSeed();
