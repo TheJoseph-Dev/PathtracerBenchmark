@@ -73,13 +73,30 @@ public:
 
 	std::vector<Vertex> objVertices;
 	std::vector<Triangle> triangles = std::vector<Triangle>();
+
 	struct MeshGeometry {
 		std::vector<Vertex> vertices;
 		std::vector<glm::uvec3> triangles;
 	};
 
+	struct Material {
+		glm::vec4 albedo = glm::vec4(1.0f);
+		float specular = 0.0f;
+		float roughness = 1.0f;
+		float IOR = 0.0f;
+		float transmission = 0.0f;
+
+		glm::vec3 emissiveColor = glm::vec3(0.0f);
+		float emissivePower = 0.0f;
+	};
+
 private:
-	glm::vec4 LoadVertexData(const std::string& data);
+	std::vector<Material> mats;
+	std::unordered_map<std::string, uint32_t> matIdxMap;
+	
+	uint32_t currentMaterialIndex = 0;
+	std::vector<uint32_t> matIndices;
+	glm::vec4 LoadVectorData(const std::string& data);
 	std::vector<Vertex> LoadFace(const std::string& face);
 	Vertex CreateVertex(const std::string& indicies);
 	void CreateVertexArray(const std::vector<Vertex>& loadedVertices);
@@ -92,6 +109,7 @@ public:
 
 	std::vector<glm::vec4> GetPositions() const { return positions; }
 	std::vector<Triangle> GetTriangles() const { return this->triangles; }
+	std::vector<Material> GetMaterials() const { return this->mats; }
 
 	MeshGeometry GetMeshGeometry() const {
 		std::vector<glm::uvec3> triIdxs(triangles.size());

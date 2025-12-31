@@ -20,31 +20,57 @@ std::vector<std::string> split(std::string s, const std::string& separator) {
 }
 
 OBJLoader::OBJLoader(const char* filepath) {
-
+	
 	std::ifstream stream = std::ifstream(filepath);
 	std::cout << filepath << "\n\n";
 
-	if (!stream) { std::cout << "ERROR: OBJLoader got a NULL directory\n"; return; }
+	if (!stream) { std::cerr << "ERROR: OBJLoader got a NULL directory\n"; return; }
 
 	std::string line;
 
+	std::string mtlFilepath = std::string(filepath);
+	mtlFilepath[mtlFilepath.size() - 1] = 'l';
+	mtlFilepath[mtlFilepath.size() - 2] = 't';
+	mtlFilepath[mtlFilepath.size() - 3] = 'm';
+	std::ifstream matStream = std::ifstream(mtlFilepath);
+	
+	// Load Materials
+	if(matStream)
+		while (getline(matStream, line)) {
+			if (line.rfind("newmtl", 0) == 0) {
+				this->matIdxMap[line.substr(7)] = this->mats.size();
+				this->mats.push_back({});
+			}
+			else if (line.rfind("Ns", 0) == 0) this->mats.back().specular = stof(line.substr(3)); // Specular
+			else if (line.rfind("Kd", 0) == 0) this->mats.back().albedo = LoadVectorData(line.substr(3)); // Albedo
+			else if (line.rfind("Ke", 0) == 0) this->mats.back().emissiveColor = LoadVectorData(line.substr(3)); // Emissive Color
+			else if (line.rfind("Ni", 0) == 0) this->mats.back().IOR = stof(line.substr(3)); // IOR
+			else if (line.rfind("d", 0) == 0) this->mats.back().transmission = 1.0-stof(line.substr(2)); // Transmission
+			else if (line.rfind("Pr", 0) == 0) this->mats.back().roughness = stof(line.substr(3)); // Roughness
+			else if (line.rfind("pbr_emissive_power", 0) == 0) this->mats.back().roughness = stof(line.substr(19)); // Emissive Power
+		}
+	else {
+		this->mats.push_back({});
+		std::cerr << "WARNING: OBJLoader couldn't find .MTL file\n";
+	}
+
 	while (getline(stream, line)) {
-		
-		if (line.rfind("v ",  0) == 0)  { this->positions.push_back(LoadVertexData(line)); continue; }
-		if (line.rfind("vt", 0) == 0) { this->textureCoords.push_back(LoadVertexData(line)); continue; }
-		if (line.rfind("vn", 0) == 0) { this->normals.push_back(LoadVertexData(line)); continue; }
+		if (line.rfind("usemtl", 0) == 0) { this->currentMaterialIndex = this->matIdxMap[line.substr(7)]; continue; }
+		if (line.rfind("v ",  0) == 0)  { this->positions.push_back(LoadVectorData(line)); continue; }
+		if (line.rfind("vt", 0) == 0) { this->textureCoords.push_back(LoadVectorData(line)); continue; }
+		if (line.rfind("vn", 0) == 0) { this->normals.push_back(LoadVectorData(line)); continue; }
 
 		if (line.rfind("f", 0) == 0) {
 			auto face = LoadFace(line);
 			objVertices.insert(objVertices.end(), face.begin(), face.end());
+			this->matIndices.push_back(this->currentMaterialIndex);
 			continue;
 		}
 	}
 
 	this->triangles.reserve(objVertices.size()/3);
 	for (int i = 0; i < objVertices.size(); i += 3) {
-		uint32_t matIdx = 1;
-		glm::uvec4 indices = {i, i+1, i+2, matIdx};
+		glm::uvec4 indices = {i, i+1, i+2, this->matIndices[i/3] };
 		glm::vec3 v0 = objVertices[i].position;
 		glm::vec3 v1 = objVertices[i + 1].position;
 		glm::vec3 v2 = objVertices[i + 2].position;
@@ -56,7 +82,7 @@ OBJLoader::OBJLoader(const char* filepath) {
 }
 
 // v, vt, vn
-glm::vec4 OBJLoader::LoadVertexData(const std::string& data) {
+glm::vec4 OBJLoader::LoadVectorData(const std::string& data) {
 	const std::string separator = " ";
 	glm::vec4 vData = glm::vec4(0);
 	auto values = split(data, separator);

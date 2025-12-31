@@ -68,6 +68,40 @@ struct Vertex {
     }
 };
 
+// RAII Implementation
+struct Buffer {
+    VkDevice device{ VK_NULL_HANDLE };
+    VkBuffer buffer{ VK_NULL_HANDLE };
+    VkDeviceMemory memory{ VK_NULL_HANDLE };
+    VkDeviceSize size{ 0 };
+
+    ~Buffer() {
+        if (buffer)
+            vkDestroyBuffer(device, buffer, nullptr);
+        if (memory)
+            vkFreeMemory(device, memory, nullptr);
+    }
+
+    Buffer() {};
+
+    Buffer(const Buffer&) = delete;
+    Buffer& operator=(const Buffer&) = delete;
+
+    Buffer(Buffer&& other) noexcept {
+        *this = std::move(other);
+    }
+
+    Buffer& operator=(Buffer&& other) noexcept {
+        device = other.device;
+        buffer = other.buffer;
+        memory = other.memory;
+        size = other.size;
+        other.buffer = VK_NULL_HANDLE;
+        other.memory = VK_NULL_HANDLE;
+        return *this;
+    }
+};
+
 class Vulkan {
 
     // How many frames you let the CPU start rendering before the GPU is done
@@ -106,6 +140,7 @@ class Vulkan {
     VkDescriptorPool descriptorPool;
     VkDescriptorSet fragDescriptorSet[PING_PONG_FRAMES];
     VkDescriptorSet computeDescriptorSet[PING_PONG_FRAMES];
+    const uint32_t nDescriptorSets = 2; // Frag and Compute
 
     VkImage pathtracerImages[PING_PONG_FRAMES];
     VkDeviceMemory pathtracerImagesMemory[PING_PONG_FRAMES];
@@ -115,7 +150,7 @@ class Vulkan {
     VkSampler fragImageSampler;
     int textureIndex = 0;
 
-    VkBuffer vertexBuffer;
+    Buffer vertexBuffer;
     VkPipelineLayout pipelineLayout;
     VkPipelineLayout computePipelineLayout;
     VkPipeline graphicsPipeline;
@@ -644,11 +679,6 @@ public:
         vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
     }
 
-    struct UniformBuffer {
-        VkBuffer buffer;
-        VkDeviceMemory memory;
-    };
-
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -696,8 +726,10 @@ public:
         throw std::runtime_error("failed to find suitable memory type!");
     }
 
-    UniformBuffer createUniformBuffer(VkDeviceSize size, const void* initialData) {
-        UniformBuffer ubo{};
+    Buffer createUniformBuffer(VkDeviceSize size, const void* initialData) {
+        Buffer ubo{};
+        ubo.device = this->device;
+        ubo.size = size;
 
         createBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ubo.buffer, ubo.memory);
 
@@ -712,20 +744,27 @@ public:
         return ubo;
     }
 
-    void updateUniformBuffer(const UniformBuffer& ubo, const void* newData, VkDeviceSize size) {
+    void updateUniformBuffer(const Buffer& ubo, const void* newData, VkDeviceSize size) {
         void* data;
         vkMapMemory(device, ubo.memory, 0, size, 0, &data);
         memcpy(data, newData, (size_t)size);
         vkUnmapMemory(device, ubo.memory);
     }
 
-    struct StorageBuffer {
-        VkBuffer buffer;
-        VkDeviceMemory memory;
+    const uint32_t SSBOsCount = 5;
+    enum SSBOBinding {
+        BVH_NODES = 3,
+        TRIANGLES = 4,
+        VERTICES = 5,
+        EMISSIVES = 6,
+        MATERIALS = 7
     };
+    std::vector<Buffer> pathtracerSSBOs;
 
-    StorageBuffer createStorageBuffer(VkDeviceSize size, const void* initialData) {
-        StorageBuffer sbuf{};
+    Buffer createStorageBuffer(VkDeviceSize size, const void* initialData) {
+        Buffer sbuf{};
+        sbuf.device = this->device;
+        sbuf.size = size;
 
         // Create the buffer with STORAGE_BUFFER usage
         createBuffer(
@@ -1053,7 +1092,7 @@ public:
 
     
     PathtracerUBO pathtracerState{};
-    UniformBuffer pathtracerUBO;
+    Buffer pathtracerUBO;
     void createGraphicsPipeline() {
         // Graphics Pipeline
         VkCommandPoolCreateInfo cmdPoolInfo{};
@@ -1106,7 +1145,8 @@ public:
             { 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
+            { 6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { 7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
         };
         createDescriptorSetLayout(computeBindings, &this->computeDescriptorSetLayout);
 
@@ -1116,14 +1156,15 @@ public:
         };
         createDescriptorSetLayout(fragBindings, &this->descriptorSetLayout);
 
-        
+        this->pathtracerSSBOs.reserve(SSBOsCount);
         std::vector<VkDescriptorPoolSize> poolSizes = {
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 * PING_PONG_FRAMES },         // Only for compute UBO
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * PING_PONG_FRAMES }, // 1 lastFrameTex + 2 fragment textures (double buffering)
             { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 * PING_PONG_FRAMES },          // compute output image (2 because of double buffering)
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 * PING_PONG_FRAMES }          // SSBOs
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SSBOsCount * PING_PONG_FRAMES }          // SSBOs
         };
-        createDescriptorPool(poolSizes, 2 * PING_PONG_FRAMES);
+
+        createDescriptorPool(poolSizes, nDescriptorSets * PING_PONG_FRAMES);
 
         createImage2D(Pathtracer::WIDTH, Pathtracer::HEIGHT);
         create2DLinearImageSampler();
@@ -1151,19 +1192,23 @@ public:
 
         this->pathtracerPC.ct.tileSize = { Pathtracer::TILE_X, Pathtracer::TILE_Y };
 
-        OBJLoader objloader(RESOURCE("3DModels\\cornell_box.obj"));
+        OBJLoader objloader(RESOURCE("3DModels\\sibenik2.obj"));
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
         std::vector<OBJLoader::Vertex> objVertices = objloader.objVertices;
 
         // Load light geometry
-        OBJLoader lightLoader(RESOURCE("3DModels\\cornell_box-light.obj"));
+        OBJLoader lightLoader(RESOURCE("3DModels\\sibenik-light.obj"));
         std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
         std::vector<OBJLoader::Vertex> lightVerts = lightLoader.objVertices;
+
+        OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(0.9f, 0.9f, 0.9f), 50.0f };
+        std::vector<OBJLoader::Material> materials = objloader.GetMaterials();
+        materials.push_back(lightMat);
 
         // Merge light vertices
         uint32_t vertexOffset = objVertices.size();
         objVertices.insert(objVertices.end(), lightVerts.begin(), lightVerts.end());
-        for (auto& lt : lightTris) lt.indices += glm::uvec4(vertexOffset,vertexOffset,vertexOffset,4);
+        for (auto& lt : lightTris) lt.indices = glm::uvec4(lt.indices.x+vertexOffset, lt.indices.y+vertexOffset, lt.indices.z+vertexOffset, materials.size()-1);
 
         // Create SSBOs
         std::vector<glm::uvec3> meshTris(triangles.size());
@@ -1178,17 +1223,21 @@ public:
         triangles = std::move(reordered);
 
         auto tree = bvh.GetTree();
-        StorageBuffer treeSBO = createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data());
-        createSSBO(treeSBO.buffer, 3); // BVH Nodes
+        pathtracerSSBOs.push_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
+        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::BVH_NODES); // BVH Nodes
+
         //bvh.Print();
-        StorageBuffer trianglesSBO = createStorageBuffer(triangles.size() * sizeof(triangles[0]), triangles.data());
-        createSSBO(trianglesSBO.buffer, 4); // Triangles
+        pathtracerSSBOs.push_back(createStorageBuffer(triangles.size() * sizeof(triangles[0]), triangles.data()));
+        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::TRIANGLES); // Triangles
 
-        StorageBuffer positionsSBO = createStorageBuffer(objVertices.size() * sizeof(objVertices[0]), objVertices.data());
-        createSSBO(positionsSBO.buffer, 5); // Vertices
+        pathtracerSSBOs.push_back(createStorageBuffer(objVertices.size() * sizeof(objVertices[0]), objVertices.data()));
+        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::VERTICES); // Vertices
 
-        StorageBuffer emissiveTrianglesSBO = createStorageBuffer(lightTris.size() * sizeof(lightTris[0]), lightTris.data());
-        createSSBO(emissiveTrianglesSBO.buffer, 6); // Emissives/Light
+        pathtracerSSBOs.push_back(createStorageBuffer(lightTris.size() * sizeof(lightTris[0]), lightTris.data()));
+        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::EMISSIVES); // Emissives/Light
+
+        pathtracerSSBOs.push_back(createStorageBuffer(materials.size() * sizeof(materials[0]), materials.data()));
+        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::MATERIALS); // Materials
 
 
         // Dynamic State
@@ -1213,20 +1262,22 @@ public:
             {{ 1.0f,  1.0f}, {1.0f, 1.0f}}
         };
 
-        VkDeviceMemory vertexBufferMemory;
+        //VkDeviceMemory vertexBufferMemory;
+        this->vertexBuffer.device = this->device;
+        this->vertexBuffer.size = sizeof(vertices[0]) * vertices.size();
         VkBufferCreateInfo vertexBufferInfo{};
         vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        vertexBufferInfo.size = sizeof(vertices[0]) * vertices.size();
+        vertexBufferInfo.size = this->vertexBuffer.size;
         vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         vertexBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateBuffer(this->device, &vertexBufferInfo, nullptr, &this->vertexBuffer) != VK_SUCCESS) {
+        if (vkCreateBuffer(this->device, &vertexBufferInfo, nullptr, &this->vertexBuffer.buffer) != VK_SUCCESS) {
             std::cerr << "Failed to create vertex buffer\n";
             return;
         }
 
         VkMemoryRequirements vertexBufferMemRequirements;
-        vkGetBufferMemoryRequirements(this->device, this->vertexBuffer, &vertexBufferMemRequirements);
+        vkGetBufferMemoryRequirements(this->device, this->vertexBuffer.buffer, &vertexBufferMemRequirements);
 
         VkPhysicalDeviceMemoryProperties vertexBufferMemProperties;
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &vertexBufferMemProperties);
@@ -1241,18 +1292,18 @@ public:
         vertexBufferAllocInfo.allocationSize = vertexBufferMemRequirements.size;
         vertexBufferAllocInfo.memoryTypeIndex = memType;
 
-        if (vkAllocateMemory(this->device, &vertexBufferAllocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(this->device, &vertexBufferAllocInfo, nullptr, &vertexBuffer.memory) != VK_SUCCESS) {
             std::cerr << "Failed to allocate vertex buffer\n";
             return;
         }
 
-        vkBindBufferMemory(this->device, this->vertexBuffer, vertexBufferMemory, 0);
+        vkBindBufferMemory(this->device, this->vertexBuffer.buffer, vertexBuffer.memory, 0);
 
         // Once the vertex buffer is allocated and created, it's time to fill it with data
         void* data;
-        vkMapMemory(this->device, vertexBufferMemory, 0, vertexBufferInfo.size, 0, &data);
+        vkMapMemory(this->device, vertexBuffer.memory, 0, vertexBufferInfo.size, 0, &data);
         memcpy(data, vertices.data(), vertexBufferInfo.size);
-        vkUnmapMemory(this->device, vertexBufferMemory);
+        vkUnmapMemory(this->device, vertexBuffer.memory);
 
         /*
             Unfortunately the driver may not immediately copy the data into the buffer memory, for example because of caching.
@@ -1454,34 +1505,82 @@ public:
     }
 
     void shutdown() {
-        vkDeviceWaitIdle(this->device); // Ensures proper cleanup
+        vkDeviceWaitIdle(device);
 
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+        
+        // Synchronization objects
+        for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
             vkDestroyFence(device, inFlightFences[i], nullptr);
         }
 
+        for (uint32_t i = 0; i < SWAPCHAIN_IMAGE_COUNT; ++i)
+            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+
+        imagesInFlight.clear();
+
+        
+        // Descriptor resources
         vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
-        vkDestroyCommandPool(device, commandPool, nullptr);
+        vkDestroyDescriptorSetLayout(device, computeDescriptorSetLayout, nullptr);
 
+        
+        // Pipelines & layouts
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
+
+        vkDestroyPipeline(device, computePipeline, nullptr);
+
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
-        for (auto imageView : swapChainImageViews)
-            vkDestroyImageView(device, imageView, nullptr);
+        vkDestroyPipelineLayout(device, computePipelineLayout, nullptr);
+
+        
+        // Command pool (implicitly frees command buffers)
+        vkDestroyCommandPool(device, commandPool, nullptr);
+
+        
+        // Path tracer ping-pong images
+        for (uint32_t i = 0; i < PING_PONG_FRAMES; ++i) {
+            vkDestroyImageView(device, pathtracerImageViews[i], nullptr);
+            vkDestroyImage(device, pathtracerImages[i], nullptr);
+            vkFreeMemory(device, pathtracerImagesMemory[i], nullptr);
+        }
+
+        vkDestroySampler(device, pathtracerImageSampler, nullptr);
+
+        vkDestroySampler(device, fragImageSampler, nullptr);
+
+        
+        // Swapchain resources
+        for (VkImageView view : swapChainImageViews)
+            vkDestroyImageView(device, view, nullptr);
+
+        swapChainImageViews.clear();
+        swapChainImages.clear();
 
         vkDestroySwapchainKHR(device, swapChain, nullptr);
 
-        for(int i = 0; i < 2; i++)
-            vkDestroyImage(device, pathtracerImages[i], nullptr);
-        vkDestroyBuffer(device, vertexBuffer, nullptr);
+        
+        // Buffers
+        vertexBuffer.~Buffer();
+        vertexBuffer.buffer = VK_NULL_HANDLE;
+        vertexBuffer.memory = VK_NULL_HANDLE;
+
+        pathtracerSSBOs.clear();
+
+        pathtracerUBO.~Buffer();
+        pathtracerUBO.buffer = VK_NULL_HANDLE;
+        pathtracerUBO.memory = VK_NULL_HANDLE;
+        
+        // Device / instance
         vkDestroyDevice(device, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyInstance(instance, nullptr);
     }
+
 
 
     void loop(uint32_t& currentFrame) {
@@ -1591,7 +1690,7 @@ public:
         vkCmdBindPipeline(this->commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
 
         // bind vertex buffers, descriptor sets, and issue draw calls...
-        VkBuffer vertexBuffers[] = { this->vertexBuffer };
+        VkBuffer vertexBuffers[] = { this->vertexBuffer.buffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(this->commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
         //vkCmdDraw(this->commandBuffers[currentFrame], 6, 1, 0, 0);
