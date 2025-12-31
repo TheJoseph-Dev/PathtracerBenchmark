@@ -73,7 +73,6 @@ struct Material {
     vec4 albedo;
     float specular;
     float roughness;
-    float metalicness;
     float IOR;
     float transmission;
     
@@ -81,19 +80,20 @@ struct Material {
     float emissivePower;
 };
 
-Material m1 = Material(vec4(0.1, 0.7, 0.9, 1.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.0), 0.0);
-Material m2 = Material(vec4(0.9, 0.6, 0.4, 1.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.0), 0.0);
-Material tranM = Material(vec4(1.0), 0.7, 0.2, 0.0, 1.0, 0.4, vec3(0.0), 0.0);
-Material wRefM = Material(vec4(0.9), 0.9, 0.9, 0.0, 1.0, 0.0, vec3(0.0), 0.0);
+Material m1 = Material(vec4(0.1, 0.7, 0.9, 1.0), 0.0, 1.0, 0.0, 0.0, vec3(0.0), 0.0);
+Material m2 = Material(vec4(0.9, 0.6, 0.4, 1.0), 0.0, 1.0, 0.0, 0.0, vec3(0.0), 0.0);
+Material tranM = Material(vec4(1.0), 0.7, 0.2, 1.0, 0.4, vec3(0.0), 0.0);
+Material wRefM = Material(vec4(0.9), 0.9, 0.9, 1.0, 0.0, vec3(0.0), 0.0);
     
-Material wlm = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(1.0), 20.0);
-Material lm = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.9, 0.5, 0.1), 50.0);
-Material bLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.0, 0.5, 1.0), 5.0); 
-Material pRefM = Material(vec4(0.9, 0.5, 0.8, 1.0), 0.8, 0.7, 0.0, 1.0, 0.0, vec3(0.0), 0.0);
-Material rLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(1.0, 0.2, 0.1), 2.0); 
-Material gLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, 0.0, vec3(0.2, 0.9, 0.8), 1.0);
+Material wlm = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(1.0), 20.0);
+Material lm = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(0.9, 0.5, 0.1), 50.0);
+Material bLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(0.0, 0.5, 1.0), 5.0); 
+Material pRefM = Material(vec4(0.9, 0.5, 0.8, 1.0), 0.8, 0.7, 1.0, 0.0, vec3(0.0), 0.0);
+Material rLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(1.0, 0.2, 0.1), 2.0); 
+Material gLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(0.2, 0.9, 0.8), 1.0);
     
-Material[] mats = Material[] ( m1, m2, tranM, wRefM, pRefM, wlm, lm, rLight, gLight, bLight );
+// Material[] mats = Material[] ( m1, m2, tranM, wRefM, pRefM, wlm, lm, rLight, gLight, bLight );
+layout(std430, binding = 7) readonly buffer Materials { Material mats[]; };
 
 // layout (std430, binding=12) readonly buffer objsData {
 //     ObjectInfo objsInfo[];
@@ -237,7 +237,7 @@ struct RenderData {
 };
 
 #define MAX_DIST 100.0
-#define MAX_LIGHT_BOUNCES 6 /*8*/
+#define MAX_LIGHT_BOUNCES 4 /*8*/
 #define MAX_TRAVERSAL_DEPTH 64
 #define MIN_TRACE_DIST 0.001
 #define NORMAL_OFFSET 0.001
@@ -722,7 +722,7 @@ RenderData worldRender(vec2 uv, Ray ray) {
             vec3 V = normalize(-ray.dir);
             if (didNEE) {
                 // MIS
-                float pdfBRDF = ggxPdf(N, V, ls.wi, mat.roughness);
+                float pdfBRDF = glossyWeight * ggxPdf(N, V, ls.wi, mat.roughness);
                 float w = MISWeight(ls.pdf, pdfBRDF);
                 vec3 f = ggxBRDF(N, V, ls.wi, mat.roughness, mat.albedo.rgb);
 
@@ -735,18 +735,16 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
             vec3 f = ggxBRDF(N, V, ggxDir, mat.roughness, mat.albedo.rgb);
 
-            throughput /= glossyWeight;
             throughput *= f * max(dot(N, ggxDir), 0.0) / pdfGGX;
 
             ray.dir = ggxDir;
         } else {
-            throughput /= diffuseWeight;
             throughput *= mat.albedo.rgb;
 
             if (didNEE) {
                 // MIS
                 float cosS = max(dot(N, ls.wi), 0.0);
-                float pdfBRDF = cosS * INV_PI;
+                float pdfBRDF = diffuseWeight * cosS * INV_PI;
 
                 float w = MISWeight(ls.pdf, pdfBRDF);
 
