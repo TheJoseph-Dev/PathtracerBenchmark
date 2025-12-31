@@ -42,8 +42,8 @@ OBJLoader::OBJLoader(const char* filepath) {
 				this->mats.push_back({});
 			}
 			else if (line.rfind("Ns", 0) == 0) this->mats.back().specular = stof(line.substr(3)); // Specular
-			else if (line.rfind("Kd", 0) == 0) this->mats.back().albedo = LoadVectorData(line.substr(3)); // Albedo
-			else if (line.rfind("Ke", 0) == 0) this->mats.back().emissiveColor = LoadVectorData(line.substr(3)); // Emissive Color
+			else if (line.rfind("Kd", 0) == 0) this->mats.back().albedo = LoadVectorData(line); // Albedo
+			else if (line.rfind("Ke", 0) == 0) this->mats.back().emissiveColor = LoadVectorData(line); // Emissive Color
 			else if (line.rfind("Ni", 0) == 0) this->mats.back().IOR = stof(line.substr(3)); // IOR
 			else if (line.rfind("d", 0) == 0) this->mats.back().transmission = 1.0-stof(line.substr(2)); // Transmission
 			else if (line.rfind("Pr", 0) == 0) this->mats.back().roughness = stof(line.substr(3)); // Roughness
