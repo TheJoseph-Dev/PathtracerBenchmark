@@ -31,14 +31,13 @@ namespace Pathtracer {
         }
 
         void mainLoop() {
-
+            Pathtracer::Benchmark binfo = pathtracerConfig.GetBenchmarkInfo();
             uint32_t currentFrame = 0;
-
-            while (!glfwWindowShouldClose(window)) {
-                vulkan.loop(currentFrame);
+            while (!glfwWindowShouldClose(window) && (!binfo.btype || binfo.spp--)) {
+                vulkan.run(currentFrame);
                 glfwPollEvents();
             }
+            Pathtracer::Statistics stats = vulkan.GetStatistics();
         }
-
     };
 }

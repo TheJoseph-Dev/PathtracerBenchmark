@@ -3,15 +3,21 @@
 int main() {
 
     {
-        Pathtracer::Config pathtracerConfig(
-            Pathtracer::AccelerationStructure::BVH,
-            Pathtracer::API::VULKAN,
-            Pathtracer::Scene::CORNELL_BOX,
-            Pathtracer::Resolution::R480x320,
-            6
+        using namespace Pathtracer;
+        Benchmark benchmarkInfo = {};
+        benchmarkInfo.btype = BenchmarkType::SPP;
+        benchmarkInfo.spp = 1024U;
+        
+        Config pathtracerConfig(
+            AccelerationStructure::BVH,
+            API::VULKAN,
+            Scene::CORNELL_BOX,
+            Resolution::R720x480,
+            6,
+            benchmarkInfo
         );
 
-        Pathtracer::View view(pathtracerConfig);
+        View view(pathtracerConfig);
         view.run();
     }
 

@@ -27,7 +27,27 @@ namespace Pathtracer {
 
         ComputeTile ct;
         uint32_t lightBounces;
-        // glm::uvec4 lightBounces
+    };
+
+    /*
+    enum ErrorType {
+        MSE = 0,
+        RMSE = 1
+    };
+    */
+
+    enum BenchmarkType {
+        NONE = 0,
+        SPP = 1, /*Samples Per Pixel*/
+        IMGREF = 2 /*Image Reference*/
+    };
+
+
+    struct Benchmark {
+        BenchmarkType btype;
+        union {
+            uint32_t spp;
+        };
     };
 
     enum AccelerationStructure {
@@ -61,11 +81,13 @@ namespace Pathtracer {
         const Scene scene;
         const Resolution resolution;
         const uint32_t lightBounces;
+        const Benchmark benchmarkInfo;
+        const bool saveOutputImages;
     
     public:
 
-        Config(AccelerationStructure as, API api, Scene scene, Resolution resolution, uint32_t lightBounces)
-        : accelerationStructure(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces)
+        Config(AccelerationStructure as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, bool saveOutputImages = false)
+            : accelerationStructure(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImages(saveOutputImages)
         {}
 
         AccelerationStructure GetAccelerationStructure() const {
@@ -92,13 +114,6 @@ namespace Pathtracer {
             }
         }
 
-        /*
-        Resolution GetResolution() const {
-            checkInitialized();
-            return resolution;
-        }
-        */
-
         glm::uvec2 GetResolution() const {
             switch (this->resolution) {
                 case Resolution::R480x320: return glm::uvec2(480, 320);
@@ -113,6 +128,26 @@ namespace Pathtracer {
         uint32_t GetLightBounces() const {
             return this->lightBounces;
         }
+
+        Benchmark GetBenchmarkInfo() const {
+            return this->benchmarkInfo;
+        }
+    };
+
+    struct TreeStatistics {
+        uint32_t rays;
+        uint32_t isecs;
+        uint32_t traversals;
+        uint32_t pad;
+    };
+
+    struct Statistics {
+        TreeStatistics treeStats;
+        float elapsedTotalTime = 0.0f;
+        float avgFrameTime = 0.0f;
+
+        float accStructBuildTime = 0.0f;
+        uint32_t accStructMemoryUsage = 0;
     };
 }
 
@@ -167,6 +202,8 @@ struct Buffer {
             vkDestroyBuffer(device, buffer, nullptr);
         if (memory)
             vkFreeMemory(device, memory, nullptr);
+        buffer = VK_NULL_HANDLE;
+        memory = VK_NULL_HANDLE;
     }
 
     Buffer() {};
@@ -198,7 +235,9 @@ class Vulkan {
     static constexpr uint32_t SWAPCHAIN_IMAGE_COUNT = 2;
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2; //SWAPCHAIN_IMAGE_COUNT - 1;
     static constexpr uint32_t PING_PONG_FRAMES = 2;
-    
+    static constexpr uint32_t nDescriptorSets = 2; // Frag and Compute
+    static constexpr uint32_t PATHTRACER_IMG_COUNT = PING_PONG_FRAMES + 1; // + 1 comes from acc out image
+
     VkInstance instance; // Connection between Vulkan and the main program
     VkPhysicalDevice physicalDevice;
     VkDevice device; // After selecting a Physical Device, create a logical device to interface with it
@@ -227,12 +266,11 @@ class Vulkan {
     VkDescriptorPool descriptorPool;
     VkDescriptorSet fragDescriptorSet[PING_PONG_FRAMES];
     VkDescriptorSet computeDescriptorSet[PING_PONG_FRAMES];
-    const uint32_t nDescriptorSets = 2; // Frag and Compute
 
-    VkImage pathtracerImages[PING_PONG_FRAMES];
-    VkDeviceMemory pathtracerImagesMemory[PING_PONG_FRAMES];
-    VkImageView pathtracerImageViews[PING_PONG_FRAMES];
-    VkImageLayout pathtracerImageLayouts[PING_PONG_FRAMES];
+    VkImage pathtracerImages[PATHTRACER_IMG_COUNT];
+    VkDeviceMemory pathtracerImagesMemory[PATHTRACER_IMG_COUNT];
+    VkImageView pathtracerImageViews[PATHTRACER_IMG_COUNT];
+    VkImageLayout pathtracerImageLayouts[PATHTRACER_IMG_COUNT];
     VkSampler pathtracerImageSampler;
     VkSampler fragImageSampler;
     int textureIndex = 0;
@@ -255,9 +293,10 @@ class Vulkan {
     Pathtracer::Config pathtracerConfig;
     const uint32_t WIDTH, HEIGHT;
 public:
-    Vulkan(const Pathtracer::Config& pathtracerConfig):
+    Vulkan(const Pathtracer::Config& pathtracerConfig) :
         pathtracerConfig(pathtracerConfig), WIDTH(pathtracerConfig.GetResolution().x), HEIGHT(pathtracerConfig.GetResolution().y)
-    {}
+    {
+    }
 
     void init(GLFWwindow* window) {
         createInstance();
@@ -267,6 +306,7 @@ public:
         createGraphicsPipeline();
     }
 
+private:
     void createInstance() {
         std::cout << "\n Vulkan Header Version: " << VK_HEADER_VERSION << std::endl;
         std::cout << " Vulkan API Version: " << VK_API_VERSION_VARIANT(VK_HEADER_VERSION_COMPLETE)
@@ -339,7 +379,7 @@ public:
             void* pUserData) -> VkBool32 {
                 std::cerr << "[VULKAN DEBUG] " << pCallbackData->pMessage << std::endl;
                 return VK_FALSE;
-        };
+            };
         debugCreateInfo.pUserData = nullptr;
 
         // Load the extension function
@@ -422,7 +462,7 @@ public:
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
-        
+
         std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
         for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
@@ -630,14 +670,14 @@ public:
         shaderModuleInfo.codeSize = shaderBuffer.size();
         shaderModuleInfo.pCode = reinterpret_cast<const uint32_t*>(shaderBuffer.data());
         if (vkCreateShaderModule(this->device, &shaderModuleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-            std::cerr << "Failed to create VkShaderModule\n"; 
+            std::cerr << "Failed to create VkShaderModule\n";
             return std::nullopt;
         }
 
         return shaderModule;
     }
 
-    VkCommandBuffer beginSingleTimeCommands() {
+    VkCommandBuffer beginSingleTimeCommands() const {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -656,7 +696,7 @@ public:
         return commandBuffer;
     }
 
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer) {
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer) const {
         vkEndCommandBuffer(commandBuffer);
 
         VkSubmitInfo submitInfo{};
@@ -842,39 +882,62 @@ public:
         vkUnmapMemory(device, ubo.memory);
     }
 
-    const uint32_t SSBOsCount = 5;
+    const uint32_t SSBOsCount = 6;
     enum SSBOBinding {
         BVH_NODES = 3,
         TRIANGLES = 4,
         VERTICES = 5,
         EMISSIVES = 6,
-        MATERIALS = 7
+        MATERIALS = 7,
+
+        STATISTICS = 9
     };
     std::vector<Buffer> pathtracerSSBOs;
+    std::vector<Buffer> stagingBuffers;
 
-    Buffer createStorageBuffer(VkDeviceSize size, const void* initialData) {
-        Buffer sbuf{};
-        sbuf.device = this->device;
-        sbuf.size = size;
-
-        // Create the buffer with STORAGE_BUFFER usage
+    Buffer createStagingBuffer(VkDeviceSize size, const void* initialData) {
+        Buffer staging{};
+        staging.device = this->device;
+        staging.size = size;
         createBuffer(
             size,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            sbuf.buffer,
-            sbuf.memory
+            staging.buffer,
+            staging.memory
         );
 
-        // Upload initial data if provided
+        // Map & copy initial data
         if (initialData) {
             void* data;
-            vkMapMemory(device, sbuf.memory, 0, size, 0, &data);
-            memcpy(data, initialData, static_cast<size_t>(size));
-            vkUnmapMemory(device, sbuf.memory);
+            vkMapMemory(device, staging.memory, 0, size, 0, &data);
+            memcpy(data, initialData, size);
+            vkUnmapMemory(device, staging.memory);
         }
+        return staging;
+    }
 
-        return sbuf;
+    Buffer createStorageBuffer(VkDeviceSize size, const void* initialData, bool keepStaging = false) {
+        Buffer staging = createStagingBuffer(size, initialData);
+
+        // Create device-local GPU buffer
+        Buffer gpuBuffer{};
+        gpuBuffer.device = this->device;
+        gpuBuffer.size = size;
+        createBuffer(
+            size,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            gpuBuffer.buffer,
+            gpuBuffer.memory
+        );
+
+        // Copy staging => device-local buffer
+        copyBuffer(staging.buffer, gpuBuffer.buffer, size);
+
+        if (keepStaging) this->stagingBuffers.push_back(std::move(staging));
+        
+        return gpuBuffer; // C++ guarantees it stays alive, so ~Buffer not called here
     }
 
     void createSSBO(const VkBuffer& buffer, uint32_t binding) {
@@ -883,32 +946,19 @@ public:
         bufferInfo.offset = 0;
         bufferInfo.range = VK_WHOLE_SIZE;
 
-        for (int i = 0; i < PING_PONG_FRAMES; i++)
-        {
-            VkWriteDescriptorSet write{};
-            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstBinding = binding;
+        write.dstArrayElement = 0;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        write.descriptorCount = 1;
+        write.pBufferInfo = &bufferInfo;
+        for (int i = 0; i < PING_PONG_FRAMES; i++) {
             write.dstSet = computeDescriptorSet[i];
-            write.dstBinding = binding;
-            write.dstArrayElement = 0;
-            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            write.descriptorCount = 1;
-            write.pBufferInfo = &bufferInfo;
-
             vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
         }
     }
 
-
-    /*
-        | Scenario                             | Use Staging Buffer? | Why                                                                                    |
-        | ------------------------------------ | ------------------- | -------------------------------------------------------------------------------------- |
-        | Discrete GPU, infrequent UBO updates | Yes                 | Best GPU performance; device-local memory is fast                                      |
-        | Integrated GPU (shared memory)       | No                  | No real benefit from copying; adds complexity                                          |
-        | Frequent updates per frame           | Maybe not           | Copying becomes a bottleneck; better to use ring buffers or persistently mapped memory |
-        | Need maximum GPU performance         | Yes                 | Allows GPU-optimal memory usage                                                        |
-    
-        Therefore, when having to update an image many times it is better to not stage at all
-    */
 
     void create2DLinearImageSampler() {
         VkSamplerCreateInfo dataSamplerInfo{};
@@ -944,7 +994,7 @@ public:
     void createImage2D(uint32_t width, uint32_t height) {
 
         // Double Buffer
-        for (int i = 0; i < PING_PONG_FRAMES; i++) {
+        for (int i = 0; i < PATHTRACER_IMG_COUNT; i++) {
             this->pathtracerImages[i] = {};
             this->pathtracerImagesMemory[i] = {};
             this->pathtracerImageViews[i] = {};
@@ -960,7 +1010,7 @@ public:
             dataImageInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
             dataImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
             dataImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            dataImageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            dataImageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
             dataImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             dataImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -992,13 +1042,28 @@ public:
             dataTextureInfo.subresourceRange.layerCount = 1;
 
             vkCreateImageView(this->device, &dataTextureInfo, nullptr, &pathtracerImageViews[i]);
-            transitionImageLayout(this->pathtracerImages[i], VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-            pathtracerImageLayouts[i] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            VkImageLayout imgLayout = i != PATHTRACER_IMG_COUNT-1 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
+            transitionImageLayout(this->pathtracerImages[i], VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, imgLayout);
+            pathtracerImageLayouts[i] = imgLayout;
         }
+
+        // Acc image staging buffer
+        Buffer stagingAcc{};
+        stagingAcc.device = this->device;
+        stagingAcc.size = this->WIDTH * this->HEIGHT * sizeof(glm::vec4);
+        createBuffer(
+            stagingAcc.size, // size in bytes
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT, // for vkCmdCopyImageToBuffer
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingAcc.buffer,
+            stagingAcc.memory
+        );
+        this->stagingBuffers.push_back(std::move(stagingAcc));
     }
 
-    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
-        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer cmdbf = VK_NULL_HANDLE) const {
+        VkCommandBuffer commandBuffer = cmdbf ? cmdbf : beginSingleTimeCommands();
 
         /*
             One of the most common ways to perform layout transitions is using an image memory barrier. A pipeline barrier like that is generally
@@ -1064,6 +1129,20 @@ public:
             sourceStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         }
+        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        }
+        else if (oldLayout == VK_IMAGE_LAYOUT_GENERAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        }
         else {
             throw std::invalid_argument("unsupported layout transition!");
         }
@@ -1077,7 +1156,7 @@ public:
             1, &barrier
         );
 
-        endSingleTimeCommands(commandBuffer);
+        if(!cmdbf) endSingleTimeCommands(commandBuffer);
     }
 
     void transitionCompute(VkCommandBuffer commandBuffer, VkImage image, int currentFrame) {
@@ -1148,40 +1227,6 @@ public:
         pathtracerImageLayouts[textureIndex] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 
-    /*
-    void copyBufferToImage2D(VkBuffer buffer, VkImage image, uint32_t size) {
-        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-        VkBufferImageCopy region{};
-        region.bufferOffset = 0;
-        region.bufferRowLength = 0;
-        region.bufferImageHeight = 0;
-
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel = 0;
-        region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 1;
-
-        region.imageOffset = { 0, 0, 0 };
-        region.imageExtent = {
-            size,
-            1,
-            1
-        };
-
-        vkCmdCopyBufferToImage(
-            commandBuffer,
-            buffer,
-            image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            1,
-            &region
-        );
-
-        endSingleTimeCommands(commandBuffer);
-    }
-    */
-
-    
     PathtracerUBO pathtracerState{};
     Buffer pathtracerUBO;
     void createGraphicsPipeline() {
@@ -1233,11 +1278,13 @@ public:
             { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
+            { SSBOBinding::BVH_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::TRIANGLES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::VERTICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::EMISSIVES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::MATERIALS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { 8, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::STATISTICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
         };
         createDescriptorSetLayout(computeBindings, &this->computeDescriptorSetLayout);
 
@@ -1251,8 +1298,8 @@ public:
         std::vector<VkDescriptorPoolSize> poolSizes = {
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 * PING_PONG_FRAMES },         // Only for compute UBO
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * PING_PONG_FRAMES }, // 1 lastFrameTex + 2 fragment textures (double buffering)
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 * PING_PONG_FRAMES },          // compute output image (2 because of double buffering)
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SSBOsCount * PING_PONG_FRAMES }          // SSBOs
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 * PING_PONG_FRAMES },          // compute output image + acc image framebuffer
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SSBOsCount * PING_PONG_FRAMES } // SSBOs
         };
 
         createDescriptorPool(poolSizes, nDescriptorSets * PING_PONG_FRAMES);
@@ -1273,6 +1320,9 @@ public:
 
             // Output storage image for compute
             updateStorageImageDescriptorSet(computeDescriptorSet[i], 0, pathtracerImageViews[i], VK_IMAGE_LAYOUT_GENERAL);
+
+            // Acc image
+            updateStorageImageDescriptorSet(computeDescriptorSet[i], 8, pathtracerImageViews[PATHTRACER_IMG_COUNT-1], VK_IMAGE_LAYOUT_GENERAL);
 
             // Input sampler for compute (previous frame texture)
             updateCombinedImageSamplerDescriptorSet(computeDescriptorSet[i], 2, pathtracerImageSampler, pathtracerImageViews[1 - i]);
@@ -1331,6 +1381,9 @@ public:
 
         pathtracerSSBOs.push_back(createStorageBuffer(materials.size() * sizeof(materials[0]), materials.data()));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::MATERIALS); // Materials
+
+        pathtracerSSBOs.push_back(createStorageBuffer(sizeof(Pathtracer::TreeStatistics), nullptr, true));
+        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::STATISTICS); // Statistics
 
 
         // Dynamic State
@@ -1597,6 +1650,7 @@ public:
         this->imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
     }
 
+public:
     void shutdown() {
         vkDeviceWaitIdle(device);
 
@@ -1636,7 +1690,7 @@ public:
 
         
         // Path tracer ping-pong images
-        for (uint32_t i = 0; i < PING_PONG_FRAMES; ++i) {
+        for (uint32_t i = 0; i < PATHTRACER_IMG_COUNT; ++i) {
             vkDestroyImageView(device, pathtracerImageViews[i], nullptr);
             vkDestroyImage(device, pathtracerImages[i], nullptr);
             vkFreeMemory(device, pathtracerImagesMemory[i], nullptr);
@@ -1659,14 +1713,11 @@ public:
         
         // Buffers
         vertexBuffer.~Buffer();
-        vertexBuffer.buffer = VK_NULL_HANDLE;
-        vertexBuffer.memory = VK_NULL_HANDLE;
-
+        
         pathtracerSSBOs.clear();
+        stagingBuffers.clear();
 
         pathtracerUBO.~Buffer();
-        pathtracerUBO.buffer = VK_NULL_HANDLE;
-        pathtracerUBO.memory = VK_NULL_HANDLE;
         
         // Device / instance
         vkDestroyDevice(device, nullptr);
@@ -1676,18 +1727,17 @@ public:
 
 
 
-    void loop(uint32_t& currentFrame) {
+    void run(uint32_t& currentFrame) {
         //puts("=== START LOOP ===");
 
-        // 1. Wait for frame's fence (makes command buffer safe to reuse)
+        // Wait for frame's fence (makes command buffer safe to reuse)
         VkResult waitResult = vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
         if (waitResult != VK_SUCCESS) {
-            // GPU is still processing => early return
             puts("inFlightFences waiting");
             return;
         }
 
-        // 2. Acquire swapchain image
+        // Acquire swapchain image
         uint32_t imageIndex;
         VkResult acquireResult = vkAcquireNextImageKHR(device, swapChain, 2000000000ULL, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
@@ -1699,7 +1749,7 @@ public:
         }
 
 
-        // 3. If this swapchain image is already in-flight, wait for it
+        // If this swapchain image is already in-flight, wait for it
         if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
             waitResult = vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, 2000000000ULL);
             if (waitResult != VK_SUCCESS) {
@@ -1708,13 +1758,13 @@ public:
             }
         }
 
-        // 5. Reset the fence AFTER it is no longer used
+        // Reset the fence AFTER it is no longer used
         vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
-        // 4. Assign fence for this frame to this image
+        // Assign fence for this frame to this image
         imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
-        // 6. Reset command buffer
+        // Reset command buffer
         vkResetCommandBuffer(commandBuffers[currentFrame], 0);
 
         //puts("==== AFTER FENCES ====");
@@ -1872,5 +1922,117 @@ public:
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
         pathtracerState.iFrame++;
         //puts("=== END LOOP ===");
+    }
+
+    Pathtracer::Statistics GetStatistics() const {
+        Pathtracer::Benchmark binfo = this->pathtracerConfig.GetBenchmarkInfo();
+        if (!binfo.btype) return {};
+
+        const uint32_t STAGING_STATS = 1, STAGING_ACC = 0;
+        VkImage accImg = this->pathtracerImages[PATHTRACER_IMG_COUNT - 1];
+
+        VkCommandBuffer cmdbf = beginSingleTimeCommands();
+        transitionImageLayout(accImg, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, cmdbf);
+
+        VkBufferImageCopy imgCopy{};
+        imgCopy.bufferOffset = 0;
+        imgCopy.bufferRowLength = 0; // tightly packed
+        imgCopy.bufferImageHeight = 0;
+        imgCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imgCopy.imageSubresource.mipLevel = 0;
+        imgCopy.imageSubresource.baseArrayLayer = 0;
+        imgCopy.imageSubresource.layerCount = 1;
+        imgCopy.imageOffset = { 0, 0, 0 };
+        imgCopy.imageExtent = { this->WIDTH, this->HEIGHT, 1 };
+
+        vkCmdCopyImageToBuffer(cmdbf, accImg, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->stagingBuffers[STAGING_ACC].buffer, 1, &imgCopy);
+
+        const Buffer& statsSSBO = this->pathtracerSSBOs.back();
+        const Buffer& stagingStats = this->stagingBuffers[STAGING_STATS];
+
+        VkBufferCopy statsCopy{};
+        statsCopy.srcOffset = 0;
+        statsCopy.dstOffset = 0;
+        statsCopy.size = sizeof(Pathtracer::TreeStatistics);
+
+        vkCmdCopyBuffer(cmdbf, statsSSBO.buffer, stagingStats.buffer, 1, &statsCopy);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmdbf;
+
+        endSingleTimeCommands(cmdbf);
+        vkQueueWaitIdle(this->graphicsQueue);
+
+        std::vector<glm::vec4> pixels;
+        void* mappedPixels = nullptr;
+        vkMapMemory(this->device, this->stagingBuffers[STAGING_ACC].memory, 0, VK_WHOLE_SIZE, 0, &mappedPixels);
+        pixels.resize(this->WIDTH * this->HEIGHT);
+        memcpy(pixels.data(), mappedPixels, this->WIDTH * this->HEIGHT * sizeof(glm::vec4));
+        vkUnmapMemory(this->device, this->stagingBuffers[STAGING_ACC].memory);
+
+        void* mappedStats = nullptr;
+        vkMapMemory(this->device, stagingStats.memory, 0, sizeof(Pathtracer::TreeStatistics), 0, &mappedStats);
+        Pathtracer::TreeStatistics treeStats = *reinterpret_cast<Pathtracer::TreeStatistics*>(mappedStats);
+        vkUnmapMemory(this->device, stagingStats.memory);
+        
+        /*
+        VkClearColorValue clearVal = { 0.f, 0.f, 0.f, 0.f };
+        VkImageSubresourceRange range{};
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.levelCount = 1;
+        range.layerCount = 1;
+        vkCmdClearColorImage(cmdbf, accImg, VK_IMAGE_LAYOUT_GENERAL, &clearVal, 1, &range);
+        */
+
+        for (auto& px : pixels)
+            px /= static_cast<float>(binfo.spp);
+        
+        writePPM("output.ppm", pixels, this->WIDTH, this->HEIGHT);
+
+        std::cout << "[STATS]\n RAYS: " << treeStats.rays << "\n";
+        Pathtracer::Statistics stats = { treeStats };
+        return stats;
+    }
+
+private:
+    void writePPM(const std::string& filename, const std::vector<glm::vec4>& pixels, int width, int height, bool useGamma = true) const {
+        std::ofstream out(filename, std::ios::binary);
+        if (!out) {
+            throw std::runtime_error("Failed to open file for writing PPM");
+        }
+
+        auto linearToSRGB = [](float c) {
+            c = std::clamp(c, 0.f, 1.f);
+            return c <= 0.0031308f ? 12.92f * c : 1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f;
+        };
+
+        // Write PPM header (P6 = binary RGB)
+        out << "P6\n" << width << " " << height << "\n255\n";
+
+        for (int y = 0; y < height; ++y) { // flip vertically
+            for (int x = 0; x < width; ++x) {
+                const glm::vec4& c = pixels[y * width + x];
+                float r = std::clamp(c.r, 0.0f, 1.0f);
+                float g = std::clamp(c.g, 0.0f, 1.0f);
+                float b = std::clamp(c.b, 0.0f, 1.0f);
+
+                if (useGamma) {
+                    r = linearToSRGB(r);
+                    g = linearToSRGB(g);
+                    b = linearToSRGB(b);
+                }
+
+                unsigned char rgb[3];
+                rgb[0] = static_cast<unsigned char>(r * 255.0f);
+                rgb[1] = static_cast<unsigned char>(g * 255.0f);
+                rgb[2] = static_cast<unsigned char>(b * 255.0f);
+
+                out.write(reinterpret_cast<char*>(rgb), 3);
+            }
+        }
+
+        out.close();
     }
 };
