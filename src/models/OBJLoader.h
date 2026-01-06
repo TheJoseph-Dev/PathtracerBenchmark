@@ -21,9 +21,6 @@ class OBJLoader {
 		float* vertices = nullptr;
 		int verticesSize = 0; // Considers Stride, but not type
 		int verticesCount = 0; // Just the vertices count
-
-		//float* vPos = nullptr; // Only the vertex positions
-		//float* vNPos = nullptr; // Only the vertex position and normals
 	};
 
 	VertexData vData;
@@ -40,30 +37,6 @@ public:
 		glm::vec4 normal;
 
 		static int GetStride() { return (4 * 3); }
-		struct VHash {
-			size_t operator()(const OBJLoader::Vertex& v) const {
-				auto hashFloat = [](float f) { return std::hash<float>()(f); };
-
-				size_t hx = hashFloat(v.position.x);
-				size_t hy = hashFloat(v.position.y);
-				size_t hz = hashFloat(v.position.z);
-
-				size_t htx = hashFloat(v.textureCoord.x);
-				size_t hty = hashFloat(v.textureCoord.y);
-
-				size_t hnx = hashFloat(v.normal.x);
-				size_t hny = hashFloat(v.normal.y);
-				size_t hnz = hashFloat(v.normal.z);
-
-				// Combine hashes (simple XOR + shift)
-				size_t h = hx ^ (hy << 1) ^ (hz << 2) ^ (htx << 3) ^ (hty << 4) ^ (hnx << 5) ^ (hny << 6) ^ (hnz << 7);
-				return h;
-			}
-		};
-
-		inline bool operator==(const Vertex& other) const {
-			return this->position == other.position && this->textureCoord == other.textureCoord && this->normal == other.normal;
-		}
 	};
 
 	struct Triangle {

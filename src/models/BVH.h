@@ -49,15 +49,6 @@ class BVH {
         }
     };
 
-    struct DynamicNode {
-        int32_t id;
-        AABB bbox;
-        uint32_t triIdx;
-        uint32_t triCount;
-        DynamicNode* left;
-        DynamicNode* right;
-    };
-
     struct Node {
         AABB bbox;  
         int32_t left;      // index of left child (-1 if leaf)
@@ -66,13 +57,12 @@ class BVH {
         uint32_t triCount; // number of triangles in leaf
     };
 
-    DynamicNode* root;
     uint32_t size;
 
 public:
 
     BVH(const OBJLoader::MeshGeometry& meshgeo);
-    ~BVH();
+    ~BVH() {};
 
     struct Triangle {
         uint32_t oIdx;
@@ -80,46 +70,25 @@ public:
         AABB bbox;
     };
 
+    void Build();
+
 private:
 
 int SplitMedian(const AABB& bounds, int l, int r);
 int SplitSAH(const AABB& bounds, int l, int r);
 
-void Build(DynamicNode** root, int l, int r);
-
-// DFS
-std::vector<Node> Flatten() const {
-    std::vector<Node> tree(this->size);
-    std::vector<DynamicNode*> stk;
-    stk.reserve(this->size);
-    stk.push_back(root);
-    while(!stk.empty()) {
-        DynamicNode* node = stk.back(); 
-        stk.pop_back();
-        tree[node->id] = { node->bbox, node->left ? node->left->id : -1, node->right ? node->right->id : -1, node->triIdx, node->triCount };
-        if(node->left) stk.push_back(node->left);
-        if(node->right) stk.push_back(node->right);
-    }
-    return tree;
-}
-
-void FreeTree(DynamicNode* root) {
-    if(!root) return;
-    FreeTree(root->right);
-    FreeTree(root->left);
-    delete root;
-}
-
 std::vector<Triangle> triangles;
+std::vector<Node> tree;
+
+uint32_t Build(int l, int r);
 
 public:
 
     std::vector<Node> GetTree() const {
-        return this->Flatten();
+        return this->tree;
     }
 
     void Print() const {
-        auto tree = this->GetTree();
         for (size_t i = 0; i < tree.size(); i++) printf("%d | (%d, %d | %d, %d) => bbmin(%.2f %.2f %.2f) bbmax(%.2f %.2f %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].bbox.min.x, tree[i].bbox.min.y, tree[i].bbox.min.z, tree[i].bbox.max.x, tree[i].bbox.max.y, tree[i].bbox.max.z);
     }
 

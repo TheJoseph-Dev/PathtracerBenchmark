@@ -14,7 +14,8 @@ int main() {
             Scene::CORNELL_BOX,
             Resolution::R720x480,
             6,
-            benchmarkInfo
+            benchmarkInfo,
+            true
         );
 
         View view(pathtracerConfig);

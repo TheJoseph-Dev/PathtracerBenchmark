@@ -21,9 +21,13 @@ BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) {
     }
 
     this->size = 0;
-    this->root = nullptr;
-    this->Build(&this->root, 0, this->triangles.size());
+    this->tree.resize(4*triangles.size());
+    // Build => Made build public so it's easier to benchmark
 };
+
+void BVH::Build() {
+    this->Build(0, this->triangles.size());
+}
 
 int BVH::SplitMedian(const AABB& bounds, int l, int r) {
     // Choose split axis
@@ -152,33 +156,28 @@ int BVH::SplitSAH(const AABB& bounds, int l, int r) {
     return splitIndex;
 }
 
-void BVH::Build(DynamicNode** root, int l, int r) {
-    *root = new DynamicNode();
-    DynamicNode* node = *root;
-    node->id = this->size++;
+uint32_t BVH::Build(int l, int r) {
+    uint32_t nodeIdx = this->size++;
+    Node& node = this->tree[nodeIdx];
 
     AABB bounds;
     for (int i = l; i < r; i++)
         bounds.expand(triangles[i].bbox);
-    node->bbox = bounds;
+    node.bbox = bounds;
 
     const int triCount = r-l;
     if(triCount <= leafSize) {
-        node->left = node->right = nullptr;
-        node->triCount = triCount;
-        node->triIdx = l;
-        return void();
+        node.left = node.right = -1;
+        node.triCount = triCount;
+        node.triIdx = l;
+        return nodeIdx;
     }
 
     int mid = SplitSAH(bounds, l, r);
 
-    Build(&node->left, l, mid);
-    Build(&node->right, mid, r);
-    node->triIdx = 0;
-    node->triCount = 0;
+    node.left = Build(l, mid);
+    node.right = Build(mid, r);
+    node.triIdx = 0;
+    node.triCount = 0;
+    return nodeIdx;
 }
-
-BVH::~BVH() {
-    this->FreeTree(this->root);
-    this->root = nullptr;
-};

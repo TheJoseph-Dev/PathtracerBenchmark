@@ -8,6 +8,7 @@
 #include <fstream>
 #include <direct.h>
 #include <optional>
+#include <chrono>
 #include <glm/glm.hpp>
 #include "models/OBJLoader.h"
 #include "models/BVH.h"
@@ -29,13 +30,12 @@ namespace Pathtracer {
         uint32_t lightBounces;
     };
 
+    
     /*
-    enum ErrorType {
-        MSE = 0,
-        RMSE = 1
-    };
+        NONE: Pathtracer runs indefinitely
+        SPP: Pathtracer runs for a fixed number of frames/spp (samples per pixel). This yields runtime and tree build and traversal statistics
+        IMGREF: Pathtracer runs with ladder of spp (1,4,16,64,256,...) for 2 images using different techniques and store the RMSE or relRMSE
     */
-
     enum BenchmarkType {
         NONE = 0,
         SPP = 1, /*Samples Per Pixel*/
@@ -45,9 +45,7 @@ namespace Pathtracer {
 
     struct Benchmark {
         BenchmarkType btype;
-        union {
-            uint32_t spp;
-        };
+        uint32_t spp;
     };
 
     enum AccelerationStructure {
@@ -82,12 +80,12 @@ namespace Pathtracer {
         const Resolution resolution;
         const uint32_t lightBounces;
         const Benchmark benchmarkInfo;
-        const bool saveOutputImages;
+        const bool saveOutputImage;
     
     public:
 
-        Config(AccelerationStructure as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, bool saveOutputImages = false)
-            : accelerationStructure(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImages(saveOutputImages)
+        Config(AccelerationStructure as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, bool saveOutputImage = false)
+            : accelerationStructure(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage)
         {}
 
         AccelerationStructure GetAccelerationStructure() const {
@@ -132,15 +130,38 @@ namespace Pathtracer {
         Benchmark GetBenchmarkInfo() const {
             return this->benchmarkInfo;
         }
+
+        bool ShouldSaveImage() const {
+            return this->saveOutputImage;
+        }
+
+
+        void Print() const {
+            std::cout << "[Config]"
+                << "\n CPU: 11th Gen Intel Core i5 - 2.40GHz"
+                << "\n GPU: NVIDIA GeForce MX350 - 2Gb VRAM"
+                << "\n Scene: " << this->GetScene()
+                << "\n API: " << (!this->api ? "Vulkan" : "CUDA")
+                << "\n Acc. Structure: " << (!this->accelerationStructure ? "Binned SAH-BVH" : "Havran SAH-KdTree")
+                << "\n Resolution: " << this->GetResolution().x << "x" << this->GetResolution().y
+                << "\n SPP: " << this->benchmarkInfo.spp
+                << "\n Max Light Bounces: " << this->lightBounces << "\n";
+        }
+    };
+
+    struct GPUTreeStatistics {
+        struct uint64gpu_t { uint32_t lo, hi; };
+        uint64gpu_t rays;
+        uint64gpu_t isecs;
+        uint64gpu_t traversals;
     };
 
     struct TreeStatistics {
-        uint32_t rays;
-        uint32_t isecs;
-        uint32_t traversals;
-        uint32_t pad;
+        uint64_t rays;
+        uint64_t isecs;
+        uint64_t traversals;
     };
-
+    
     struct Statistics {
         TreeStatistics treeStats;
         float elapsedTotalTime = 0.0f;
@@ -148,6 +169,9 @@ namespace Pathtracer {
 
         float accStructBuildTime = 0.0f;
         uint32_t accStructMemoryUsage = 0;
+
+        float rmse = 0.0f;
+        float psnr = 0.0f;
     };
 }
 
@@ -291,6 +315,7 @@ class Vulkan {
     std::vector<VkFence> imagesInFlight;
 
     Pathtracer::Config pathtracerConfig;
+    Pathtracer::Statistics pathtracerStatistics;
     const uint32_t WIDTH, HEIGHT;
 public:
     Vulkan(const Pathtracer::Config& pathtracerConfig) :
@@ -914,6 +939,13 @@ private:
             memcpy(data, initialData, size);
             vkUnmapMemory(device, staging.memory);
         }
+        else {
+            void* data;
+            vkMapMemory(device, staging.memory, 0, size, 0, &data);
+            memset(data, 0, size);
+            vkUnmapMemory(device, staging.memory);
+        }
+
         return staging;
     }
 
@@ -1357,7 +1389,13 @@ private:
         std::vector<glm::uvec3> meshTris(triangles.size());
         for (size_t i = 0; i < triangles.size(); i++) meshTris[i] = { triangles[i].indices.x, triangles[i].indices.y, triangles[i].indices.z };
         OBJLoader::MeshGeometry mergedMesh{ objVertices, meshTris };
+
         BVH bvh = BVH(mergedMesh);
+        auto t0 = std::chrono::high_resolution_clock::now();
+        bvh.Build();
+        auto t1 = std::chrono::high_resolution_clock::now();
+        pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
+
         auto bvht = bvh.GetTriangles();
 
         // Reordering to match BVH partitions (triIdx; triCount) in the shader
@@ -1366,6 +1404,8 @@ private:
         triangles = std::move(reordered);
 
         auto tree = bvh.GetTree();
+        pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
+
         pathtracerSSBOs.push_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::BVH_NODES); // BVH Nodes
 
@@ -1382,7 +1422,7 @@ private:
         pathtracerSSBOs.push_back(createStorageBuffer(materials.size() * sizeof(materials[0]), materials.data()));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::MATERIALS); // Materials
 
-        pathtracerSSBOs.push_back(createStorageBuffer(sizeof(Pathtracer::TreeStatistics), nullptr, true));
+        pathtracerSSBOs.push_back(createStorageBuffer(sizeof(Pathtracer::GPUTreeStatistics), nullptr, true));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::STATISTICS); // Statistics
 
 
@@ -1953,7 +1993,7 @@ public:
         VkBufferCopy statsCopy{};
         statsCopy.srcOffset = 0;
         statsCopy.dstOffset = 0;
-        statsCopy.size = sizeof(Pathtracer::TreeStatistics);
+        statsCopy.size = sizeof(Pathtracer::GPUTreeStatistics);
 
         vkCmdCopyBuffer(cmdbf, statsSSBO.buffer, stagingStats.buffer, 1, &statsCopy);
 
@@ -1973,9 +2013,12 @@ public:
         vkUnmapMemory(this->device, this->stagingBuffers[STAGING_ACC].memory);
 
         void* mappedStats = nullptr;
-        vkMapMemory(this->device, stagingStats.memory, 0, sizeof(Pathtracer::TreeStatistics), 0, &mappedStats);
-        Pathtracer::TreeStatistics treeStats = *reinterpret_cast<Pathtracer::TreeStatistics*>(mappedStats);
+        vkMapMemory(this->device, stagingStats.memory, 0, sizeof(Pathtracer::GPUTreeStatistics), 0, &mappedStats);
+        Pathtracer::GPUTreeStatistics gpuTreeStats = *reinterpret_cast<Pathtracer::GPUTreeStatistics*>(mappedStats);
         vkUnmapMemory(this->device, stagingStats.memory);
+
+        std::cout << "[STATS]\n RAYS: " << gpuTreeStats.rays.hi << " " << gpuTreeStats.rays.lo << "\n TRAVERSALS: " << gpuTreeStats.traversals.hi << " " << gpuTreeStats.traversals.lo << "\n ISECS: " << gpuTreeStats.isecs.hi << " " << gpuTreeStats.isecs.lo << "\n";
+        Pathtracer::TreeStatistics treeStats { gpuTreeStats.rays.lo | (uint64_t(gpuTreeStats.rays.hi) << 32ULL), gpuTreeStats.isecs.lo | (uint64_t(gpuTreeStats.isecs.hi) << 32ULL), gpuTreeStats.traversals.lo | (uint64_t(gpuTreeStats.traversals.hi) << 32ULL) };
         
         /*
         VkClearColorValue clearVal = { 0.f, 0.f, 0.f, 0.f };
@@ -1989,10 +2032,13 @@ public:
         for (auto& px : pixels)
             px /= static_cast<float>(binfo.spp);
         
-        writePPM("output.ppm", pixels, this->WIDTH, this->HEIGHT);
+        if (this->pathtracerConfig.ShouldSaveImage()) {
+            writePPM(RESOURCE("outputs\\output.ppm"), pixels, this->WIDTH, this->HEIGHT, false);
+            writePPM(RESOURCE("outputs\\output-g.ppm"), pixels, this->WIDTH, this->HEIGHT, true);
+        }
 
-        std::cout << "[STATS]\n RAYS: " << treeStats.rays << "\n";
-        Pathtracer::Statistics stats = { treeStats };
+        Pathtracer::Statistics stats = this->pathtracerStatistics;
+        stats.treeStats = treeStats;
         return stats;
     }
 
@@ -2008,10 +2054,10 @@ private:
             return c <= 0.0031308f ? 12.92f * c : 1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f;
         };
 
-        // Write PPM header (P6 = binary RGB)
+        // Header
         out << "P6\n" << width << " " << height << "\n255\n";
 
-        for (int y = 0; y < height; ++y) { // flip vertically
+        for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 const glm::vec4& c = pixels[y * width + x];
                 float r = std::clamp(c.r, 0.0f, 1.0f);

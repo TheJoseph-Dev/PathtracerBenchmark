@@ -32,12 +32,56 @@ namespace Pathtracer {
 
         void mainLoop() {
             Pathtracer::Benchmark binfo = pathtracerConfig.GetBenchmarkInfo();
-            uint32_t currentFrame = 0;
-            while (!glfwWindowShouldClose(window) && (!binfo.btype || binfo.spp--)) {
+            uint32_t currentFrame = 0, currentSPP = 0;
+            auto t0 = std::chrono::high_resolution_clock::now();
+            while (!glfwWindowShouldClose(window) && (!binfo.btype || currentSPP++ < binfo.spp)) {
                 vulkan.run(currentFrame);
                 glfwPollEvents();
             }
-            Pathtracer::Statistics stats = vulkan.GetStatistics();
+            Pathtracer::Statistics stats = vulkan.GetStatistics(); // vkQueueWaitIdle
+            auto t1 = std::chrono::high_resolution_clock::now();
+            
+            this->pathtracerConfig.Print();
+            long long totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+            stats.elapsedTotalTime = totalTime / 1000.0f;
+
+            std::cout << "[STATS]\n RAYS: " << stats.treeStats.rays
+                << "\n TRAVERSALS: " << stats.treeStats.traversals
+                << "\n ISECS: " << stats.treeStats.isecs << "\n"
+                << "\n RAYS/s: " << (double)stats.treeStats.rays / stats.elapsedTotalTime
+                << "\n NODES/RAY: " << (double)stats.treeStats.traversals / stats.treeStats.rays
+                << "\n ISECS/RAY: " << (double)stats.treeStats.isecs / stats.treeStats.rays << "\n";
+
+            std::cout << "\n Total Elapsed Time: " << (stats.elapsedTotalTime < 1e-6 ? "< 1 ms" : std::to_string(stats.elapsedTotalTime)) << " s\n"
+                << "\n Acc. Structure Build Time: " << stats.accStructBuildTime << " s\n"
+                << "\n Acc. Structure Memory: " << stats.accStructMemoryUsage << " bytes (Nodes only)\n";
+
+            if (binfo.btype == IMGREF)
+                std::cout << "\n RMSE: " << stats.rmse
+                          << "\n PSNR: " << stats.psnr << "\n";
         }
     };
 }
+
+/*
+[Configuration]
+CPU:  Intel Core i5 (11th Gen, 2.40 GHz)
+GPU:  NVIDIA GeForce MX350 (2 GB VRAM)
+API:  Vulkan
+Scene: Cornell Box
+Resolution: 720 × 480
+Samples per Pixel: 1024
+Max Path Length: 6
+Acceleration Structure: Binned SAH BVH
+
+[Performance Statistics]
+Total Rays Traced:        1.99 x 10^9
+Rays per Second:          3.25 x 10^7
+Average Nodes per Ray:    5.29
+Average Intersections per Ray: 16.30
+Total Render Time:        61.10 s
+
+[Acceleration Structure]
+Build Time:               < 1 ms
+Memory Usage:             5.6 KB
+*/

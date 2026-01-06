@@ -99,11 +99,15 @@ layout(std430, binding = 7) readonly buffer Materials { Material mats[]; };
 // Benchmark
 layout(binding = 8, rgba32f) uniform image2D accImage;
 layout(std430, binding = 9) buffer Statistics {
-    uint rays; // Rays cast (primary + secondary) | Overall work done; basic throughput metric
-    uint isecs; // Primitive intersections | Measures geometry testing cost; can identify heavy scenes
-    uint traversals; // BVH nodes visited | BVH efficiency; algorithm-level performance
-    uint pad;
+    uvec2 rays; // Rays cast (primary + secondary) | Overall work done; basic throughput metric
+    uvec2 isecs; // Primitive intersections | Measures geometry testing cost; can identify heavy scenes
+    uvec2 traversals; // BVH nodes visited | BVH efficiency; algorithm-level performance
 } statistics;
+
+#define ATOMIC_INC_U64(counter) do { \
+    uint old = atomicAdd(counter.x, 1u); \
+    if (old + 1u < old) atomicAdd(counter.y, 1u); \
+} while(false)
 
 // Pathtracing
 
@@ -319,14 +323,14 @@ IsecInfo RayAABBIsec(Ray ray, Node n, vec3 invDir) {
     - Quantized bounds
 */
 void TraversalBVH(Ray ray, inout Scene scene) {
-    atomicAdd(statistics.rays, 1);
+    ATOMIC_INC_U64(statistics.rays);
     vec3 invDir = 1.0 / ray.dir;
     int stack[MAX_TRAVERSAL_DEPTH];
     int stkptr = 0, it = 0;
     stack[stkptr++] = 0;
 
     while (stkptr > 0 && stkptr < MAX_TRAVERSAL_DEPTH && it++ < 2*MAX_TRAVERSAL_DEPTH) {
-        atomicAdd(statistics.traversals, 1);
+        ATOMIC_INC_U64(statistics.traversals);
         int nodeIdx = stack[--stkptr];
         Node n = nodes[nodeIdx];
 
@@ -339,7 +343,7 @@ void TraversalBVH(Ray ray, inout Scene scene) {
 
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
-                atomicAdd(statistics.isecs, 1);
+                ATOMIC_INC_U64(statistics.isecs);
                 Triangle tri = triangles[n.triIdx + i];
 
                 vec3 v0 = vertices[tri.indices.x].position.xyz;
