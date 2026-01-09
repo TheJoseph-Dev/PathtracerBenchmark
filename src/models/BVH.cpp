@@ -1,6 +1,7 @@
 #include "BVH.h"
 
 #include <algorithm>
+#include <queue>
 
 BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) {
     static_assert(sizeof(Node) == 48);
@@ -180,4 +181,22 @@ uint32_t BVH::Build(int l, int r) {
     node.triIdx = 0;
     node.triCount = 0;
     return nodeIdx;
+}
+
+int BVH::GetHeight() const {
+    if (tree.empty()) return 0;
+    int h = 0;
+    std::queue<int32_t> q;
+    q.push(0);
+    while (!q.empty()) {
+        size_t sz = q.size();
+        while (sz--) {
+            int32_t node = q.front();
+            q.pop();
+            if (this->tree[node].left >= 0) q.push(this->tree[node].left);
+            if (this->tree[node].right >= 0) q.push(this->tree[node].right);
+        }
+        h++;
+    }
+    return h;
 }

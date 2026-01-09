@@ -75,7 +75,7 @@ OBJLoader::OBJLoader(const char* filepath) {
 		glm::vec3 v1 = objVertices[i + 1].position;
 		glm::vec3 v2 = objVertices[i + 2].position;
 		float area = 0.5f * glm::length(glm::cross(v1 - v0, v2 - v0));
-		this->triangles.push_back({ indices, { area, 0,0,0 } });
+		this->triangles.push_back({ indices, { area, 0,0,0 }});
 	}
 	//CreateVertexArray(objVertices);
 	//CreateSSBuffer(objVertices);

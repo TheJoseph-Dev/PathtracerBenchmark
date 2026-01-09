@@ -17,8 +17,8 @@ namespace Pathtracer {
     //constexpr uint32_t WIDTH = 720;//1440; //640; //1080;
     //constexpr uint32_t HEIGHT = 480;//810; //480; //720;
 
-    constexpr uint32_t TILE_X = 8;
-    constexpr uint32_t TILE_Y = 8;
+    //constexpr uint32_t TILE_X = 64;
+    //constexpr uint32_t TILE_Y = 64;
 
     struct PushConstants {
         struct ComputeTile {
@@ -69,8 +69,9 @@ namespace Pathtracer {
         R480x320 = 0,
         R720x480 = 1,
         R1080x720 = 2,
-        R1440x810 = 3,
-        R1920x1080 = 4
+        R1024x1024 = 3,
+        R1440x810 = 4,
+        R1920x1080 = 5
     };
 
     class Config {
@@ -80,12 +81,13 @@ namespace Pathtracer {
         const Resolution resolution;
         const uint32_t lightBounces;
         const Benchmark benchmarkInfo;
+        const glm::uvec2 tileSize;
         const bool saveOutputImage;
     
     public:
 
-        Config(AccelerationStructure as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, bool saveOutputImage = false)
-            : accelerationStructure(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage)
+        Config(AccelerationStructure as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false)
+            : accelerationStructure(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize)
         {}
 
         AccelerationStructure GetAccelerationStructure() const {
@@ -117,6 +119,7 @@ namespace Pathtracer {
                 case Resolution::R480x320: return glm::uvec2(480, 320);
                 case Resolution::R720x480: return glm::uvec2(720, 480);
                 case Resolution::R1080x720: return glm::uvec2(1080, 720);
+                case Resolution::R1024x1024: return glm::uvec2(1024, 1024);
                 case Resolution::R1440x810: return glm::uvec2(1440, 810);
                 case Resolution::R1920x1080: return glm::uvec2(1920, 1080);
                 default: throw std::runtime_error("Unknown resolution");
@@ -129,6 +132,10 @@ namespace Pathtracer {
 
         Benchmark GetBenchmarkInfo() const {
             return this->benchmarkInfo;
+        }
+
+        glm::uvec2 GetTileSize() const {
+            return this->tileSize;
         }
 
         bool ShouldSaveImage() const {
@@ -1231,11 +1238,13 @@ private:
         // Tiling to avoid TDR
         //vkCmdDispatch(commandBuffer, (this->WIDTH + 7) / 8, (this->HEIGHT + 7) / 8, 1);
 
-        for (uint32_t tileY = 0; tileY < this->HEIGHT; tileY += Pathtracer::TILE_Y) {
-            for (uint32_t tileX = 0; tileX < this->WIDTH; tileX += Pathtracer::TILE_X) {
+        const uint32_t TILE_Y = this->pathtracerConfig.GetTileSize().y;
+        const uint32_t TILE_X = this->pathtracerConfig.GetTileSize().x;
+        for (uint32_t tileY = 0; tileY < this->HEIGHT; tileY += TILE_Y) {
+            for (uint32_t tileX = 0; tileX < this->WIDTH; tileX += TILE_X) {
                 this->pathtracerPC.ct.tileOffset = { tileX, tileY };
                 vkCmdPushConstants( commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::PushConstants), &this->pathtracerPC );
-                vkCmdDispatch( commandBuffer, (Pathtracer::TILE_X + 7) / 8, (Pathtracer::TILE_Y + 7) / 8, 1 );
+                vkCmdDispatch( commandBuffer, (TILE_X + 7) / 8, (TILE_Y + 7) / 8, 1 );
             }
         }
 
@@ -1363,7 +1372,7 @@ private:
             updateCombinedImageSamplerDescriptorSet(fragDescriptorSet[i], 0, fragImageSampler, pathtracerImageViews[i]);
         }
 
-        this->pathtracerPC.ct.tileSize = { Pathtracer::TILE_X, Pathtracer::TILE_Y };
+        this->pathtracerPC.ct.tileSize = this->pathtracerConfig.GetTileSize();
         this->pathtracerPC.lightBounces = this->pathtracerConfig.GetLightBounces();
 
         std::string sceneFilepath = RESOURCE("3DModels\\") + this->pathtracerConfig.GetScene();

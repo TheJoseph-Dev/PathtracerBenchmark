@@ -1,0 +1,276 @@
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100000
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 2058622184
+ TRAVERSALS: 11000781970
+ ISECS: 34400254059
+
+ RAYS/s: 5.42871e+07
+ NODES/RAY: 5.34376
+ ISECS/RAY: 16.7103
+
+ Total Elapsed Time: 37.921 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100000
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 1240944029
+ TRAVERSALS: 6631238607
+ ISECS: 20736067342
+
+ RAYS/s: 5.62225e+07
+ NODES/RAY: 5.3437
+ ISECS/RAY: 16.7099
+
+ Total Elapsed Time: 22.072 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100000
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 2079375214
+ TRAVERSALS: 11109280351
+ ISECS: 34726620144
+
+ RAYS/s: 5.14417e+07
+ NODES/RAY: 5.3426
+ ISECS/RAY: 16.7005
+
+ Total Elapsed Time: 40.422 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 750602064
+ TRAVERSALS: 4010134307
+ ISECS: 12535189526
+
+ RAYS/s: 4.55103e+07
+ NODES/RAY: 5.34256
+ ISECS/RAY: 16.7002
+
+ Total Elapsed Time: 16.493 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 1005689723
+ TRAVERSALS: 5383020612
+ ISECS: 16869146656
+
+ RAYS/s: 6.05035e+07
+ NODES/RAY: 5.35257
+ ISECS/RAY: 16.7737
+
+ Total Elapsed Time: 16.622 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 750558318
+ TRAVERSALS: 4009894441
+ ISECS: 12534410046
+
+ RAYS/s: 6.26666e+07
+ NODES/RAY: 5.34255
+ ISECS/RAY: 16.7001
+
+ Total Elapsed Time: 11.977 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 750525956
+ TRAVERSALS: 4009996198
+ ISECS: 12532037359
+
+ RAYS/s: 5.11327e+07
+ NODES/RAY: 5.34291
+ ISECS/RAY: 16.6977
+
+ Total Elapsed Time: 14.678 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 742832833
+ TRAVERSALS: 3969675916
+ ISECS: 12410211304
+
+ RAYS/s: 5.442e+07
+ NODES/RAY: 5.34397
+ ISECS/RAY: 16.7066
+
+ Total Elapsed Time: 13.65 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 100
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 742737984
+ TRAVERSALS: 3969182037
+ ISECS: 12408719375
+
+ RAYS/s: 3.83329e+07
+ NODES/RAY: 5.34399
+ ISECS/RAY: 16.7067
+
+ Total Elapsed Time: 19.376 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 10000
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 75074153704
+ TRAVERSALS: 401121260212
+ ISECS: 1253610570980
+
+ RAYS/s: 4.52282e+07
+ NODES/RAY: 5.343
+ ISECS/RAY: 16.6983
+
+ Total Elapsed Time: 1659.9 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 10000
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 208860228
+ TRAVERSALS: 1092709838
+ ISECS: 3300019026
+
+ RAYS/s: 8.43198e+07
+ NODES/RAY: 5.23178
+ ISECS/RAY: 15.8001
+
+ Total Elapsed Time: 2.477 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ SPP: 10000
+ Max Light Bounces: 12
+[STATS]
+ RAYS: 81761389332
+ TRAVERSALS: 434370179025
+ ISECS: 1345810383161
+
+ RAYS/s: 4.98409e+07
+ NODES/RAY: 5.31266
+ ISECS/RAY: 16.4602
+
+ Total Elapsed Time: 1640.45 s
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)

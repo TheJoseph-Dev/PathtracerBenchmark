@@ -88,6 +88,8 @@ public:
         return this->tree;
     }
 
+    int GetHeight() const;
+
     void Print() const {
         for (size_t i = 0; i < tree.size(); i++) printf("%d | (%d, %d | %d, %d) => bbmin(%.2f %.2f %.2f) bbmax(%.2f %.2f %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].bbox.min.x, tree[i].bbox.min.y, tree[i].bbox.min.z, tree[i].bbox.max.x, tree[i].bbox.max.y, tree[i].bbox.max.z);
     }

@@ -6,15 +6,16 @@ int main() {
         using namespace Pathtracer;
         Benchmark benchmarkInfo = {};
         benchmarkInfo.btype = BenchmarkType::SPP;
-        benchmarkInfo.spp = 1024U;
+        benchmarkInfo.spp = 10U * 1000U;
         
         Config pathtracerConfig(
             AccelerationStructure::BVH,
             API::VULKAN,
             Scene::CORNELL_BOX,
-            Resolution::R720x480,
-            6,
+            Resolution::R1024x1024,
+            12,
             benchmarkInfo,
+            glm::uvec2(64, 64),
             true
         );
 

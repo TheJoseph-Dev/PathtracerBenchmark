@@ -38,12 +38,22 @@ namespace Pathtracer {
                 vulkan.run(currentFrame);
                 glfwPollEvents();
             }
+            
             Pathtracer::Statistics stats = vulkan.GetStatistics(); // vkQueueWaitIdle
             auto t1 = std::chrono::high_resolution_clock::now();
-            
-            this->pathtracerConfig.Print();
             long long totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
             stats.elapsedTotalTime = totalTime / 1000.0f;
+
+            std::streambuf* stdoutbuf = std::cout.rdbuf();
+            std::ofstream filebuf(RESOURCE("outputs\\stats.txt"), std::ios::app);
+            std::cout.rdbuf(filebuf.rdbuf());
+            this->SaveStatistics(stats, binfo);
+            std::cout.rdbuf(stdoutbuf);
+            this->SaveStatistics(stats, binfo);
+        }
+
+        void SaveStatistics(const Pathtracer::Statistics& stats, const Pathtracer::Benchmark& binfo) const {
+            this->pathtracerConfig.Print();
 
             std::cout << "[STATS]\n RAYS: " << stats.treeStats.rays
                 << "\n TRAVERSALS: " << stats.treeStats.traversals
@@ -52,13 +62,13 @@ namespace Pathtracer {
                 << "\n NODES/RAY: " << (double)stats.treeStats.traversals / stats.treeStats.rays
                 << "\n ISECS/RAY: " << (double)stats.treeStats.isecs / stats.treeStats.rays << "\n";
 
-            std::cout << "\n Total Elapsed Time: " << (stats.elapsedTotalTime < 1e-6 ? "< 1 ms" : std::to_string(stats.elapsedTotalTime)) << " s\n"
-                << "\n Acc. Structure Build Time: " << stats.accStructBuildTime << " s\n"
+            std::cout << "\n Total Elapsed Time: " << stats.elapsedTotalTime << " s\n"
+                << "\n Acc. Structure Build Time: " << (stats.accStructBuildTime < 1e-3 ? "< 1 ms" : std::to_string(stats.accStructBuildTime)) << " s\n"
                 << "\n Acc. Structure Memory: " << stats.accStructMemoryUsage << " bytes (Nodes only)\n";
 
             if (binfo.btype == IMGREF)
                 std::cout << "\n RMSE: " << stats.rmse
-                          << "\n PSNR: " << stats.psnr << "\n";
+                << "\n PSNR: " << stats.psnr << "\n";
         }
     };
 }
