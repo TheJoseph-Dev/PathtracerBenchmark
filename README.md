@@ -13,7 +13,7 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
     - Acc Framebuffer
     - Tree Stats buffer
 
-🟨 **Modularized**
+🟩 **Modularized**
 - Acceleration Structure
 - API
 - Scenes
@@ -22,7 +22,7 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 - Tile Size
 - Benchmark type
     - SPP
-    - Error functions (MSE, RMSE,...)
+    - IMGREF
 
 
 🟩 **Vulkan SPIR-V**
@@ -34,18 +34,18 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 ⬜ **CUDA**
 
 ### Benchmarks
-⬜ **Samples Per Pixel (SPP) benchmark**
+🟩 **Samples Per Pixel (SPP) benchmark**
 - Throughput time 
 - Finish time
 
-⬜ **Trees Benchmark**
+🟩 **Trees Benchmark**
 - Build Time
 - Memory
 - Traversal/s
 - Rays/s
 - Isec/s
 
-⬜ **Image reference benchmark**
+🟩 **Image reference benchmark**
 - Compare convergence speed
 - RMSE; MSE; PSNR; SSIM
 
@@ -53,7 +53,7 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 - Vulkan (SPIR-V)
 - CUDA
 
-⬜ **Benchmark automation** 
+🟨 **Benchmark automation** 
 - Many benchmarks at single run
 - Automatic resume files, infos and outputs
 
