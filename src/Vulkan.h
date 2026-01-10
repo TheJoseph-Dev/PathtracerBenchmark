@@ -67,11 +67,12 @@ namespace Pathtracer {
 
     enum Resolution {
         R480x320 = 0,
-        R720x480 = 1,
-        R1080x720 = 2,
-        R1024x1024 = 3,
-        R1440x810 = 4,
-        R1920x1080 = 5
+        R512x512 = 1,
+        R720x480 = 2,
+        R1080x720 = 3,
+        R1024x1024 = 4,
+        R1440x810 = 5,
+        R1920x1080 = 6
     };
 
     class Config {
@@ -80,7 +81,7 @@ namespace Pathtracer {
         const Scene scene;
         const Resolution resolution;
         const uint32_t lightBounces;
-        const Benchmark benchmarkInfo;
+        Benchmark benchmarkInfo;
         const glm::uvec2 tileSize;
         const bool saveOutputImage;
     
@@ -117,6 +118,7 @@ namespace Pathtracer {
         glm::uvec2 GetResolution() const {
             switch (this->resolution) {
                 case Resolution::R480x320: return glm::uvec2(480, 320);
+                case Resolution::R512x512: return glm::uvec2(512, 512);
                 case Resolution::R720x480: return glm::uvec2(720, 480);
                 case Resolution::R1080x720: return glm::uvec2(1080, 720);
                 case Resolution::R1024x1024: return glm::uvec2(1024, 1024);
@@ -142,6 +144,9 @@ namespace Pathtracer {
             return this->saveOutputImage;
         }
 
+        void SetSPP(uint32_t spp) {
+            this->benchmarkInfo.spp = spp;
+        }
 
         void Print() const {
             std::cout << "[Config]"
@@ -151,8 +156,17 @@ namespace Pathtracer {
                 << "\n API: " << (!this->api ? "Vulkan" : "CUDA")
                 << "\n Acc. Structure: " << (!this->accelerationStructure ? "Binned SAH-BVH" : "Havran SAH-KdTree")
                 << "\n Resolution: " << this->GetResolution().x << "x" << this->GetResolution().y
+                << "\n Tile Size: " << this->GetTileSize().x << "x" << this->GetTileSize().y
                 << "\n SPP: " << this->benchmarkInfo.spp
                 << "\n Max Light Bounces: " << this->lightBounces << "\n";
+        }
+
+        std::string InlineString() const {
+            return "-spp" + std::to_string(this->benchmarkInfo.spp)
+                + "-r" + std::to_string(GetResolution().x) + "x" + std::to_string(GetResolution().y)
+                + "-lb" + std::to_string(this->lightBounces)
+                + (!this->api ? "-vulkan" : "-cuda")
+                + (!this->accelerationStructure ? "-bvh" : "-kdtree");
         }
     };
 
@@ -168,14 +182,18 @@ namespace Pathtracer {
         uint64_t isecs;
         uint64_t traversals;
     };
+
     
     struct Statistics {
         TreeStatistics treeStats;
         float elapsedTotalTime = 0.0f;
-        float avgFrameTime = 0.0f;
+        float fps = 0.0f; // time/spp
+        float avgKernelTime = 0.0f;
 
         float accStructBuildTime = 0.0f;
         uint32_t accStructMemoryUsage = 0;
+
+        uint32_t sceneTriangles = 0;
 
         float rmse = 0.0f;
         float psnr = 0.0f;
@@ -185,7 +203,6 @@ namespace Pathtracer {
 std::string RESOURCE_PATH_PREFIX = std::string("..\\..\\..\\src\\resources\\");
 #define RESOURCE(filepath) "..\\..\\..\\src\\resources\\" filepath
 
-#define DEBUG
 #ifdef DEBUG
 constexpr bool enableValidationLayers = true;
 
@@ -272,6 +289,7 @@ class Vulkan {
     VkInstance instance; // Connection between Vulkan and the main program
     VkPhysicalDevice physicalDevice;
     VkDevice device; // After selecting a Physical Device, create a logical device to interface with it
+    VkPhysicalDeviceProperties physicalDeviceProperties;
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
         //VK_KHR_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME - Not available
@@ -315,6 +333,8 @@ class Vulkan {
     VkCommandPool commandPool;
     VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
 
+    VkQueryPool timestampPools[MAX_FRAMES_IN_FLIGHT];
+
     VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT]; // Ensures the submit waits until the acquired image is ready (from vkAcquireNextImageKHR)
     VkSemaphore renderFinishedSemaphores[SWAPCHAIN_IMAGE_COUNT]; // Ensures the present (vkQueuePresentKHR) waits until rendering to that image is done.
 
@@ -328,6 +348,10 @@ public:
     Vulkan(const Pathtracer::Config& pathtracerConfig) :
         pathtracerConfig(pathtracerConfig), WIDTH(pathtracerConfig.GetResolution().x), HEIGHT(pathtracerConfig.GetResolution().y)
     {
+    }
+
+    ~Vulkan() {
+        this->shutdown();
     }
 
     void init(GLFWwindow* window) {
@@ -458,10 +482,10 @@ private:
             deviceFeatures2.pNext = &dynamicRenderingFeatures;
             vkGetPhysicalDeviceFeatures2(device, &deviceFeatures2);
             std::cout << "\n - " << deviceProperties.deviceName;
-
             if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
                 std::cout << " (Discrete)";
                 physicalDevice = device;
+                physicalDeviceProperties = deviceProperties;
             }
 
             if (dynamicRenderingFeatures.dynamicRendering) {
@@ -1234,10 +1258,15 @@ private:
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSet[currentFrame%PING_PONG_FRAMES], 0, nullptr);
 
+        /*
+        A timestamp query measures GPU time between two points in the command buffer
+        It does not measure "this dispatch" unless you bracket it
+        */
+        vkCmdResetQueryPool(commandBuffer, timestampPools[currentFrame % PING_PONG_FRAMES], 0, 2);
+        vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[currentFrame % PING_PONG_FRAMES], 0);
+
         // Dispatch compute
         // Tiling to avoid TDR
-        //vkCmdDispatch(commandBuffer, (this->WIDTH + 7) / 8, (this->HEIGHT + 7) / 8, 1);
-
         const uint32_t TILE_Y = this->pathtracerConfig.GetTileSize().y;
         const uint32_t TILE_X = this->pathtracerConfig.GetTileSize().x;
         for (uint32_t tileY = 0; tileY < this->HEIGHT; tileY += TILE_Y) {
@@ -1247,6 +1276,9 @@ private:
                 vkCmdDispatch( commandBuffer, (TILE_X + 7) / 8, (TILE_Y + 7) / 8, 1 );
             }
         }
+
+        vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[currentFrame % PING_PONG_FRAMES], 1);
+
 
         // Transition GENERAL -> SHADER_READ_ONLY_OPTIMAL for graphics
         barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -1385,7 +1417,7 @@ private:
         std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
         std::vector<OBJLoader::Vertex> lightVerts = lightLoader.objVertices;
 
-        OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(0.9f, 0.9f, 0.9f), 20.0f };
+        OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(0.9f, 0.9f, 0.9f), 32.0f };
         std::vector<OBJLoader::Material> materials = objloader.GetMaterials();
         materials.push_back(lightMat);
 
@@ -1411,6 +1443,7 @@ private:
         std::vector<OBJLoader::Triangle> reordered(triangles.size());
         for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[bvht[i].oIdx];
         triangles = std::move(reordered);
+        pathtracerStatistics.sceneTriangles = triangles.size();
 
         auto tree = bvh.GetTree();
         pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
@@ -1674,6 +1707,14 @@ private:
             return;
         }
 
+        VkQueryPoolCreateInfo qpci{};
+        qpci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+        qpci.queryType = VK_QUERY_TYPE_TIMESTAMP;
+        qpci.queryCount = 2;
+
+        for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+            vkCreateQueryPool(device, &qpci, nullptr, &timestampPools[i]);
+
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -1708,6 +1749,7 @@ public:
         for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
             vkDestroyFence(device, inFlightFences[i], nullptr);
+            vkDestroyQueryPool(device, timestampPools[i], nullptr);
         }
 
         for (uint32_t i = 0; i < SWAPCHAIN_IMAGE_COUNT; ++i)
@@ -1780,10 +1822,19 @@ public:
         //puts("=== START LOOP ===");
 
         // Wait for frame's fence (makes command buffer safe to reuse)
-        VkResult waitResult = vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        VkResult waitResult = vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); // guarantees the previous submission/cmdbuf that used currentFrame is finished
         if (waitResult != VK_SUCCESS) {
             puts("inFlightFences waiting");
             return;
+        }
+
+        if (pathtracerState.iFrame >= MAX_FRAMES_IN_FLIGHT) {
+            // Safe to read timestamp for the frame that last used this index
+            uint64_t timestamps[2];
+            vkGetQueryPoolResults( device, timestampPools[currentFrame], 0, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
+            uint64_t delta = timestamps[1] - timestamps[0];
+            double gpuTimeNs = double(delta) * physicalDeviceProperties.limits.timestampPeriod;
+            this->pathtracerStatistics.avgKernelTime += gpuTimeNs / 1e6;
         }
 
         // Acquire swapchain image
@@ -1973,6 +2024,10 @@ public:
         //puts("=== END LOOP ===");
     }
 
+    void wait() const {
+        vkQueueWaitIdle(this->graphicsQueue);
+    }
+
     Pathtracer::Statistics GetStatistics() const {
         Pathtracer::Benchmark binfo = this->pathtracerConfig.GetBenchmarkInfo();
         if (!binfo.btype) return {};
@@ -2026,7 +2081,7 @@ public:
         Pathtracer::GPUTreeStatistics gpuTreeStats = *reinterpret_cast<Pathtracer::GPUTreeStatistics*>(mappedStats);
         vkUnmapMemory(this->device, stagingStats.memory);
 
-        std::cout << "[STATS]\n RAYS: " << gpuTreeStats.rays.hi << " " << gpuTreeStats.rays.lo << "\n TRAVERSALS: " << gpuTreeStats.traversals.hi << " " << gpuTreeStats.traversals.lo << "\n ISECS: " << gpuTreeStats.isecs.hi << " " << gpuTreeStats.isecs.lo << "\n";
+        //std::cout << "[STATS]\n RAYS: " << gpuTreeStats.rays.hi << " " << gpuTreeStats.rays.lo << "\n TRAVERSALS: " << gpuTreeStats.traversals.hi << " " << gpuTreeStats.traversals.lo << "\n ISECS: " << gpuTreeStats.isecs.hi << " " << gpuTreeStats.isecs.lo << "\n";
         Pathtracer::TreeStatistics treeStats { gpuTreeStats.rays.lo | (uint64_t(gpuTreeStats.rays.hi) << 32ULL), gpuTreeStats.isecs.lo | (uint64_t(gpuTreeStats.isecs.hi) << 32ULL), gpuTreeStats.traversals.lo | (uint64_t(gpuTreeStats.traversals.hi) << 32ULL) };
         
         /*
@@ -2040,14 +2095,43 @@ public:
 
         for (auto& px : pixels)
             px /= static_cast<float>(binfo.spp);
-        
-        if (this->pathtracerConfig.ShouldSaveImage()) {
-            writePPM(RESOURCE("outputs\\output.ppm"), pixels, this->WIDTH, this->HEIGHT, false);
-            writePPM(RESOURCE("outputs\\output-g.ppm"), pixels, this->WIDTH, this->HEIGHT, true);
-        }
+
+        auto mse = [](glm::vec4 p1, glm::vec4 p2) {
+            float dx = p1.x - p2.x;
+            float dy = p1.y - p2.y;
+            float dz = p1.z - p2.z;
+            return (dx*dx + dy*dy + dz*dz)/3;
+        };
+
+        auto rmse = [mse](glm::vec4 p1, glm::vec4 p2) {
+            return sqrt(mse(p1, p2));
+        };
+
+        auto psnr = [mse](glm::vec4 p1, glm::vec4 p2) {
+            //const uint32_t max = 255;
+            return 10 * log10(65025/(mse(p1, p2) + 1e-9));
+        };
 
         Pathtracer::Statistics stats = this->pathtracerStatistics;
         stats.treeStats = treeStats;
+        
+        if (binfo.btype == Pathtracer::IMGREF) {
+            std::string filepath = RESOURCE_PATH_PREFIX + "outputs\\" + this->pathtracerConfig.GetScene() + "\\ref.ppm";
+            auto groundTruth = readPPM(filepath, this->WIDTH, this->HEIGHT);
+            for (size_t i = 0; i < pixels.size(); i++) {
+                stats.rmse += rmse(pixels[i]*255.0f, groundTruth[i]);
+                stats.psnr += psnr(pixels[i]*255.0f, groundTruth[i]);
+            }
+            stats.rmse /= pixels.size();
+            stats.psnr /= pixels.size();
+        }
+        
+        if (this->pathtracerConfig.ShouldSaveImage()) {
+            std::string filepath = RESOURCE_PATH_PREFIX + "outputs\\" + (binfo.btype != Pathtracer::IMGREF ? "output" : this->pathtracerConfig.GetScene() + "\\output" + this->pathtracerConfig.InlineString());
+            writePPM(filepath + ".ppm", pixels, this->WIDTH, this->HEIGHT, false);
+            if(binfo.btype != Pathtracer::IMGREF) writePPM(filepath + "-g.ppm", pixels, this->WIDTH, this->HEIGHT, true);
+        }
+
         return stats;
     }
 
@@ -2089,5 +2173,48 @@ private:
         }
 
         out.close();
+    }
+
+    std::vector<glm::vec4> readPPM(const std::string& filename, int width, int height) const {
+        std::ifstream file(filename, std::ios::binary);
+        if (!file)
+            throw std::runtime_error("Failed to open PPM file: " + filename);
+
+        std::string magic;
+        file >> magic; // P6
+        if (magic != "P6")
+            throw std::runtime_error("Unsupported PPM format: " + magic);
+
+        // Skip comments
+        char c = file.peek();
+        while (c == '#') {
+            file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            c = file.peek();
+        }
+
+        int w, h, maxval;
+        file >> w >> h >> maxval;
+        if (w != width || h != height)
+            std::cerr << "Warning: PPM dimensions do not match requested size\n";
+
+        file.get(); // consume single whitespace/newline after header
+
+        std::vector<glm::vec4> pixels;
+        pixels.reserve(w * h);
+
+        for (int i = 0; i < w * h; ++i) {
+            unsigned char rgb[3];
+            file.read(reinterpret_cast<char*>(rgb), 3);
+
+            glm::vec4 pixel;
+            pixel.r = float(rgb[0]) / maxval;
+            pixel.g = float(rgb[1]) / maxval;
+            pixel.b = float(rgb[2]) / maxval;
+            pixel.a = 1.0f; // alpha channel
+
+            pixels.push_back(pixel);
+        }
+
+        return pixels; // NRVO / move occurs automatically
     }
 };
