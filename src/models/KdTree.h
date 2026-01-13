@@ -1,3 +1,5 @@
+#ifndef KDTREE_H
+#define KDTREE_H
 #include <vector>
 
 class KdTree {
@@ -45,3 +47,5 @@ public:
         return this->Flatten();
     }
 };
+
+#endif

@@ -1,3 +1,5 @@
+#ifndef PATHTRACER_H
+#define PATHTRACER_H
 #include "Vulkan.h"
 
 namespace Pathtracer {
@@ -62,9 +64,9 @@ namespace Pathtracer {
         }
 
         void imgrefBenchmark() {
-            //const uint32_t sppLadder[] = { 1, 4, 16, 64, 256, 1024, 4096, 16384 };
+            //const uint32_t sppLadder[] = { 1, 4, 16, 64, 256, 1024, 4096 };
             uint32_t spp = 1;
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 7; i++) {
                 config.SetSPP(spp);
                 spp <<= 2;
                 sppBenchmark();
@@ -117,3 +119,5 @@ Total Render Time:        61.10 s
 Build Time:               < 1 ms
 Memory Usage:             5.6 KB
 */
+
+#endif

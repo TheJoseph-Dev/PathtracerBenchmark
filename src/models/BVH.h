@@ -1,3 +1,5 @@
+#ifndef BVH_H
+#define BVH_H
 #include <vector>
 #include <glm/glm.hpp>
 #include "OBJLoader.h"
@@ -98,3 +100,5 @@ public:
         return this->triangles;
     }
 };
+
+#endif

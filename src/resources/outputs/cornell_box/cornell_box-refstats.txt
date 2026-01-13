@@ -10,19 +10,19 @@
  Max Light Bounces: 12
 [STATS]
  TRIANGLES: 30
- RAYS: 654039799598
- TRAVERSALS: 3474689645017
- ISECS: 10765648216073
+ RAYS: 654037923733
+ TRAVERSALS: 3474679492674
+ ISECS: 10765615762339
 
- RAYS/s: 5.58697e+07
+ RAYS/s: 5.84468e+07
  NODES/RAY: 5.31266
  ISECS/RAY: 16.4602
 
- Total Elapsed Time: 11706.5 s
+ Total Elapsed Time: 11190.3 s
 
- FPS: 6.8338 spp/s
+ FPS: 7.14904 spp/s
 
- Avg. Kernel Time: 145.696 ms
+ Avg. Kernel Time: 139.455 ms
 
  Acc. Structure Build Time: < 1 ms s
 

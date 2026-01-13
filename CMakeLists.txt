@@ -8,6 +8,7 @@ add_subdirectory(vendor/glfw)
 include_directories(
     vendor/glfw/include
     vendor/glm
+    vendor/io
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/src
 )

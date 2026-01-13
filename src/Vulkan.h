@@ -1,3 +1,5 @@
+#ifndef VULKAN_H
+#define VULKAN_H
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -12,6 +14,8 @@
 #include <glm/glm.hpp>
 #include "models/OBJLoader.h"
 #include "models/BVH.h"
+#include "models/EXR.h"
+#include "models/PPM.h"
 
 namespace Pathtracer {
     //constexpr uint32_t WIDTH = 720;//1440; //640; //1080;
@@ -2093,128 +2097,43 @@ public:
         vkCmdClearColorImage(cmdbf, accImg, VK_IMAGE_LAYOUT_GENERAL, &clearVal, 1, &range);
         */
 
-        for (auto& px : pixels)
-            px /= static_cast<float>(binfo.spp);
-
-        auto mse = [](glm::vec4 p1, glm::vec4 p2) {
-            float dx = p1.x - p2.x;
-            float dy = p1.y - p2.y;
-            float dz = p1.z - p2.z;
-            return (dx*dx + dy*dy + dz*dz)/3;
-        };
-
-        auto rmse = [mse](glm::vec4 p1, glm::vec4 p2) {
-            return sqrt(mse(p1, p2));
-        };
-
-        auto psnr = [mse](glm::vec4 p1, glm::vec4 p2) {
-            //const uint32_t max = 255;
-            return 10 * log10(65025/(mse(p1, p2) + 1e-9));
-        };
-
         Pathtracer::Statistics stats = this->pathtracerStatistics;
         stats.treeStats = treeStats;
         
+        for (auto& px : pixels)
+            px /= static_cast<float>(binfo.spp);
+
+        auto mse = [](glm::vec4 p1, glm::vec4 p2) -> double {
+            double dx = p1.x - p2.x;
+            double dy = p1.y - p2.y;
+            double dz = p1.z - p2.z;
+            return (dx * dx + dy * dy + dz * dz) / 3;
+        };
+
+        
         if (binfo.btype == Pathtracer::IMGREF) {
-            std::string filepath = RESOURCE_PATH_PREFIX + "outputs\\" + this->pathtracerConfig.GetScene() + "\\ref.ppm";
-            auto groundTruth = readPPM(filepath, this->WIDTH, this->HEIGHT);
-            for (size_t i = 0; i < pixels.size(); i++) {
-                stats.rmse += rmse(pixels[i]*255.0f, groundTruth[i]);
-                stats.psnr += psnr(pixels[i]*255.0f, groundTruth[i]);
-            }
-            stats.rmse /= pixels.size();
-            stats.psnr /= pixels.size();
+            std::string filepath = RESOURCE_PATH_PREFIX + "outputs\\" + this->pathtracerConfig.GetScene() + "\\ref.exr";
+            std::vector<glm::vec4> groundTruth;
+            uint32_t w, h;
+            EXR::Load(filepath, groundTruth, w, h);
+            double smse = 0.0;
+            for (size_t i = 0; i < pixels.size(); i++)
+                smse += mse(pixels[i], groundTruth[i]);
+            smse /= pixels.size();
+            stats.rmse = sqrt(smse);
+            stats.psnr = 10.0 * log10(1.0 / smse);
         }
         
         if (this->pathtracerConfig.ShouldSaveImage()) {
             std::string filepath = RESOURCE_PATH_PREFIX + "outputs\\" + (binfo.btype != Pathtracer::IMGREF ? "output" : this->pathtracerConfig.GetScene() + "\\output" + this->pathtracerConfig.InlineString());
-            writePPM(filepath + ".ppm", pixels, this->WIDTH, this->HEIGHT, false);
-            if(binfo.btype != Pathtracer::IMGREF) writePPM(filepath + "-g.ppm", pixels, this->WIDTH, this->HEIGHT, true);
+            EXR::Save(filepath + ".exr", pixels, this->WIDTH, this->HEIGHT);
+            PPM::Save(filepath + ".ppm", pixels, this->WIDTH, this->HEIGHT, false);
+            //if(binfo.btype != Pathtracer::IMGREF) PPM::Save(filepath + "-g.ppm", pixels, this->WIDTH, this->HEIGHT, true);
         }
 
         return stats;
     }
 
-private:
-    void writePPM(const std::string& filename, const std::vector<glm::vec4>& pixels, int width, int height, bool useGamma = true) const {
-        std::ofstream out(filename, std::ios::binary);
-        if (!out) {
-            throw std::runtime_error("Failed to open file for writing PPM");
-        }
-
-        auto linearToSRGB = [](float c) {
-            c = std::clamp(c, 0.f, 1.f);
-            return c <= 0.0031308f ? 12.92f * c : 1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f;
-        };
-
-        // Header
-        out << "P6\n" << width << " " << height << "\n255\n";
-
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                const glm::vec4& c = pixels[y * width + x];
-                float r = std::clamp(c.r, 0.0f, 1.0f);
-                float g = std::clamp(c.g, 0.0f, 1.0f);
-                float b = std::clamp(c.b, 0.0f, 1.0f);
-
-                if (useGamma) {
-                    r = linearToSRGB(r);
-                    g = linearToSRGB(g);
-                    b = linearToSRGB(b);
-                }
-
-                unsigned char rgb[3];
-                rgb[0] = static_cast<unsigned char>(r * 255.0f);
-                rgb[1] = static_cast<unsigned char>(g * 255.0f);
-                rgb[2] = static_cast<unsigned char>(b * 255.0f);
-
-                out.write(reinterpret_cast<char*>(rgb), 3);
-            }
-        }
-
-        out.close();
-    }
-
-    std::vector<glm::vec4> readPPM(const std::string& filename, int width, int height) const {
-        std::ifstream file(filename, std::ios::binary);
-        if (!file)
-            throw std::runtime_error("Failed to open PPM file: " + filename);
-
-        std::string magic;
-        file >> magic; // P6
-        if (magic != "P6")
-            throw std::runtime_error("Unsupported PPM format: " + magic);
-
-        // Skip comments
-        char c = file.peek();
-        while (c == '#') {
-            file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            c = file.peek();
-        }
-
-        int w, h, maxval;
-        file >> w >> h >> maxval;
-        if (w != width || h != height)
-            std::cerr << "Warning: PPM dimensions do not match requested size\n";
-
-        file.get(); // consume single whitespace/newline after header
-
-        std::vector<glm::vec4> pixels;
-        pixels.reserve(w * h);
-
-        for (int i = 0; i < w * h; ++i) {
-            unsigned char rgb[3];
-            file.read(reinterpret_cast<char*>(rgb), 3);
-
-            glm::vec4 pixel;
-            pixel.r = float(rgb[0]) / maxval;
-            pixel.g = float(rgb[1]) / maxval;
-            pixel.b = float(rgb[2]) / maxval;
-            pixel.a = 1.0f; // alpha channel
-
-            pixels.push_back(pixel);
-        }
-
-        return pixels; // NRVO / move occurs automatically
-    }
 };
+
+#endif
