@@ -1,0 +1,30 @@
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ API: Vulkan
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 64x64
+ SPP: 80000
+ Max Light Bounces: 12
+[STATS]
+ TRIANGLES: 30
+ RAYS: 654039799598
+ TRAVERSALS: 3474689645017
+ ISECS: 10765648216073
+
+ RAYS/s: 5.58697e+07
+ NODES/RAY: 5.31266
+ ISECS/RAY: 16.4602
+
+ Total Elapsed Time: 11706.5 s
+
+ FPS: 6.8338 spp/s
+
+ Avg. Kernel Time: 145.696 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 5760 bytes (Nodes only)
+

@@ -1,17 +1,17 @@
-#define DEBUG
+//#define DEBUG
 #include "Pathtracer.h"
 
 //using namespace Pathtracer;
 
-Pathtracer::Config refGenConfig(Pathtracer::Scene scene, Pathtracer::API api = Pathtracer::API::VULKAN, Pathtracer::AccelerationStructure as = Pathtracer::AccelerationStructure::BVH) {
+Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
     benchmarkInfo.spp = 80U * 1000U;
 
     Config pathtracerConfig(
-        as,
-        api,
+        AccelerationStructure::BVH,
+        API::VULKAN,
         scene,
         Resolution::R1024x1024,
         12,
