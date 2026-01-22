@@ -38,7 +38,7 @@ namespace Pathtracer {
     /*
         NONE: Pathtracer runs indefinitely
         SPP: Pathtracer runs for a fixed number of frames/spp (samples per pixel). This yields runtime and tree build and traversal statistics
-        IMGREF: Pathtracer runs with ladder of spp (1,4,16,64,256,...) for 2 images using different techniques and store the RMSE or relRMSE
+        IMGREF: Pathtracer runs with ladder of spp (1,4,16,64,256,...) for 2 images using different techniques and store the RMSE and PSNR
     */
     enum BenchmarkType {
         NONE = 0,
@@ -113,9 +113,9 @@ namespace Pathtracer {
             switch (this->scene) {
                 case Scene::CORNELL_BOX: return "cornell_box";
                 case Scene::SIBENIK: return "sibenik2";
-                case Scene::BUNNY: return "bunny-plane";
-                case Scene::DRAGON: return "dragon-plane";
-                default: throw std::runtime_error("Unknown resolution");
+                case Scene::BUNNY: return "bunny-cbx";
+                case Scene::DRAGON: return "dragon-cbx";
+                default: throw std::runtime_error("Unknown scene");
             }
         }
 
@@ -1347,7 +1347,7 @@ private:
         pathtracerState.iFrame = 0;
         pathtracerState.iResolution = glm::vec2(this->WIDTH, this->HEIGHT);
         pathtracerState.iTime = 0;
-        pathtracerState.camera.cameraPos = glm::vec4(0.0f, 0.1f, -0.4f, 0.0);
+        pathtracerState.camera.cameraPos = glm::vec4(0.0f, 0.1f, -0.6f, 0.0);
         pathtracerState.camera.cameraRot = glm::vec4(0, 0,0,0);
         pathtracerUBO = createUniformBuffer(sizeof(PathtracerUBO), &pathtracerState);
 
@@ -1421,7 +1421,7 @@ private:
         std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
         std::vector<OBJLoader::Vertex> lightVerts = lightLoader.objVertices;
 
-        OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(0.9f, 0.9f, 0.9f), 32.0f };
+        OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(1.0f), 32.0f };
         std::vector<OBJLoader::Material> materials = objloader.GetMaterials();
         materials.push_back(lightMat);
 

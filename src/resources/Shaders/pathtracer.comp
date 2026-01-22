@@ -234,7 +234,7 @@ struct RenderData {
 #define MAX_DIST 100.0
 //#define MAX_LIGHT_BOUNCES 4 /*8*/
 #define MAX_TRAVERSAL_DEPTH 64
-#define MIN_TRACE_DIST 0.001
+#define MIN_TRACE_DIST 0.0001
 #define NORMAL_OFFSET 0.0001
 
 vec3 lightPos = (vec3(2.0, 3.0, 3.0))*1.0;
@@ -446,38 +446,7 @@ Scene world(Ray ray) {
     Scene scene;
     scene.d = MAX_DIST;
     scene.d2 = MAX_DIST;
-    
-    /*
-    ObjectInfo[] objsInfo = ObjectInfo[] (); //(ObjectInfo(vec4(1.0, 1.0, -1.0, 0.0), SPHERE_TYPE, 5, 0.3, 0.0), ObjectInfo(vec4(0.0, -0.25, 0.0, 0.0), SPHERE_TYPE, 0, 0.25, 0.0));
-    for(int i = 0; i < objsInfo.length(); i++) {
-        ObjectInfo objInfo = objsInfo[i];
-        if(objInfo.type == SPHERE_TYPE) {
-            Sphere sph = Sphere(objInfo.pos.xyz, objInfo.size, mats[int(objInfo.matIndex)]);
-            float d2;
-            float sphereHit = iSphere(ray, sph, d2);
-            if (miss(sphereHit)) continue;
-            scene.d = min(scene.d, sphereHit);
-            vec3 normal = normalize(ray.origin - objInfo.pos.xyz + scene.d * ray.dir);
-            vec3 normal2 = normalize(ray.origin - objInfo.pos.xyz + d2 * ray.dir);
-            SceneObject obj = SceneObject(objInfo.pos.xyz, normal, normal2, sph.mat);
-            if (scene.d == sphereHit) { 
-                scene.closestHit = obj;
-                scene.d2 = d2;
-            }
-        }
-        else if(objInfo.type == BOX_TYPE) {
-            Box box = Box(objInfo.pos.xyz, vec3(objInfo.size), mats[int(objInfo.matIndex)]);
-            vec3 normal = vec3(0.0);
-            float boxHit = boxIntersection(ray.origin - objInfo.pos.xyz, ray.dir, box.size, normal);
-            if (miss(boxHit)) continue;
-            scene.d = min(scene.d, boxHit);
-            SceneObject obj = SceneObject(objInfo.pos.xyz, normalize(normal), vec3(0.0), box.mat);
-            if (scene.d == boxHit) scene.closestHit = obj;
-        }
-    }
-    */
 
-    //Material texM = Material(vec4(0.0), 0.0, 1.0, 0.5, 0.0, 0.0, vec3(0.0), 0.0);
     TraversalBVH(ray, scene);
     EmissiveTraversalBF(ray, scene);
 
@@ -528,6 +497,29 @@ struct LightSample {
     float pdf;    // solid-angle PDF
 };
 
+float computeLightPdf(vec3 curPos, vec3 prevPos, uint triIdx) {
+    Triangle tri = eTriangles[triIdx];
+
+    vec3 v0 = vertices[tri.indices.x].position.xyz;
+    vec3 v1 = vertices[tri.indices.y].position.xyz;
+    vec3 v2 = vertices[tri.indices.z].position.xyz;
+
+    vec3 lightNormal = normalize(cross(v1 - v0, v2 - v0));
+
+    float area = tri.area.x;
+
+    vec3 toLight = curPos - prevPos;
+    float dist2 = dot(toLight, toLight);
+    if (dist2 < 1e-9) return 0.0;
+    vec3 wi = normalize(toLight);
+
+    float cosL = max(dot(lightNormal, -wi), 0.0); // abs(dot(lightNormal, -wi)); => double sided
+    if (cosL <= 0.0) return 0.0;
+
+    float denom = max(area * cosL * float(eTriangles.length()), 1e-6);
+    return dist2 / denom;
+}
+
 LightSample sampleNEE(vec3 hitPos, vec3 N) {
     LightSample ls;
     ls.pdf = -1e-5;
@@ -557,9 +549,6 @@ LightSample sampleNEE(vec3 hitPos, vec3 N) {
     float dist = sqrt(dist2);
     vec3 wi = toLight / max(1e-5, dist);
 
-    if (dot(lightNormal, wi) > 0.0)
-        lightNormal = -lightNormal;
-
     float cosS = dot(N, wi);
     float cosL = dot(lightNormal, -wi);
     if (cosS <= 0.0 || cosL <= 0.0) return ls;
@@ -570,16 +559,10 @@ LightSample sampleNEE(vec3 hitPos, vec3 N) {
     shadow.dir = wi;
 
     Scene sh = world(shadow);
-    if (sh.d < dist - NORMAL_OFFSET) return ls;
-
-    // PDF
-    float area = max(tri.area.x, 1e-6);
-    float areaPDF = 1.0 / area;
-    float pdf = areaPDF * dist2 / max(cosL, 1e-5);
-    pdf /= float(lightCount);
+    if (sh.d < dist - 2.0*NORMAL_OFFSET) return ls;
 
     ls.wi = wi;
-    ls.pdf = max(1e-5, pdf);
+    ls.pdf = computeLightPdf(lightPos, hitPos, lidx);
 
     Material lm = mats[tri.indices.w];
     ls.Le = lm.emissiveColor * lm.emissivePower;
@@ -694,29 +677,12 @@ float MISWeight(float pdf_a, float pdf_b) {
     return a2 / max(1e-6, (a2 + b2));
 }
 
-float computeLightPdf(vec3 curPos, vec3 prevPos, vec3 normal, uint triIdx) {
-    Triangle tri = eTriangles[triIdx];
-
-    float area = tri.area.x;
-
-    vec3 toLight = curPos - prevPos;
-    float dist2 = dot(toLight, toLight);
-    if (dist2 < 1e-9) return 0.0;
-    vec3 wi = normalize(toLight);
-
-    float cosL = max(dot(normal, -wi), 0.0);
-    if (cosL <= 0.0) return 0.0;
-
-    float denom = max(area * cosL * float(eTriangles.length()), 1e-6);
-    return dist2 / denom;
-}
-
 RenderData worldRender(vec2 uv, Ray ray) {
     Scene scene;
     vec3 radiance = vec3(0.0);
     vec3 throughput = vec3(1.0);
 
-    float prevPdfBSDF = 0.0;
+    float prevPdfBSDF = 1.0;
     for(int i = 0; i < pc.lightBounces; i++) {
         vec3 prevPos = ray.origin;
         scene = world(ray);
@@ -733,7 +699,7 @@ RenderData worldRender(vec2 uv, Ray ray) {
         if(mat.emissivePower > 0.0) {
             vec3 Le = mat.emissiveColor * mat.emissivePower;
             if(i > 0) {
-                float pdfLight = computeLightPdf(hitPoint, prevPos, N, scene.closestHit.triIdx);
+                float pdfLight = computeLightPdf(hitPoint, prevPos, scene.closestHit.triIdx);
                 float w = MISWeight(prevPdfBSDF, pdfLight);
                 radiance += throughput * Le * w;
             }

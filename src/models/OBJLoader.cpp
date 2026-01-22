@@ -47,7 +47,7 @@ OBJLoader::OBJLoader(const char* filepath) {
 			else if (line.rfind("Ni", 0) == 0) this->mats.back().IOR = stof(line.substr(3)); // IOR
 			else if (line.rfind("d", 0) == 0) this->mats.back().transmission = 1.0-stof(line.substr(2)); // Transmission
 			else if (line.rfind("Pr", 0) == 0) this->mats.back().roughness = stof(line.substr(3)); // Roughness
-			else if (line.rfind("pbr_emissive_power", 0) == 0) this->mats.back().roughness = stof(line.substr(19)); // Emissive Power
+			else if (line.rfind("pbr_emissive_power", 0) == 0) this->mats.back().emissivePower = stof(line.substr(19)); // Emissive Power
 		}
 	else {
 		this->mats.push_back({});

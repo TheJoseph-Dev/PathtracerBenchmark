@@ -42,7 +42,7 @@ int main() {
 
     {   
         using namespace Pathtracer;
-        App pathtracer(imgrefConfig(Scene::CORNELL_BOX));
+        App pathtracer(refGenConfig(Scene::BUNNY));
         pathtracer.run();
     }
 
