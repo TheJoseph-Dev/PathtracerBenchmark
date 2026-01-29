@@ -1414,12 +1414,12 @@ private:
         std::string sceneFilepath = RESOURCE("3DModels\\") + this->pathtracerConfig.GetScene();
         OBJLoader objloader((sceneFilepath + ".obj").c_str());
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
-        std::vector<OBJLoader::Vertex> objVertices = objloader.objVertices;
+        std::vector<OBJLoader::Vertex> objVertices = objloader.GetObjVertices();
 
         // Load light geometry
         OBJLoader lightLoader((sceneFilepath + "-light.obj").c_str());
         std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
-        std::vector<OBJLoader::Vertex> lightVerts = lightLoader.objVertices;
+        std::vector<OBJLoader::Vertex> lightVerts = lightLoader.GetObjVertices();
 
         OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(1.0f), 32.0f };
         std::vector<OBJLoader::Material> materials = objloader.GetMaterials();

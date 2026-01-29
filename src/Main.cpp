@@ -8,7 +8,7 @@ Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     benchmarkInfo.spp = 80U * 1000U;
 
     Config pathtracerConfig(
-        AccelerationStructure::BVH,
+        Pathtracer::AccelerationStructure::BVH,
         API::VULKAN,
         scene,
         Resolution::R1024x1024,
@@ -26,7 +26,7 @@ Pathtracer::Config imgrefConfig(Pathtracer::Scene scene) {
     benchmarkInfo.btype = BenchmarkType::IMGREF;
 
     Config pathtracerConfig(
-        AccelerationStructure::BVH,
+        Pathtracer::AccelerationStructure::BVH,
         API::VULKAN,
         scene,
         Resolution::R1024x1024,
@@ -42,7 +42,7 @@ int main() {
 
     {   
         using namespace Pathtracer;
-        App pathtracer(refGenConfig(Scene::BUNNY));
+        App pathtracer(refGenConfig(Scene::CORNELL_BOX));
         pathtracer.run();
     }
 

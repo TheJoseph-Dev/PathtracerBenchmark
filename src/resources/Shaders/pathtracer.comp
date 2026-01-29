@@ -52,12 +52,12 @@ struct ObjectInfo {
 };
 
 struct Node {
-    vec4 bboxMin;
-    vec4 bboxMax;
     int left;
     int right;
     uint triIdx;
     uint triCount;
+    vec4 bboxMin;
+    vec4 bboxMax;
 };
 
 struct Triangle {
@@ -392,11 +392,9 @@ void TraversalBVH(Ray ray, inout Scene scene) {
                     stack[stkptr++] = left;
                     stack[stkptr++] = right;
                 }
-            } else if (hitL) {
-                stack[stkptr++] = left;
-            } else if (hitR) {
-                stack[stkptr++] = right;
-            }
+            } 
+            else if (hitL) stack[stkptr++] = left;
+            else if (hitR) stack[stkptr++] = right;
         }
     }
 }
@@ -470,7 +468,7 @@ vec4 skyColor(vec2 uv) {
     
     vec4 color = vec4(red, green, blue, 1.0) * 1.0; 
     //color = vec4(0.5);
-    return color;
+    return vec4(0.0);
 }
 
 uint seed = 0u;
@@ -684,7 +682,6 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
     float prevPdfBSDF = 1.0;
     for(int i = 0; i < pc.lightBounces; i++) {
-        vec3 prevPos = ray.origin;
         scene = world(ray);
         if(scene.d >= MAX_DIST) { 
             radiance += throughput * skyColor(uv).rgb; 
@@ -699,7 +696,7 @@ RenderData worldRender(vec2 uv, Ray ray) {
         if(mat.emissivePower > 0.0) {
             vec3 Le = mat.emissiveColor * mat.emissivePower;
             if(i > 0) {
-                float pdfLight = computeLightPdf(hitPoint, prevPos, scene.closestHit.triIdx);
+                float pdfLight = computeLightPdf(hitPoint, ray.origin, scene.closestHit.triIdx);
                 float w = MISWeight(prevPdfBSDF, pdfLight);
                 radiance += throughput * Le * w;
             }

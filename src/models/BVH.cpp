@@ -3,31 +3,17 @@
 #include <algorithm>
 #include <queue>
 
-BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) {
+BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) : AccelerationStructure(meshgeo) {
     static_assert(sizeof(Node) == 48);
-    this->triangles.reserve(meshgeo.triangles.size());
-    for (size_t i = 0; i < meshgeo.triangles.size(); i++) {
-        Triangle tri;
-        tri.oIdx = i;
-        tri.v0 = meshgeo.triangles[i].x;
-        tri.v1 = meshgeo.triangles[i].y;
-        tri.v2 = meshgeo.triangles[i].z;
-
-        const glm::vec4& a = meshgeo.vertices[tri.v0].position;
-        const glm::vec4& b = meshgeo.vertices[tri.v1].position;
-        const glm::vec4& c = meshgeo.vertices[tri.v2].position;
-
-        tri.bbox = AABB(glm::min(glm::min(a, b), c), glm::max(glm::max(a, b), c));
-        triangles.push_back(tri);
-    }
-
-    this->size = 0;
-    this->tree.resize(4*triangles.size());
+    static_assert(std::is_trivially_copyable_v<Node>);
+    this->tree.resize(4*triangles.size()/leafSize);
     // Build => Made build public so it's easier to benchmark
 };
 
 void BVH::Build() {
+    this->size = 0;
     this->Build(0, this->triangles.size());
+    tree.resize(this->size);
 }
 
 int BVH::SplitMedian(const AABB& bounds, int l, int r) {
@@ -60,10 +46,6 @@ int BVH::SplitMedian(const AABB& bounds, int l, int r) {
 // SAl = Left child surface area; SAr = Right child surface area
 // Nl = number of triangles at left; Nr = number of triangles at right
 int BVH::SplitSAH(const AABB& bounds, int l, int r) {
-    const int count = r - l;
-    if (count <= leafSize)
-        return (l + r) >> 1;
-
     float bestCost = std::numeric_limits<float>::infinity();
     int bestAxis = -1;
     int bestSplit = -1;
@@ -71,11 +53,6 @@ int BVH::SplitSAH(const AABB& bounds, int l, int r) {
     const float SA = bounds.surfaceArea();
 
     for (int axis = 0; axis < 3; axis++) {
-        struct Bin {
-            AABB bounds;
-            int count = 0;
-        };
-
         Bin bins[BINS];
 
         float minAxis = bounds.min[axis];
@@ -125,8 +102,8 @@ int BVH::SplitSAH(const AABB& bounds, int l, int r) {
         for (int i = 0; i < BINS - 1; i++) {
             if (!leftCount[i] || !rightCount[i + 1])
                 continue;
-            float SAlC = leftBounds[i].surfaceArea() / SA * leftCount[i];
-            float SArC = rightBounds[i + 1].surfaceArea() / SA * rightCount[i + 1];
+            float SAlC = leftCount[i] * leftBounds[i].surfaceArea() / SA;
+            float SArC = rightCount[i + 1] * rightBounds[i + 1].surfaceArea() / SA;
             float cost = Ct + Ci * ( SAlC + SArC );
 
             if (cost < bestCost) {

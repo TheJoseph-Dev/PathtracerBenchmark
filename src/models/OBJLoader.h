@@ -44,9 +44,6 @@ public:
 		glm::vec4 area;
 	};
 
-	std::vector<Vertex> objVertices;
-	std::vector<Triangle> triangles = std::vector<Triangle>();
-
 	struct MeshGeometry {
 		std::vector<Vertex> vertices;
 		std::vector<glm::uvec3> triangles;
@@ -64,6 +61,9 @@ public:
 	};
 
 private:
+	std::vector<Vertex> objVertices;
+	std::vector<Triangle> triangles = std::vector<Triangle>();
+
 	std::vector<Material> mats;
 	std::unordered_map<std::string, uint32_t> matIdxMap;
 	
@@ -83,6 +83,7 @@ public:
 	std::vector<glm::vec4> GetPositions() const { return positions; }
 	std::vector<Triangle> GetTriangles() const { return this->triangles; }
 	std::vector<Material> GetMaterials() const { return this->mats; }
+	std::vector<Vertex> GetObjVertices() const { return this->objVertices; }
 
 	MeshGeometry GetMeshGeometry() const {
 		std::vector<glm::uvec3> triIdxs(triangles.size());

@@ -1,51 +1,42 @@
 #ifndef KDTREE_H
 #define KDTREE_H
 #include <vector>
+#include <array>
+#include <glm/glm.hpp>
+#include "OBJLoader.h"
+#include "AccelerationStructure.h"
 
-class KdTree {
-    struct DynamicNode {
-        int32_t id;
-        //AABB bounds;
-        DynamicNode* left;
-        DynamicNode* right;
+class KdTree: public AccelerationStructure {
+
+    struct Node: public TreeNode {
+        uint32_t axis;
+        float splitPos;
     };
 
-    struct Node {
-        //AABB bounds;  
-        int32_t left;
-        int32_t right;
-    };
-
-    DynamicNode* root;
-    uint32_t size;
+    std::vector<Node> tree;
+    
 public:
 
-    KdTree();
-    ~KdTree();
+    KdTree(const OBJLoader::MeshGeometry& meshgeo);
+    ~KdTree() override = default;
+
+    void Build() override;
+
+    int GetHeight() const;
+
+    void Print() const {
+        //for (size_t i = 0; i < tree.size(); i++) printf("%d | (%d, %d | %d, %d) => bbmin(%.2f %.2f %.2f) bbmax(%.2f %.2f %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].bbox.min.x, tree[i].bbox.min.y, tree[i].bbox.min.z, tree[i].bbox.max.x, tree[i].bbox.max.y, tree[i].bbox.max.z);
+    }
+
+    const std::vector<Node>& GetTree() const {
+        return this->tree;
+    }
 
 private:
 
-// DFS
-std::vector<Node> Flatten() const {
-    std::vector<Node> tree(this->size);
-    std::vector<DynamicNode*> stk;
-    stk.reserve(this->size);
-    stk.push_back(root);
-    while(!stk.empty()) {
-        DynamicNode* node = stk.back(); 
-        stk.pop_back();
-        tree[node->id] = { node->left ? node->left->id : -1, node->right ? node->right->id : -1 };
-        if(node->left) stk.push_back(node->left);
-        if(node->right) stk.push_back(node->right);
-    }
-    return tree;
-}
-
-public:
-
-    std::vector<Node> GetTree() const {
-        return this->Flatten();
-    }
+    std::vector<size_t> indexArena;
+    std::array<int, 2> SplitSAH(const AABB& bounds, int l, int r, uint32_t axis);
+    uint32_t Build(int l, int r, uint32_t axis);
 };
 
 #endif
