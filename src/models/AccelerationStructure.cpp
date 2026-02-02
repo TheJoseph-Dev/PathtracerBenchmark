@@ -15,7 +15,7 @@ AccelerationStructure::AccelerationStructure(const OBJLoader::MeshGeometry& mesh
         const glm::vec4& c = meshgeo.vertices[tri.v2].position;
 
         tri.bbox = AABB(glm::min(glm::min(a, b), c), glm::max(glm::max(a, b), c));
-        triangles.push_back(tri);
+        triangles.emplace_back(tri);
     }
 
     this->size = 0;

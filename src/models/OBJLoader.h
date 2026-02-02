@@ -36,7 +36,7 @@ public:
 		glm::vec4 textureCoord;
 		glm::vec4 normal;
 
-		static int GetStride() { return (4 * 3); }
+		static constexpr int GetStride() { return (4 * 3); }
 	};
 
 	struct Triangle {

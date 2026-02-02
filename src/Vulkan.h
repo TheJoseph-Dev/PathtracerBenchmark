@@ -14,6 +14,7 @@
 #include <glm/glm.hpp>
 #include "models/OBJLoader.h"
 #include "models/BVH.h"
+#include "models/KdTree.h"
 #include "models/EXR.h"
 #include "models/PPM.h"
 
@@ -34,6 +35,11 @@ namespace Pathtracer {
         uint32_t lightBounces;
     };
 
+    struct SpecializedConstants {
+        VkBool32 useNEE = VK_TRUE;
+        VkBool32 useMIS = VK_TRUE;
+        VkBool32 useBVH = VK_TRUE;
+    };
     
     /*
         NONE: Pathtracer runs indefinitely
@@ -52,7 +58,7 @@ namespace Pathtracer {
         uint32_t spp;
     };
 
-    enum AccelerationStructure {
+    enum AccelerationStructureType {
         /*Binned SAH*/BVH = 0,
         /*Havran SAH*/KD_TREE = 1
     };
@@ -80,7 +86,7 @@ namespace Pathtracer {
     };
 
     class Config {
-        const AccelerationStructure accelerationStructure;
+        const AccelerationStructureType accelerationStructureType;
         const API api;
         const Scene scene;
         const Resolution resolution;
@@ -91,12 +97,12 @@ namespace Pathtracer {
     
     public:
 
-        Config(AccelerationStructure as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false)
-            : accelerationStructure(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize)
+        Config(AccelerationStructureType as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false)
+            : accelerationStructureType(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize)
         {}
 
-        AccelerationStructure GetAccelerationStructure() const {
-            return accelerationStructure;
+        AccelerationStructureType GetAccelerationStructureType() const {
+            return accelerationStructureType;
         }
 
         API GetAPI() const {
@@ -158,7 +164,7 @@ namespace Pathtracer {
                 << "\n GPU: NVIDIA GeForce MX350 - 2Gb VRAM"
                 << "\n Scene: " << this->GetScene()
                 << "\n API: " << (!this->api ? "Vulkan" : "CUDA")
-                << "\n Acc. Structure: " << (!this->accelerationStructure ? "Binned SAH-BVH" : "Havran SAH-KdTree")
+                << "\n Acc. Structure: " << (!this->accelerationStructureType ? "Binned SAH-BVH" : "Havran SAH-KdTree")
                 << "\n Resolution: " << this->GetResolution().x << "x" << this->GetResolution().y
                 << "\n Tile Size: " << this->GetTileSize().x << "x" << this->GetTileSize().y
                 << "\n SPP: " << this->benchmarkInfo.spp
@@ -170,7 +176,7 @@ namespace Pathtracer {
                 + "-r" + std::to_string(GetResolution().x) + "x" + std::to_string(GetResolution().y)
                 + "-lb" + std::to_string(this->lightBounces)
                 + (!this->api ? "-vulkan" : "-cuda")
-                + (!this->accelerationStructure ? "-bvh" : "-kdtree");
+                + (!this->accelerationStructureType ? "-bvh" : "-kdtree");
         }
     };
 
@@ -553,7 +559,7 @@ private:
             queueCreateInfo.queueCount = 1;
             float queuePriority = 1.0f;
             queueCreateInfo.pQueuePriorities = &queuePriority;
-            queueCreateInfos.push_back(queueCreateInfo);
+            queueCreateInfos.emplace_back(queueCreateInfo);
         }
 
         dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
@@ -942,15 +948,17 @@ private:
         vkUnmapMemory(device, ubo.memory);
     }
 
-    const uint32_t SSBOsCount = 6;
+    const uint32_t SSBOsCount = 8;
     enum SSBOBinding {
         BVH_NODES = 3,
-        TRIANGLES = 4,
-        VERTICES = 5,
-        EMISSIVES = 6,
-        MATERIALS = 7,
+        KDTREE_NODES = 4,
+        KDTREE_INDICES = 5,
+        TRIANGLES = 6,
+        VERTICES = 7,
+        EMISSIVES = 8,
+        MATERIALS = 9,
 
-        STATISTICS = 9
+        STATISTICS = 11
     };
     std::vector<Buffer> pathtracerSSBOs;
     std::vector<Buffer> stagingBuffers;
@@ -1356,11 +1364,13 @@ private:
             { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::BVH_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::KDTREE_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::KDTREE_INDICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::TRIANGLES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::VERTICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::EMISSIVES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::MATERIALS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 8, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { 10, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::STATISTICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
         };
         createDescriptorSetLayout(computeBindings, &this->computeDescriptorSetLayout);
@@ -1416,6 +1426,8 @@ private:
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
         std::vector<OBJLoader::Vertex> objVertices = objloader.GetObjVertices();
 
+        pathtracerStatistics.sceneTriangles = triangles.size();
+
         // Load light geometry
         OBJLoader lightLoader((sceneFilepath + "-light.obj").c_str());
         std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
@@ -1423,7 +1435,7 @@ private:
 
         OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(1.0f), 32.0f };
         std::vector<OBJLoader::Material> materials = objloader.GetMaterials();
-        materials.push_back(lightMat);
+        materials.emplace_back(lightMat);
 
         // Merge light vertices
         uint32_t vertexOffset = objVertices.size();
@@ -1435,40 +1447,62 @@ private:
         for (size_t i = 0; i < triangles.size(); i++) meshTris[i] = { triangles[i].indices.x, triangles[i].indices.y, triangles[i].indices.z };
         OBJLoader::MeshGeometry mergedMesh{ objVertices, meshTris };
 
-        BVH bvh = BVH(mergedMesh);
-        auto t0 = std::chrono::high_resolution_clock::now();
-        bvh.Build();
-        auto t1 = std::chrono::high_resolution_clock::now();
-        pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
+        if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH) {
+            BVH bvh = BVH(mergedMesh);
+            auto t0 = std::chrono::high_resolution_clock::now();
+            bvh.Build();
+            auto t1 = std::chrono::high_resolution_clock::now();
+            pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
 
-        auto bvht = bvh.GetTriangles();
+            auto bvht = bvh.GetTriangles();
 
-        // Reordering to match BVH partitions (triIdx; triCount) in the shader
-        std::vector<OBJLoader::Triangle> reordered(triangles.size());
-        for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[bvht[i].oIdx];
-        triangles = std::move(reordered);
-        pathtracerStatistics.sceneTriangles = triangles.size();
+            // Reordering to match BVH partitions (triIdx; triCount) in the shader
+            std::vector<OBJLoader::Triangle> reordered(triangles.size());
+            for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[bvht[i].oIdx];
+            triangles = std::move(reordered);
+            
+            const std::vector<BVH::Node>& tree = bvh.GetTree();
+            pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
 
-        auto tree = bvh.GetTree();
-        pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
+            pathtracerSSBOs.emplace_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
+            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::BVH_NODES); // BVH Nodes
+        }
+        else {
+            KdTree kdh = KdTree(mergedMesh);
+            auto t0 = std::chrono::high_resolution_clock::now();
+            kdh.Build();
+            auto t1 = std::chrono::high_resolution_clock::now();
+            pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
+            kdh.Print();
+            //auto kdt = kdb.GetTriangles();
 
-        pathtracerSSBOs.push_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
-        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::BVH_NODES); // BVH Nodes
+            const std::vector<KdTree::Node>& tree = kdh.GetTree();
+            pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
+
+            objVertices = kdh.GetVertices();
+
+            pathtracerSSBOs.emplace_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
+            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_NODES); // Node ranges correspond to the indices array, which contain actual triangle indices
+
+            const std::vector<uint32_t>& indices = kdh.GetIndices();
+            pathtracerSSBOs.emplace_back(createStorageBuffer(indices.size() * sizeof(indices[0]), indices.data()));
+            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
+        }
 
         //bvh.Print();
-        pathtracerSSBOs.push_back(createStorageBuffer(triangles.size() * sizeof(triangles[0]), triangles.data()));
+        pathtracerSSBOs.emplace_back(createStorageBuffer(triangles.size() * sizeof(triangles[0]), triangles.data()));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::TRIANGLES); // Triangles
 
-        pathtracerSSBOs.push_back(createStorageBuffer(objVertices.size() * sizeof(objVertices[0]), objVertices.data()));
+        pathtracerSSBOs.emplace_back(createStorageBuffer(objVertices.size() * sizeof(objVertices[0]), objVertices.data()));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::VERTICES); // Vertices
 
-        pathtracerSSBOs.push_back(createStorageBuffer(lightTris.size() * sizeof(lightTris[0]), lightTris.data()));
+        pathtracerSSBOs.emplace_back(createStorageBuffer(lightTris.size() * sizeof(lightTris[0]), lightTris.data()));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::EMISSIVES); // Emissives/Light
 
-        pathtracerSSBOs.push_back(createStorageBuffer(materials.size() * sizeof(materials[0]), materials.data()));
+        pathtracerSSBOs.emplace_back(createStorageBuffer(materials.size() * sizeof(materials[0]), materials.data()));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::MATERIALS); // Materials
 
-        pathtracerSSBOs.push_back(createStorageBuffer(sizeof(Pathtracer::GPUTreeStatistics), nullptr, true));
+        pathtracerSSBOs.emplace_back(createStorageBuffer(sizeof(Pathtracer::GPUTreeStatistics), nullptr, true));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::STATISTICS); // Statistics
 
 
@@ -1684,6 +1718,25 @@ private:
         
         vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &computePipelineLayout);
 
+        Pathtracer::SpecializedConstants spec = {
+            .useNEE = VK_TRUE,
+            .useMIS = VK_TRUE,
+            .useBVH = (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH)
+        };
+
+        VkSpecializationMapEntry entries[] = {
+            { 1, offsetof(Pathtracer::SpecializedConstants, useNEE), sizeof(VkBool32) },
+            { 2, offsetof(Pathtracer::SpecializedConstants, useMIS), sizeof(VkBool32) },
+            { 3, offsetof(Pathtracer::SpecializedConstants, useBVH), sizeof(VkBool32) }
+        };
+
+        VkSpecializationInfo specInfo{
+            .mapEntryCount = 3,
+            .pMapEntries = entries,
+            .dataSize = sizeof(Pathtracer::SpecializedConstants),
+            .pData = &spec
+         };
+
         // Compute pipeline
         VkShaderModule pathtracerComputeShaderModule = this->createShaderModule("shaders\\pathtracer.spv", ShaderType::COMPUTE).value();
         VkComputePipelineCreateInfo computePipelineInfo{};
@@ -1692,6 +1745,7 @@ private:
         computePipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
         computePipelineInfo.stage.module = pathtracerComputeShaderModule;
         computePipelineInfo.stage.pName = "main";
+        computePipelineInfo.stage.pSpecializationInfo = &specInfo;
         computePipelineInfo.layout = computePipelineLayout;
         vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineInfo, nullptr, &computePipeline);
 

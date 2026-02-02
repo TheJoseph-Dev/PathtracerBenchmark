@@ -5,14 +5,12 @@
 #include "OBJLoader.h"
 #include "AccelerationStructure.h"
 
-class BVH: public AccelerationStructure {
-    struct Node: public TreeNode {
+class BVH final : public AccelerationStructure {
+public:
+    struct alignas(16) Node : public TreeNode {
         AABB bbox;
     };
 
-    std::vector<Node> tree;
-
-public:
     BVH(const OBJLoader::MeshGeometry& meshgeo);
     ~BVH() override = default;
 
@@ -29,6 +27,8 @@ public:
     }
 
 private:
+
+    std::vector<Node> tree;
 
     int SplitMedian(const AABB& bounds, int l, int r);
     int SplitSAH(const AABB& bounds, int l, int r);

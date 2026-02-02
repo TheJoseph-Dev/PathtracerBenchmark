@@ -3,6 +3,18 @@
 layout(local_size_x = 8, local_size_y = 8) in;
 layout(binding = 0, rgba32f) writeonly uniform image2D outImage;
 
+/*
+| USE_MIS | USE_NEE | Outcome
+|    1    |    1    |  Normal MIS BSDF + NEE
+|    1    |    0    |  UB
+|    0    |    1    |  Only NEE
+|    0    |    0    |  Only BSDF
+*/
+
+layout(constant_id = 1) const bool USE_NEE = true;
+layout(constant_id = 2) const bool USE_MIS = USE_NEE;
+layout(constant_id = 3) const bool USE_BVH = true;
+
 struct ComputeTile {
     uvec2 tileSize;
     uvec2 tileOffset;
@@ -32,7 +44,7 @@ float iTime;
 int iFrame;
 vec3 cameraPos;
 vec3 cameraRot;
-int accumulate = 1;
+//uint accumulate = 1;
 
 layout(binding = 2) uniform sampler2D lastFrameTex;
 
@@ -51,7 +63,7 @@ struct ObjectInfo {
     float w;
 };
 
-struct Node {
+struct BVHNode {
     int left;
     int right;
     uint triIdx;
@@ -60,15 +72,29 @@ struct Node {
     vec4 bboxMax;
 };
 
+struct KdNode {
+    int left;
+    int right;
+    uint triIdx;
+    uint triCount;
+    float splitPos;
+    uint axis;
+    int pad0;
+    int pad1;
+};
+
 struct Triangle {
     uvec4 indices;
     vec4 area;
 };
 
-layout(std430, binding = 3) readonly buffer BVHNodes { Node nodes[]; };
-layout(std430, binding = 4) readonly buffer Triangles { Triangle triangles[]; };
-layout(std430, binding = 5) readonly buffer MeshData { Vertex vertices[]; };
-layout(std430, binding = 6) readonly buffer EmissiveGeometry { Triangle eTriangles[]; };
+layout(std430, binding = 3) readonly buffer BVHNodes { BVHNode bvhNodes[]; };
+layout(std430, binding = 4) readonly buffer KdTreeNodes { KdNode kdNodes[]; };
+layout(std430, binding = 5) readonly buffer KdTreeIndices { uint kdtreeIndices[]; };
+
+layout(std430, binding = 6) readonly buffer Triangles { Triangle triangles[]; };
+layout(std430, binding = 7) readonly buffer MeshData { Vertex vertices[]; };
+layout(std430, binding = 8) readonly buffer EmissiveGeometry { Triangle eTriangles[]; };
 
 struct Material {
     vec4 albedo;
@@ -94,14 +120,14 @@ Material rLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(1.0, 0.2, 0.1), 2
 Material gLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(0.2, 0.9, 0.8), 1.0);
     
 // Material[] mats = Material[] ( m1, m2, tranM, wRefM, pRefM, wlm, lm, rLight, gLight, bLight );
-layout(std430, binding = 7) readonly buffer Materials { Material mats[]; };
+layout(std430, binding = 9) readonly buffer Materials { Material mats[]; };
 
 // Benchmark
-layout(binding = 8, rgba32f) uniform image2D accImage;
-layout(std430, binding = 9) buffer Statistics {
+layout(binding = 10, rgba32f) uniform image2D accImage;
+layout(std430, binding = 11) buffer Statistics {
     uvec2 rays; // Rays cast (primary + secondary) | Overall work done; basic throughput metric
     uvec2 isecs; // Primitive intersections | Measures geometry testing cost; can identify heavy scenes
-    uvec2 traversals; // BVH nodes visited | BVH efficiency; algorithm-level performance
+    uvec2 traversals; // Nodes visited | AS Efficiency; algorithm-level performance
 } statistics;
 
 #define ATOMIC_INC_U64(counter) do { \
@@ -116,6 +142,7 @@ layout(std430, binding = 9) buffer Statistics {
 #define INV_PI 0.3183098
 //#define ACCUMULATE
 #define EXPOSURE 0.5
+#define INF 2e9
 
 mat2 rotation(float angle) {
     return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
@@ -303,10 +330,10 @@ struct IsecInfo {
     float tmax;
 };
 
-IsecInfo RayAABBIsec(Ray ray, Node n, vec3 invDir) {
+IsecInfo RayAABBIsec(Ray ray, vec3 bbMin, vec3 bbMax, vec3 invDir) {
     IsecInfo info;
-    vec3 t0s = (n.bboxMin.xyz - ray.origin) * invDir;
-    vec3 t1s = (n.bboxMax.xyz - ray.origin) * invDir;
+    vec3 t0s = (bbMin - ray.origin) * invDir;
+    vec3 t1s = (bbMax - ray.origin) * invDir;
     vec3 tsmaller = min(t0s, t1s);
     vec3 tbigger  = max(t0s, t1s);
     float tmin = max(max(tsmaller.x, tsmaller.y), max(tsmaller.z, 0.0));
@@ -330,17 +357,19 @@ void TraversalBVH(Ray ray, inout Scene scene) {
     int stkptr = 0, it = 0;
     stack[stkptr++] = 0;
 
-    while (stkptr > 0 && stkptr < MAX_TRAVERSAL_DEPTH && it++ < 2*MAX_TRAVERSAL_DEPTH) {
+    while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH && it++ < 2*MAX_TRAVERSAL_DEPTH) {
         ATOMIC_INC_U64(statistics.traversals);
         int nodeIdx = stack[--stkptr];
-        Node n = nodes[nodeIdx];
+        BVHNode n = bvhNodes[nodeIdx];
 
         // Test current node
+        /*
         IsecInfo isec = RayAABBIsec(ray, n, invDir);
         if (isec.tmax < isec.tmin || isec.tmin > scene.d)
             continue;
+        */
 
-        bool isLeaf = (n.left == -1 && n.right == -1);
+        bool isLeaf = (n.left == -1);
 
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
@@ -354,17 +383,16 @@ void TraversalBVH(Ray ray, inout Scene scene) {
                 float t = triIntersect(ray.origin, ray.dir, v0, v1, v2).x;
                 if (miss(t)) continue;
 
-                if (t < scene.d) {
-                    vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
-                    vec3 hitPos = ray.origin + ray.dir * t;
-                    scene.closestHit.pos = hitPos;
-                    scene.closestHit.normal = Ng;
-                    scene.closestHit.normal2 = Ng;
-                    scene.closestHit.triIdx = n.triIdx + i;
-                    scene.d = t;
-                    scene.d2 = t;
-                    scene.closestHit.mat = mats[tri.indices.w];
-                }
+                if (t > scene.d) continue;
+                vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
+                vec3 hitPos = ray.origin + ray.dir * t;
+                scene.closestHit.pos = hitPos;
+                scene.closestHit.normal = Ng;
+                scene.closestHit.normal2 = Ng;
+                scene.closestHit.triIdx = n.triIdx + i;
+                scene.d = t;
+                scene.d2 = t;
+                scene.closestHit.mat = mats[tri.indices.w];
             }
         } else {
             int left = n.left;
@@ -374,12 +402,12 @@ void TraversalBVH(Ray ray, inout Scene scene) {
             IsecInfo lIsec, rIsec;
 
             if (left >= 0) {
-                lIsec = RayAABBIsec(ray, nodes[left], invDir);
+                lIsec = RayAABBIsec(ray, bvhNodes[left].bboxMin.xyz, bvhNodes[left].bboxMax.xyz, invDir);
                 hitL = !(lIsec.tmax < lIsec.tmin || lIsec.tmin > scene.d);
             }
 
             if (right >= 0) {
-                rIsec = RayAABBIsec(ray, nodes[right], invDir);
+                rIsec = RayAABBIsec(ray, bvhNodes[right].bboxMin.xyz, bvhNodes[right].bboxMax.xyz, invDir);
                 hitR = !(rIsec.tmax < rIsec.tmin || rIsec.tmin > scene.d);
             }
 
@@ -396,6 +424,71 @@ void TraversalBVH(Ray ray, inout Scene scene) {
             else if (hitL) stack[stkptr++] = left;
             else if (hitR) stack[stkptr++] = right;
         }
+    }
+}
+
+struct SpaceContext {
+    uint node;
+    float tmin;
+    float tmax;
+};
+
+void TraversalKdTree(Ray ray, inout Scene scene) {
+    ATOMIC_INC_U64(statistics.rays);
+    vec3 invDir = 1.0 / ray.dir;
+    SpaceContext stack[MAX_TRAVERSAL_DEPTH];
+    int stkptr = 0, it = 0;
+    stack[stkptr++] = SpaceContext(0, -INF, INF);
+
+    while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH && it++ < 2*MAX_TRAVERSAL_DEPTH) {
+        ATOMIC_INC_U64(statistics.traversals);
+        SpaceContext sc = stack[--stkptr];
+        KdNode n = kdNodes[sc.node];
+
+        if (sc.tmin > scene.d) continue;
+
+        bool isLeaf = (n.left == -1);
+        if (isLeaf) {
+            for (uint i = 0; i < n.triCount; ++i) {
+                ATOMIC_INC_U64(statistics.isecs);
+                Triangle tri = triangles[kdtreeIndices[n.triIdx + i]];
+
+                vec3 v0 = vertices[tri.indices.x].position.xyz;
+                vec3 v1 = vertices[tri.indices.y].position.xyz;
+                vec3 v2 = vertices[tri.indices.z].position.xyz;
+
+                float t = triIntersect(ray.origin, ray.dir, v0, v1, v2).x;
+                if (miss(t)) continue;
+
+                //if (t > scene.d || t < sc.tmin || t > sc.tmax) continue;
+                if (t > scene.d) continue;
+                vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
+                vec3 hitPos = ray.origin + ray.dir * t;
+                scene.closestHit.pos = hitPos;
+                scene.closestHit.normal = Ng;
+                scene.closestHit.normal2 = Ng;
+                scene.closestHit.triIdx = n.triIdx + i;
+                scene.d = t;
+                scene.d2 = t;
+                scene.closestHit.mat = mats[tri.indices.w];
+            }
+        } else {
+            float tsplit = (n.splitPos - ray.origin[n.axis]) * invDir[n.axis];
+            bool below = ray.origin[n.axis] < n.splitPos || (ray.origin[n.axis] == n.splitPos && ray.dir[n.axis] <= 0.0);
+            uint near = below ? n.left  : n.right;
+            uint far  = below ? n.right : n.left;
+            stack[stkptr++] = SpaceContext(near, sc.tmin, tsplit);
+            stack[stkptr++] = SpaceContext(far, tsplit, sc.tmax);
+            /*
+            if (tsplit >= sc.tmax || tsplit < sc.tmin) stack[stkptr++] = SpaceContext(near, sc.tmin, sc.tmax);
+            else if (tsplit <= sc.tmin) stack[stkptr++] = SpaceContext(far, sc.tmin, sc.tmax);
+            else {
+                if(tsplit < scene.d) stack[stkptr++] = SpaceContext(far, tsplit, sc.tmax);
+                stack[stkptr++] = SpaceContext(near, sc.tmin, tsplit);
+            }
+            */
+        }
+
     }
 }
 
@@ -445,7 +538,9 @@ Scene world(Ray ray) {
     scene.d = MAX_DIST;
     scene.d2 = MAX_DIST;
 
-    TraversalBVH(ray, scene);
+    if(USE_BVH) TraversalBVH(ray, scene);
+    else TraversalKdTree(ray, scene);
+
     EmissiveTraversalBF(ray, scene);
 
     return scene;

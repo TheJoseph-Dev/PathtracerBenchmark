@@ -70,7 +70,7 @@ protected:
 
     std::vector<Triangle> triangles;
 
-    struct TreeNode {
+    struct alignas(16) TreeNode {
         int32_t left;      // index of left child (-1 if leaf)
         int32_t right;     // index of right child (-1 if leaf)
         uint32_t triIdx;   // starting triangle index (valid if leaf)

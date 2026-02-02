@@ -10,11 +10,11 @@ std::vector<std::string> split(std::string s, const std::string& separator) {
 	std::vector<std::string> splittedString = std::vector<std::string>();
 	while (s.find(separator) != std::string::npos) {
 		std::string token = s.substr(0, s.find(separator));
-		splittedString.push_back(token);
+		splittedString.emplace_back(token);
 		s.erase(0, s.find(separator) + separator.length());
 	}
 
-	splittedString.push_back(s);
+	splittedString.emplace_back(s);
 
 	return splittedString;
 }
@@ -39,7 +39,7 @@ OBJLoader::OBJLoader(const char* filepath) {
 		while (getline(matStream, line)) {
 			if (line.rfind("newmtl", 0) == 0) {
 				this->matIdxMap[line.substr(7)] = this->mats.size();
-				this->mats.push_back({});
+				this->mats.emplace_back();
 			}
 			else if (line.rfind("Ns", 0) == 0) this->mats.back().specular = stof(line.substr(3)); // Specular
 			else if (line.rfind("Kd", 0) == 0) this->mats.back().albedo = LoadVectorData(line); // Albedo
@@ -50,20 +50,20 @@ OBJLoader::OBJLoader(const char* filepath) {
 			else if (line.rfind("pbr_emissive_power", 0) == 0) this->mats.back().emissivePower = stof(line.substr(19)); // Emissive Power
 		}
 	else {
-		this->mats.push_back({});
+		this->mats.emplace_back();
 		std::cerr << "WARNING: OBJLoader couldn't find .MTL file\n";
 	}
 
 	while (getline(stream, line)) {
 		if (line.rfind("usemtl", 0) == 0) { this->currentMaterialIndex = this->matIdxMap[line.substr(7)]; continue; }
-		if (line.rfind("v ",  0) == 0)  { this->positions.push_back(LoadVectorData(line)); continue; }
-		if (line.rfind("vt", 0) == 0) { this->textureCoords.push_back(LoadVectorData(line)); continue; }
-		if (line.rfind("vn", 0) == 0) { this->normals.push_back(LoadVectorData(line)); continue; }
+		if (line.rfind("v ",  0) == 0)  { this->positions.emplace_back(LoadVectorData(line)); continue; }
+		if (line.rfind("vt", 0) == 0) { this->textureCoords.emplace_back(LoadVectorData(line)); continue; }
+		if (line.rfind("vn", 0) == 0) { this->normals.emplace_back(LoadVectorData(line)); continue; }
 
 		if (line.rfind("f", 0) == 0) {
 			auto face = LoadFace(line);
 			objVertices.insert(objVertices.end(), face.begin(), face.end());
-			this->matIndices.push_back(this->currentMaterialIndex);
+			this->matIndices.emplace_back(this->currentMaterialIndex);
 			continue;
 		}
 	}
@@ -107,7 +107,7 @@ std::vector<OBJLoader::Vertex> OBJLoader::LoadFace(const std::string& face) {
 
 	for (std::string vIndicies : triangle) {
 		//this->triangles.push_back(stoi(split(vIndicies, "/")[0])-1);
-		vertices.push_back(CreateVertex(vIndicies));
+		vertices.emplace_back(CreateVertex(vIndicies));
 	}
 
 	return vertices;
