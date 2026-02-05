@@ -8,14 +8,12 @@
 
 class KdTree: public AccelerationStructure {
 
-    struct Node: public TreeNode {
-        uint32_t axis;
-        float splitPos;
-    };
-
-    std::vector<Node> tree;
-    
+    OBJLoader::MeshGeometry meshgeo;
 public:
+    struct alignas(16) Node : public TreeNode {
+        float splitPos;
+        uint32_t axis;
+    };
 
     KdTree(const OBJLoader::MeshGeometry& meshgeo);
     ~KdTree() override = default;
@@ -25,18 +23,56 @@ public:
     int GetHeight() const;
 
     void Print() const {
-        //for (size_t i = 0; i < tree.size(); i++) printf("%d | (%d, %d | %d, %d) => bbmin(%.2f %.2f %.2f) bbmax(%.2f %.2f %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].bbox.min.x, tree[i].bbox.min.y, tree[i].bbox.min.z, tree[i].bbox.max.x, tree[i].bbox.max.y, tree[i].bbox.max.z);
+        for (size_t i = 0; i < tree.size(); i++) printf("%d | (lidx: %d, ridx: %d | idx: %d, cnt: %d) => (axis: %d, split: %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].axis, tree[i].splitPos);
     }
 
     const std::vector<Node>& GetTree() const {
         return this->tree;
     }
 
+    const std::vector<uint32_t>& GetIndices() const {
+        return this->outBuffer;
+    }
+
+    const std::vector<OBJLoader::Vertex>& GetVertices() const {
+        return this->meshgeo.vertices;
+    }
+    
+    const std::vector<OBJLoader::Triangle>& GetTriangles() const {
+        return this->meshgeo.triangles;
+    }
 private:
 
-    std::vector<size_t> indexArena;
-    std::array<int, 2> SplitSAH(const AABB& bounds, int l, int r, uint32_t axis);
-    uint32_t Build(int l, int r, uint32_t axis);
+    enum EventType {
+        START = 0,
+        END = 2
+    };
+
+    struct Event {
+        float pos;
+        uint32_t idx;
+        EventType type;
+
+        bool operator<(const Event& other) const {
+            if (pos != other.pos) return pos < other.pos;
+            return this->type > other.type;
+        }
+    };
+
+    struct SplitInfo {
+        int32_t nl;
+        int32_t nr;
+        float split;
+        uint32_t axis;
+        bool shouldLeaf = false;
+    };
+
+    std::vector<Node> tree;
+    std::vector<Event> events[3];
+    std::vector<uint32_t> indexArena;
+    std::vector<uint32_t> outBuffer;
+    SplitInfo SplitSAH(const AABB& bounds, int l, int r);
+    uint32_t Build(int l, int r, const AABB& bounds);
 };
 
 #endif

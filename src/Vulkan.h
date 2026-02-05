@@ -14,6 +14,7 @@
 #include <glm/glm.hpp>
 #include "models/OBJLoader.h"
 #include "models/BVH.h"
+#include "models/KdTreeBinned.h"
 #include "models/KdTree.h"
 #include "models/EXR.h"
 #include "models/PPM.h"
@@ -1355,7 +1356,7 @@ private:
         pathtracerState.iFrame = 0;
         pathtracerState.iResolution = glm::vec2(this->WIDTH, this->HEIGHT);
         pathtracerState.iTime = 0;
-        pathtracerState.camera.cameraPos = glm::vec4(0.0f, 0.1f, -0.6f, 0.0);
+        pathtracerState.camera.cameraPos = glm::vec4(-0.0f, 0.1f, -0.6f, 0.0);
         pathtracerState.camera.cameraRot = glm::vec4(0, 0,0,0);
         pathtracerUBO = createUniformBuffer(sizeof(PathtracerUBO), &pathtracerState);
 
@@ -1443,9 +1444,9 @@ private:
         for (auto& lt : lightTris) lt.indices = glm::uvec4(lt.indices.x+vertexOffset, lt.indices.y+vertexOffset, lt.indices.z+vertexOffset, materials.size()-1);
 
         // Create SSBOs
-        std::vector<glm::uvec3> meshTris(triangles.size());
-        for (size_t i = 0; i < triangles.size(); i++) meshTris[i] = { triangles[i].indices.x, triangles[i].indices.y, triangles[i].indices.z };
-        OBJLoader::MeshGeometry mergedMesh{ objVertices, meshTris };
+        //std::vector<glm::uvec3> meshTris(triangles.size());
+        //for (size_t i = 0; i < triangles.size(); i++) meshTris[i] = { triangles[i].indices.x, triangles[i].indices.y, triangles[i].indices.z };
+        OBJLoader::MeshGeometry mergedMesh{ objVertices, triangles };
 
         if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH) {
             BVH bvh = BVH(mergedMesh);
@@ -1473,20 +1474,32 @@ private:
             kdh.Build();
             auto t1 = std::chrono::high_resolution_clock::now();
             pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
-            kdh.Print();
-            //auto kdt = kdb.GetTriangles();
+            //kdh.Print();
 
             const std::vector<KdTree::Node>& tree = kdh.GetTree();
             pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
 
             objVertices = kdh.GetVertices();
+            triangles = kdh.GetTriangles();
 
             pathtracerSSBOs.emplace_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
             createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_NODES); // Node ranges correspond to the indices array, which contain actual triangle indices
 
             const std::vector<uint32_t>& indices = kdh.GetIndices();
+
+            
+            /*
+            for (uint32_t idx = 0; idx < triangles.size(); idx++) {
+                printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.x].position.x, objVertices[triangles[idx].indices.x].position.y, objVertices[triangles[idx].indices.x].position.z);
+                printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.y].position.x, objVertices[triangles[idx].indices.y].position.y, objVertices[triangles[idx].indices.y].position.z);
+                printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.z].position.x, objVertices[triangles[idx].indices.z].position.y, objVertices[triangles[idx].indices.z].position.z);
+            }
+            */
+            
+
             pathtracerSSBOs.emplace_back(createStorageBuffer(indices.size() * sizeof(indices[0]), indices.data()));
             createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
+            
         }
 
         //bvh.Print();

@@ -49,7 +49,8 @@ private:
     };
 
     SplitInfo SplitSAH(const AABB& bounds, int l, int r);
-    uint32_t Build(int l, int r);
+    SplitInfo SplitCentroid(const AABB& bounds, int l, int r);
+    uint32_t Build(int l, int r, const AABB& bounds);
 };
 
 #endif

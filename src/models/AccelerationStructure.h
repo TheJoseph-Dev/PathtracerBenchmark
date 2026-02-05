@@ -61,6 +61,7 @@ protected:
     struct Triangle {
         uint32_t oIdx;
         uint32_t v0, v1, v2;
+        uint32_t m;
         AABB bbox;
     };
 

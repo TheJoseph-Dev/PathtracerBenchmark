@@ -18,8 +18,34 @@ KdTreeBinned::KdTreeBinned(const OBJLoader::MeshGeometry& meshgeo): Acceleration
 
 void KdTreeBinned::Build() {
     this->size = 0;
-    this->Build(0, this->triangles.size());
+    AABB bounds;
+    for (int i = 0; i < this->triangles.size(); i++) bounds.expand(triangles[i].bbox);
+    this->Build(0, this->triangles.size(), bounds);
     this->tree.resize(this->size);
+}
+
+KdTreeBinned::SplitInfo KdTreeBinned::SplitCentroid(const AABB& bounds, int l, int r) {
+    uint32_t axis = ((bounds.extent().x > bounds.extent().y && bounds.extent().x > bounds.extent().z) ? 0 : ((bounds.extent().y > bounds.extent().z) ? 1 : 2));
+    float splitPos = bounds.centroid()[axis];
+    auto ternary_partition = [this, axis](int l, int r, float splitPos) -> std::array<int, 2> {
+        int lEnd = l, rBegin = r;
+        for (int i = l; i < rBegin; i++) {
+            if (triangles[indexArena[i]].bbox.max[axis] <= splitPos) {
+                std::swap(indexArena[i], indexArena[lEnd]);
+                lEnd++;
+            }
+            else if (triangles[indexArena[i]].bbox.min[axis] >= splitPos) {
+                rBegin--;
+                std::swap(indexArena[i], indexArena[rBegin]);
+                i--;
+            }
+        }
+        return { lEnd, rBegin };
+    };
+    auto [lEnd, rBegin] = ternary_partition(l, r, splitPos);
+    //int mid = int(std::partition(indexArena.begin() + l, indexArena.begin() + r, [&](const uint32_t idx) {return this->triangles[idx].bbox.centroid()[axis] < splitPos; }) - indexArena.begin());
+    if (lEnd == l || rBegin == r || (double)(rBegin-lEnd)/(r-l) > 0.54) return { -1,-1,0,0,true };
+    return { lEnd, rBegin, splitPos, axis };
 }
 
 // Cost: C = Ct + Ci * (SAl/SA * Nl + SAr/SA * Nr)
@@ -30,56 +56,49 @@ void KdTreeBinned::Build() {
 // Nl = number of triangles at left; Nr = number of triangles at right
 KdTreeBinned::SplitInfo KdTreeBinned::SplitSAH(const AABB& bounds, int l, int r) {
     const float SA = bounds.surfaceArea();
+    const int triCount = r - l;
 
     int bestSplit = -1;
     float minCost = std::numeric_limits<float>::max();
     uint32_t bestAxis = 0;
     
     auto computeSAH = [&](int axis) {
-        Bin bins[BINS] = {};
+        int startBins[BINS] = {};
+        int endBins[BINS] = {};
 
         float minAxis = bounds.min[axis];
         float maxAxis = bounds.max[axis];
         float scale = BINS / (maxAxis - minAxis + 1e-5f);
+        float binWidth = (maxAxis - minAxis + 1e-5f) / BINS;
 
         for (int i = l; i < r; i++) {
             const Triangle& tri = this->triangles[indexArena[i]];
             int bs = std::clamp<int>((tri.bbox.min[axis] - minAxis) * scale, 0, BINS - 1);
             int bf = std::clamp<int>((tri.bbox.max[axis] - minAxis) * scale, 0, BINS - 1);
-            for (int b = bs; b <= bf; b++) {
-                bins[b].bounds.expand(tri.bbox);
-                bins[b].count++;
-            }
+            startBins[bs]++;
+            endBins[bf]++;
         }
 
-        AABB leftBounds[BINS];
-        int leftCount[BINS] = {};
+        int prfxLeft[BINS+1] = {};
+        int prfxRight[BINS+1] = {};
 
-        AABB rightBounds[BINS];
-        int rightCount[BINS] = {};
-
-        AABB acc = {};
-        int cnt = 0;
-        for (int i = 0; i < BINS; i++) {
-            acc.expand(bins[i].bounds);
-            cnt += bins[i].count;
-            leftBounds[i] = acc;
-            leftCount[i] = cnt;
-        }
-
-        acc = {};
-        cnt = 0;
-        for (int i = BINS - 1; i >= 0; i--) {
-            acc.expand(bins[i].bounds);
-            cnt += bins[i].count;
-            rightBounds[i] = acc;
-            rightCount[i] = cnt;
-        }
+        for (int i = 0; i < BINS; i++) prfxLeft[i + 1] = prfxLeft[i] + endBins[i];
+        for (int i = BINS - 1; i >= 0; i--) prfxRight[i] = prfxRight[i + 1] + startBins[i];
 
         for (int i = 0; i < BINS - 1; i++) {
-            if (!leftCount[i] || !rightCount[i + 1])
-                continue;
-            const float cost = Ct + Ci * (leftBounds[i].surfaceArea() * leftCount[i] + rightBounds[i + 1].surfaceArea() * rightCount[i + 1]) / SA;
+            int Nl = prfxLeft[i + 1];
+            int Nr = prfxRight[i + 1];
+            int straddlers = triCount - Nl - Nr;
+            Nl += straddlers;
+            Nr += straddlers;
+            if(Nl == 0 || Nr == 0) continue;
+            float pos = minAxis + (i + 1) * binWidth;
+            AABB leftB = bounds;
+            leftB.max[axis] = pos;
+            AABB rightB = bounds;
+            rightB.min[axis] = pos;
+
+            const float cost = Ct + Ci * (leftB.surfaceArea() * Nl + rightB.surfaceArea() * Nr) / SA;
             if (cost < minCost) {
                 minCost = cost;
                 bestSplit = i;
@@ -127,27 +146,34 @@ KdTreeBinned::SplitInfo KdTreeBinned::SplitSAH(const AABB& bounds, int l, int r)
     } while(tryCnt-- && degenerated);
 
 
-    if (degenerated) {
+    /*if (degenerated) {
         int axis = ((bounds.extent().x > bounds.extent().y && bounds.extent().x > bounds.extent().z) ? 0 : ((bounds.extent().y > bounds.extent().z) ? 1 : 2));
         splitPos = bounds.centroid()[axis];
         int mid = int(std::partition(indexArena.begin() + l, indexArena.begin() + r, [&](const uint32_t idx) {return this->triangles[idx].bbox.centroid()[axis] < splitPos; }) - indexArena.begin());
         if (mid == l || mid == r) return { -1,-1,0,0,true };
         lEnd = rBegin = mid;
         bestAxis = axis;
-    }
+    }*/
+
+    if (degenerated || (double)(rBegin-lEnd)/(r-l) > 0.37)
+        return { -1, -1, 0, 0, true };
 
     return { lEnd, rBegin, splitPos, bestAxis };
 }
 
-uint32_t KdTreeBinned::Build(int l, int r) {
+uint32_t KdTreeBinned::Build(int l, int r, const AABB& bounds) {
     uint32_t nodeIdx = this->size++;
     Node& node = this->tree[nodeIdx];
 
-    AABB bounds;
-    for (int i = l; i < r; i++)
-        bounds.expand(triangles[indexArena[i]].bbox);
+    //AABB bounds;
+    //for (int i = l; i < r; i++)
+    //    bounds.expand(triangles[indexArena[i]].bbox);
 
     const int triCount = r - l;
+    //printf("[Node %d | %d]:\n", nodeIdx, triCount);
+    //for (int i = l; i < r; i++)
+    //    printf("f %d %d %d\n", triangles[indexArena[i]].v0 + 1, triangles[indexArena[i]].v1 + 1, triangles[indexArena[i]].v2 + 1);
+
     auto makeLeaf = [&]() {
         node.left = node.right = -1;
         node.triCount = triCount;
@@ -163,13 +189,14 @@ uint32_t KdTreeBinned::Build(int l, int r) {
 
     node.splitPos = split;
     node.axis = bestAxis;
-
-    //indexArena.insert(indexArena.end(), indexArena.begin() + l, indexArena.begin() + rBegin);
+    AABB lB = bounds;
+    AABB rB = bounds;
+    lB.max[bestAxis] = rB.min[bestAxis] = split;
     std::memcpy(&indexArena[r], &indexArena[l], (rBegin - l) * sizeof(uint32_t));
-    node.left = Build(r, r + (rBegin - l));
+    node.left = Build(r, r + (rBegin - l), lB);
 
     std::memcpy(&indexArena[r], &indexArena[lEnd], (r - lEnd) * sizeof(uint32_t));
-    node.right = Build(r, r + (r - lEnd));
+    node.right = Build(r, r + (r - lEnd), rB);
 
     node.triIdx = 0;
     node.triCount = 0;

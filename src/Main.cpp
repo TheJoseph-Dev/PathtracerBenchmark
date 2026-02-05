@@ -8,7 +8,26 @@ Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     benchmarkInfo.spp = 80U * 1000U;
 
     Config pathtracerConfig(
-        AccelerationStructureType::BVH,
+        AccelerationStructureType::KD_TREE,
+        API::VULKAN,
+        scene,
+        Resolution::R1024x1024,
+        12,
+        benchmarkInfo,
+        glm::uvec2(64, 64),
+        true
+    );
+    return pathtracerConfig;
+}
+
+Pathtracer::Config debugConfig(Pathtracer::Scene scene) {
+    using namespace Pathtracer;
+    Benchmark benchmarkInfo = {};
+    benchmarkInfo.btype = BenchmarkType::SPP;
+    benchmarkInfo.spp = 10000;
+
+    Config pathtracerConfig(
+        AccelerationStructureType::KD_TREE,
         API::VULKAN,
         scene,
         Resolution::R1024x1024,
@@ -42,7 +61,7 @@ int main() {
 
     {   
         using namespace Pathtracer;
-        App pathtracer(refGenConfig(Scene::CORNELL_BOX));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX));
         pathtracer.run();
     }
 

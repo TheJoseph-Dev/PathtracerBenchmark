@@ -142,7 +142,7 @@ layout(std430, binding = 11) buffer Statistics {
 #define INV_PI 0.3183098
 //#define ACCUMULATE
 #define EXPOSURE 0.5
-#define INF 2e9
+#define INF 1e9
 
 mat2 rotation(float angle) {
     return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
@@ -354,10 +354,10 @@ void TraversalBVH(Ray ray, inout Scene scene) {
     ATOMIC_INC_U64(statistics.rays);
     vec3 invDir = 1.0 / ray.dir;
     int stack[MAX_TRAVERSAL_DEPTH];
-    int stkptr = 0, it = 0;
+    int stkptr = 0;
     stack[stkptr++] = 0;
 
-    while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH && it++ < 2*MAX_TRAVERSAL_DEPTH) {
+    while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH) {
         ATOMIC_INC_U64(statistics.traversals);
         int nodeIdx = stack[--stkptr];
         BVHNode n = bvhNodes[nodeIdx];
@@ -437,15 +437,15 @@ void TraversalKdTree(Ray ray, inout Scene scene) {
     ATOMIC_INC_U64(statistics.rays);
     vec3 invDir = 1.0 / ray.dir;
     SpaceContext stack[MAX_TRAVERSAL_DEPTH];
-    int stkptr = 0, it = 0;
+    int stkptr = 0;
     stack[stkptr++] = SpaceContext(0, -INF, INF);
 
-    while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH && it++ < 2*MAX_TRAVERSAL_DEPTH) {
+    while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH) {
         ATOMIC_INC_U64(statistics.traversals);
         SpaceContext sc = stack[--stkptr];
         KdNode n = kdNodes[sc.node];
 
-        if (sc.tmin > scene.d) continue;
+        if (sc.tmin >= scene.d || sc.tmin > sc.tmax) continue;
 
         bool isLeaf = (n.left == -1);
         if (isLeaf) {
@@ -460,7 +460,6 @@ void TraversalKdTree(Ray ray, inout Scene scene) {
                 float t = triIntersect(ray.origin, ray.dir, v0, v1, v2).x;
                 if (miss(t)) continue;
 
-                //if (t > scene.d || t < sc.tmin || t > sc.tmax) continue;
                 if (t > scene.d) continue;
                 vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
                 vec3 hitPos = ray.origin + ray.dir * t;
@@ -477,21 +476,30 @@ void TraversalKdTree(Ray ray, inout Scene scene) {
             bool below = ray.origin[n.axis] < n.splitPos || (ray.origin[n.axis] == n.splitPos && ray.dir[n.axis] <= 0.0);
             uint near = below ? n.left  : n.right;
             uint far  = below ? n.right : n.left;
-            stack[stkptr++] = SpaceContext(near, sc.tmin, tsplit);
-            stack[stkptr++] = SpaceContext(far, tsplit, sc.tmax);
-            /*
-            if (tsplit >= sc.tmax || tsplit < sc.tmin) stack[stkptr++] = SpaceContext(near, sc.tmin, sc.tmax);
+            if (tsplit >= sc.tmax || tsplit <= 0) stack[stkptr++] = SpaceContext(near, sc.tmin, sc.tmax);
             else if (tsplit <= sc.tmin) stack[stkptr++] = SpaceContext(far, sc.tmin, sc.tmax);
             else {
-                if(tsplit < scene.d) stack[stkptr++] = SpaceContext(far, tsplit, sc.tmax);
+                stack[stkptr++] = SpaceContext(far,  tsplit, sc.tmax);
                 stack[stkptr++] = SpaceContext(near, sc.tmin, tsplit);
             }
-            */
+            
         }
 
     }
 }
 
+/*
+    ray.origin = (-0.2, 0.1, -0.6)
+    ray.dir = (-, +, +)
+
+    Node 0 (axis = 2) (-INF, INF) => tsplit0 = (0.77 - -0.6) / + = +, below = (-0.6 < 0.77) = true => near(left, -INF, tsplit0), far(right, tsplit0, INF)
+    Node 1 (axis = 0) (-INF, tsplit0) => tsplit1 = (0.0 - -0.2) / - = -, below = (-0.2 < 0.0) = true => near(left, -INF, tsplit0)
+    Node 2 (axis = 1) (-INF, tsplit0) => tsplit2 = (0.0 - 0.1) / + = -, below = (0.1 < 0.0) = false => near(right, -INF, tsplit2) far(left, tsplit2, tsplit0)
+
+    near(left, -INF, tsplit0)
+    near(left, -INF, tsplit0)
+    far(left, tsplit2, tsplit0)
+*/
 
 void TraversalBruteForce(Ray ray, inout Scene scene) {
     for (uint tIdx = 0; tIdx < triangles.length(); ++tIdx) {

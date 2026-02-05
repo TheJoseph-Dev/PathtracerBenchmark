@@ -29,7 +29,7 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 
 🟩 **SAH-BVH**
 
-⬜ **SAH-KdTree**
+🟩 **SAH-KdTree**
 
 ⬜ **CUDA**
 

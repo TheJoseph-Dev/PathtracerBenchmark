@@ -46,7 +46,7 @@ public:
 
 	struct MeshGeometry {
 		std::vector<Vertex> vertices;
-		std::vector<glm::uvec3> triangles;
+		std::vector<Triangle> triangles;
 	};
 
 	struct Material {
@@ -86,9 +86,9 @@ public:
 	std::vector<Vertex> GetObjVertices() const { return this->objVertices; }
 
 	MeshGeometry GetMeshGeometry() const {
-		std::vector<glm::uvec3> triIdxs(triangles.size());
-		for (int i = 0; i < triangles.size(); i++) triIdxs[i] = triangles[i].indices;
-		return { this->objVertices, triIdxs };
+		//std::vector<glm::uvec3> triIdxs(triangles.size());
+		//for (int i = 0; i < triangles.size(); i++) triIdxs[i] = triangles[i].indices;
+		return { this->objVertices, this->triangles };
 	}
 };
 

@@ -6,9 +6,10 @@ AccelerationStructure::AccelerationStructure(const OBJLoader::MeshGeometry& mesh
     for (size_t i = 0; i < meshgeo.triangles.size(); i++) {
         Triangle tri;
         tri.oIdx = i;
-        tri.v0 = meshgeo.triangles[i].x;
-        tri.v1 = meshgeo.triangles[i].y;
-        tri.v2 = meshgeo.triangles[i].z;
+        tri.v0 = meshgeo.triangles[i].indices.x;
+        tri.v1 = meshgeo.triangles[i].indices.y;
+        tri.v2 = meshgeo.triangles[i].indices.z;
+        tri.m = meshgeo.triangles[i].indices.w;
 
         const glm::vec4& a = meshgeo.vertices[tri.v0].position;
         const glm::vec4& b = meshgeo.vertices[tri.v1].position;
