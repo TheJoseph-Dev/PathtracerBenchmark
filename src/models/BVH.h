@@ -6,6 +6,13 @@
 #include "AccelerationStructure.h"
 
 class BVH final : public AccelerationStructure {
+
+    static constexpr uint32_t BINS = 16; // Makes SAH viable by reducing build time complexity from O(n^2) to O(BINS*n)
+    static constexpr float Ct = 1.0f;
+    static constexpr float Ci = 1.0f;
+
+    static constexpr uint8_t leafSize = 8;
+
 public:
     struct alignas(16) Node : public TreeNode {
         AABB bbox;

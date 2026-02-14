@@ -18,198 +18,7 @@
 #include "models/KdTree.h"
 #include "models/EXR.h"
 #include "models/PPM.h"
-
-namespace Pathtracer {
-    //constexpr uint32_t WIDTH = 720;//1440; //640; //1080;
-    //constexpr uint32_t HEIGHT = 480;//810; //480; //720;
-
-    //constexpr uint32_t TILE_X = 64;
-    //constexpr uint32_t TILE_Y = 64;
-
-    struct PushConstants {
-        struct ComputeTile {
-            glm::uvec2 tileSize;
-            glm::uvec2 tileOffset;
-        };
-
-        ComputeTile ct;
-        uint32_t lightBounces;
-    };
-
-    struct SpecializedConstants {
-        VkBool32 useNEE = VK_TRUE;
-        VkBool32 useMIS = VK_TRUE;
-        VkBool32 useBVH = VK_TRUE;
-    };
-    
-    /*
-        NONE: Pathtracer runs indefinitely
-        SPP: Pathtracer runs for a fixed number of frames/spp (samples per pixel). This yields runtime and tree build and traversal statistics
-        IMGREF: Pathtracer runs with ladder of spp (1,4,16,64,256,...) for 2 images using different techniques and store the RMSE and PSNR
-    */
-    enum BenchmarkType {
-        NONE = 0,
-        SPP = 1, /*Samples Per Pixel*/
-        IMGREF = 2 /*Image Reference*/
-    };
-
-
-    struct Benchmark {
-        BenchmarkType btype;
-        uint32_t spp;
-    };
-
-    enum AccelerationStructureType {
-        /*Binned SAH*/BVH = 0,
-        /*Havran SAH*/KD_TREE = 1
-    };
-
-    enum API {
-        VULKAN = 0, /*SPIR-V*/
-        CUDA = 1
-    };
-
-    enum Scene {
-        CORNELL_BOX = 0,
-        SIBENIK = 1,
-        /*Stanford*/BUNNY = 2,
-        DRAGON = 3
-    };
-
-    enum Resolution {
-        R480x320 = 0,
-        R512x512 = 1,
-        R720x480 = 2,
-        R1080x720 = 3,
-        R1024x1024 = 4,
-        R1440x810 = 5,
-        R1920x1080 = 6
-    };
-
-    class Config {
-        const AccelerationStructureType accelerationStructureType;
-        const API api;
-        const Scene scene;
-        const Resolution resolution;
-        const uint32_t lightBounces;
-        Benchmark benchmarkInfo;
-        const glm::uvec2 tileSize;
-        const bool saveOutputImage;
-    
-    public:
-
-        Config(AccelerationStructureType as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false)
-            : accelerationStructureType(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize)
-        {}
-
-        AccelerationStructureType GetAccelerationStructureType() const {
-            return accelerationStructureType;
-        }
-
-        API GetAPI() const {
-            return api;
-        }
-
-        /*
-        Scene GetScene() const {
-            return scene;
-        }
-        */
-
-        std::string GetScene() const {
-            switch (this->scene) {
-                case Scene::CORNELL_BOX: return "cornell_box";
-                case Scene::SIBENIK: return "sibenik2";
-                case Scene::BUNNY: return "bunny-cbx";
-                case Scene::DRAGON: return "dragon-cbx";
-                default: throw std::runtime_error("Unknown scene");
-            }
-        }
-
-        glm::uvec2 GetResolution() const {
-            switch (this->resolution) {
-                case Resolution::R480x320: return glm::uvec2(480, 320);
-                case Resolution::R512x512: return glm::uvec2(512, 512);
-                case Resolution::R720x480: return glm::uvec2(720, 480);
-                case Resolution::R1080x720: return glm::uvec2(1080, 720);
-                case Resolution::R1024x1024: return glm::uvec2(1024, 1024);
-                case Resolution::R1440x810: return glm::uvec2(1440, 810);
-                case Resolution::R1920x1080: return glm::uvec2(1920, 1080);
-                default: throw std::runtime_error("Unknown resolution");
-            }
-        }
-
-        uint32_t GetLightBounces() const {
-            return this->lightBounces;
-        }
-
-        Benchmark GetBenchmarkInfo() const {
-            return this->benchmarkInfo;
-        }
-
-        glm::uvec2 GetTileSize() const {
-            return this->tileSize;
-        }
-
-        bool ShouldSaveImage() const {
-            return this->saveOutputImage;
-        }
-
-        void SetSPP(uint32_t spp) {
-            this->benchmarkInfo.spp = spp;
-        }
-
-        void Print() const {
-            std::cout << "[Config]"
-                << "\n CPU: 11th Gen Intel Core i5 - 2.40GHz"
-                << "\n GPU: NVIDIA GeForce MX350 - 2Gb VRAM"
-                << "\n Scene: " << this->GetScene()
-                << "\n API: " << (!this->api ? "Vulkan" : "CUDA")
-                << "\n Acc. Structure: " << (!this->accelerationStructureType ? "Binned SAH-BVH" : "Havran SAH-KdTree")
-                << "\n Resolution: " << this->GetResolution().x << "x" << this->GetResolution().y
-                << "\n Tile Size: " << this->GetTileSize().x << "x" << this->GetTileSize().y
-                << "\n SPP: " << this->benchmarkInfo.spp
-                << "\n Max Light Bounces: " << this->lightBounces << "\n";
-        }
-
-        std::string InlineString() const {
-            return "-spp" + std::to_string(this->benchmarkInfo.spp)
-                + "-r" + std::to_string(GetResolution().x) + "x" + std::to_string(GetResolution().y)
-                + "-lb" + std::to_string(this->lightBounces)
-                + (!this->api ? "-vulkan" : "-cuda")
-                + (!this->accelerationStructureType ? "-bvh" : "-kdtree");
-        }
-    };
-
-    struct GPUTreeStatistics {
-        struct uint64gpu_t { uint32_t lo, hi; };
-        uint64gpu_t rays;
-        uint64gpu_t isecs;
-        uint64gpu_t traversals;
-    };
-
-    struct TreeStatistics {
-        uint64_t rays;
-        uint64_t isecs;
-        uint64_t traversals;
-    };
-
-    
-    struct Statistics {
-        TreeStatistics treeStats;
-        float elapsedTotalTime = 0.0f;
-        float fps = 0.0f; // time/spp
-        float avgKernelTime = 0.0f;
-
-        float accStructBuildTime = 0.0f;
-        uint32_t accStructMemoryUsage = 0;
-
-        uint32_t sceneTriangles = 0;
-
-        float rmse = 0.0f;
-        float psnr = 0.0f;
-    };
-}
+#include "PathtracerSettings.h"
 
 std::string RESOURCE_PATH_PREFIX = std::string("..\\..\\..\\src\\resources\\");
 #define RESOURCE(filepath) "..\\..\\..\\src\\resources\\" filepath
@@ -534,20 +343,23 @@ private:
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
         for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
             if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                graphicsQueueFamilyIndex = i;
+                //graphicsQueueFamilyIndex = i;
                 std::cout << " Queue family " << i << " supports graphics operations\n";
             };
             if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
-                computeQueueFamilyIndex = i;
+                //computeQueueFamilyIndex = i;
                 std::cout << " Queue family " << i << " supports compute operations\n";
             }
 
             VkBool32 presentSupport = false;
             vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, this->surface, &presentSupport);
             if (presentSupport) {
-                presentQueueFamilyIndex = i;
+                //presentQueueFamilyIndex = i;
                 std::cout << " Queue family " << i << " supports window surface\n";
             }
+            
+            if((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && presentSupport)
+                graphicsQueueFamilyIndex = computeQueueFamilyIndex = presentQueueFamilyIndex = i;
         }
 
 
@@ -1286,7 +1098,7 @@ private:
             for (uint32_t tileX = 0; tileX < this->WIDTH; tileX += TILE_X) {
                 this->pathtracerPC.ct.tileOffset = { tileX, tileY };
                 vkCmdPushConstants( commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::PushConstants), &this->pathtracerPC );
-                vkCmdDispatch( commandBuffer, (TILE_X + 7) / 8, (TILE_Y + 7) / 8, 1 );
+                vkCmdDispatch( commandBuffer, (TILE_X + Pathtracer::local_size_x-1) / Pathtracer::local_size_x, (TILE_Y + Pathtracer::local_size_y-1) / Pathtracer::local_size_y, 1 );
             }
         }
 
@@ -1410,7 +1222,7 @@ private:
             updateStorageImageDescriptorSet(computeDescriptorSet[i], 0, pathtracerImageViews[i], VK_IMAGE_LAYOUT_GENERAL);
 
             // Acc image
-            updateStorageImageDescriptorSet(computeDescriptorSet[i], 8, pathtracerImageViews[PATHTRACER_IMG_COUNT-1], VK_IMAGE_LAYOUT_GENERAL);
+            updateStorageImageDescriptorSet(computeDescriptorSet[i], 10, pathtracerImageViews[PATHTRACER_IMG_COUNT-1], VK_IMAGE_LAYOUT_GENERAL);
 
             // Input sampler for compute (previous frame texture)
             updateCombinedImageSamplerDescriptorSet(computeDescriptorSet[i], 2, pathtracerImageSampler, pathtracerImageViews[1 - i]);
@@ -1467,8 +1279,19 @@ private:
 
             pathtracerSSBOs.emplace_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
             createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::BVH_NODES); // BVH Nodes
+
+            // Dummy
+            pathtracerSSBOs.emplace_back(createStorageBuffer(4, nullptr));
+            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_NODES);
+
+            pathtracerSSBOs.emplace_back(createStorageBuffer(4, nullptr));
+            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
         }
         else {
+            // Dummy
+            pathtracerSSBOs.emplace_back(createStorageBuffer(4, nullptr));
+            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::BVH_NODES);
+
             KdTree kdh = KdTree(mergedMesh);
             auto t0 = std::chrono::high_resolution_clock::now();
             kdh.Build();
@@ -1479,8 +1302,10 @@ private:
             const std::vector<KdTree::Node>& tree = kdh.GetTree();
             pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
 
+            /*
             objVertices = kdh.GetVertices();
             triangles = kdh.GetTriangles();
+            */
 
             pathtracerSSBOs.emplace_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
             createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_NODES); // Node ranges correspond to the indices array, which contain actual triangle indices
@@ -1498,11 +1323,9 @@ private:
             
 
             pathtracerSSBOs.emplace_back(createStorageBuffer(indices.size() * sizeof(indices[0]), indices.data()));
-            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
-            
+            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);            
         }
 
-        //bvh.Print();
         pathtracerSSBOs.emplace_back(createStorageBuffer(triangles.size() * sizeof(triangles[0]), triangles.data()));
         createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::TRIANGLES); // Triangles
 
@@ -1734,17 +1557,19 @@ private:
         Pathtracer::SpecializedConstants spec = {
             .useNEE = VK_TRUE,
             .useMIS = VK_TRUE,
-            .useBVH = (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH)
+            .useBVH = (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH),
+            .useStats = this->pathtracerConfig.ShouldGetStatsAS()
         };
 
         VkSpecializationMapEntry entries[] = {
             { 1, offsetof(Pathtracer::SpecializedConstants, useNEE), sizeof(VkBool32) },
             { 2, offsetof(Pathtracer::SpecializedConstants, useMIS), sizeof(VkBool32) },
-            { 3, offsetof(Pathtracer::SpecializedConstants, useBVH), sizeof(VkBool32) }
+            { 3, offsetof(Pathtracer::SpecializedConstants, useBVH), sizeof(VkBool32) },
+            { 4, offsetof(Pathtracer::SpecializedConstants, useStats), sizeof(VkBool32) }
         };
 
         VkSpecializationInfo specInfo{
-            .mapEntryCount = 3,
+            .mapEntryCount = 4,
             .pMapEntries = entries,
             .dataSize = sizeof(Pathtracer::SpecializedConstants),
             .pData = &spec

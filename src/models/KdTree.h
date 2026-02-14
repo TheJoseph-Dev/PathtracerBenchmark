@@ -8,7 +8,12 @@
 
 class KdTree: public AccelerationStructure {
 
-    OBJLoader::MeshGeometry meshgeo;
+    static constexpr float Ct = 1.0f;
+    static constexpr float Ci = 1.0f;
+
+    static constexpr uint8_t leafSize = 8;
+
+    //OBJLoader::MeshGeometry meshgeo;
 public:
     struct alignas(16) Node : public TreeNode {
         float splitPos;
@@ -34,6 +39,7 @@ public:
         return this->outBuffer;
     }
 
+    /*
     const std::vector<OBJLoader::Vertex>& GetVertices() const {
         return this->meshgeo.vertices;
     }
@@ -41,6 +47,7 @@ public:
     const std::vector<OBJLoader::Triangle>& GetTriangles() const {
         return this->meshgeo.triangles;
     }
+    */
 private:
 
     enum EventType {

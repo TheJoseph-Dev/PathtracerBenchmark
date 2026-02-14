@@ -1,6 +1,6 @@
 #version 450
 
-layout(local_size_x = 8, local_size_y = 8) in;
+layout(local_size_x = 64, local_size_y = 1) in;
 layout(binding = 0, rgba32f) writeonly uniform image2D outImage;
 
 /*
@@ -12,8 +12,9 @@ layout(binding = 0, rgba32f) writeonly uniform image2D outImage;
 */
 
 layout(constant_id = 1) const bool USE_NEE = true;
-layout(constant_id = 2) const bool USE_MIS = USE_NEE;
+layout(constant_id = 2) const bool USE_MIS = true;
 layout(constant_id = 3) const bool USE_BVH = true;
+layout(constant_id = 4) const bool USE_STATS = true;
 
 struct ComputeTile {
     uvec2 tileSize;
@@ -351,14 +352,14 @@ IsecInfo RayAABBIsec(Ray ray, vec3 bbMin, vec3 bbMax, vec3 invDir) {
     - Quantized bounds
 */
 void TraversalBVH(Ray ray, inout Scene scene) {
-    ATOMIC_INC_U64(statistics.rays);
+    if(USE_STATS) ATOMIC_INC_U64(statistics.rays);
     vec3 invDir = 1.0 / ray.dir;
     int stack[MAX_TRAVERSAL_DEPTH];
     int stkptr = 0;
     stack[stkptr++] = 0;
 
     while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH) {
-        ATOMIC_INC_U64(statistics.traversals);
+        if(USE_STATS) ATOMIC_INC_U64(statistics.traversals);
         int nodeIdx = stack[--stkptr];
         BVHNode n = bvhNodes[nodeIdx];
 
@@ -373,7 +374,7 @@ void TraversalBVH(Ray ray, inout Scene scene) {
 
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
-                ATOMIC_INC_U64(statistics.isecs);
+                if(USE_STATS) ATOMIC_INC_U64(statistics.isecs);
                 Triangle tri = triangles[n.triIdx + i];
 
                 vec3 v0 = vertices[tri.indices.x].position.xyz;
@@ -434,14 +435,14 @@ struct SpaceContext {
 };
 
 void TraversalKdTree(Ray ray, inout Scene scene) {
-    ATOMIC_INC_U64(statistics.rays);
+    if(USE_STATS) ATOMIC_INC_U64(statistics.rays);
     vec3 invDir = 1.0 / ray.dir;
     SpaceContext stack[MAX_TRAVERSAL_DEPTH];
     int stkptr = 0;
     stack[stkptr++] = SpaceContext(0, -INF, INF);
 
     while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH) {
-        ATOMIC_INC_U64(statistics.traversals);
+        if(USE_STATS) ATOMIC_INC_U64(statistics.traversals);
         SpaceContext sc = stack[--stkptr];
         KdNode n = kdNodes[sc.node];
 
@@ -450,7 +451,7 @@ void TraversalKdTree(Ray ray, inout Scene scene) {
         bool isLeaf = (n.left == -1);
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
-                ATOMIC_INC_U64(statistics.isecs);
+                if(USE_STATS) ATOMIC_INC_U64(statistics.isecs);
                 Triangle tri = triangles[kdtreeIndices[n.triIdx + i]];
 
                 vec3 v0 = vertices[tri.indices.x].position.xyz;

@@ -1,4 +1,4 @@
-//#define DEBUG
+#define DEBUG
 #include "Pathtracer.h"
 
 Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
@@ -20,20 +20,21 @@ Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     return pathtracerConfig;
 }
 
-Pathtracer::Config debugConfig(Pathtracer::Scene scene) {
+Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
-    benchmarkInfo.spp = 10000;
+    benchmarkInfo.spp = 100;
 
     Config pathtracerConfig(
-        AccelerationStructureType::KD_TREE,
+        acctype,
         API::VULKAN,
         scene,
         Resolution::R1024x1024,
-        12,
+        4,
         benchmarkInfo,
         glm::uvec2(64, 64),
+        false,
         true
     );
     return pathtracerConfig;
@@ -61,7 +62,7 @@ int main() {
 
     {   
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::CORNELL_BOX));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::KD_TREE));
         pathtracer.run();
     }
 

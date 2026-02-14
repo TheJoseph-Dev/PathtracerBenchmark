@@ -1,0 +1,201 @@
+#ifndef PATHTRACER_SETTINGS_H
+#define PATHTRACER_SETTINGS_H
+
+namespace Pathtracer {
+
+    constexpr uint32_t local_size_x = 64;
+    constexpr uint32_t local_size_y = 1;
+
+    struct PushConstants {
+        struct ComputeTile {
+            glm::uvec2 tileSize;
+            glm::uvec2 tileOffset;
+        };
+
+        ComputeTile ct;
+        uint32_t lightBounces;
+    };
+
+    struct SpecializedConstants {
+        VkBool32 useNEE = VK_TRUE;
+        VkBool32 useMIS = VK_TRUE;
+        VkBool32 useBVH = VK_TRUE;
+        VkBool32 useStats = VK_TRUE;
+    };
+
+    /*
+        NONE: Pathtracer runs indefinitely
+        SPP: Pathtracer runs for a fixed number of frames/spp (samples per pixel). This yields runtime and tree build and traversal statistics
+        IMGREF: Pathtracer runs with ladder of spp (1,4,16,64,256,...) for 2 images using different techniques and store the RMSE and PSNR
+    */
+    enum BenchmarkType {
+        NONE = 0,
+        SPP = 1, /*Samples Per Pixel*/
+        IMGREF = 2 /*Image Reference*/
+    };
+
+
+    struct Benchmark {
+        BenchmarkType btype;
+        uint32_t spp;
+    };
+
+    enum AccelerationStructureType {
+        BVH = 0,
+        KD_TREE = 1
+    };
+
+    enum API {
+        VULKAN = 0, /*SPIR-V*/
+        CUDA = 1
+    };
+
+    enum Scene {
+        CORNELL_BOX = 0,
+        SIBENIK = 1,
+        BUNNY = 2,
+        DRAGON = 3
+    };
+
+    enum Resolution {
+        R480x320 = 0,
+        R512x512 = 1,
+        R720x480 = 2,
+        R1080x720 = 3,
+        R1024x1024 = 4,
+        R1440x810 = 5,
+        R1920x1080 = 6
+    };
+
+    class Config {
+        const AccelerationStructureType accelerationStructureType;
+        const API api;
+        const Scene scene;
+        const Resolution resolution;
+        const uint32_t lightBounces;
+        Benchmark benchmarkInfo;
+        const glm::uvec2 tileSize;
+        const bool saveOutputImage;
+        const bool getStatsAS; // Enables or not the atomics
+
+    public:
+
+        Config(AccelerationStructureType as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false, bool getStatsAS = true)
+            : accelerationStructureType(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize), getStatsAS(getStatsAS)
+        {
+        }
+
+        AccelerationStructureType GetAccelerationStructureType() const {
+            return accelerationStructureType;
+        }
+
+        API GetAPI() const {
+            return api;
+        }
+
+        /*
+        Scene GetScene() const {
+            return scene;
+        }
+        */
+
+        std::string GetScene() const {
+            switch (this->scene) {
+            case Scene::CORNELL_BOX: return "cornell_box";
+            case Scene::SIBENIK: return "sibenik2";
+            case Scene::BUNNY: return "bunny-cbx";
+            case Scene::DRAGON: return "dragon-cbx";
+            default: throw std::runtime_error("Unknown scene");
+            }
+        }
+
+        glm::uvec2 GetResolution() const {
+            switch (this->resolution) {
+            case Resolution::R480x320: return glm::uvec2(480, 320);
+            case Resolution::R512x512: return glm::uvec2(512, 512);
+            case Resolution::R720x480: return glm::uvec2(720, 480);
+            case Resolution::R1080x720: return glm::uvec2(1080, 720);
+            case Resolution::R1024x1024: return glm::uvec2(1024, 1024);
+            case Resolution::R1440x810: return glm::uvec2(1440, 810);
+            case Resolution::R1920x1080: return glm::uvec2(1920, 1080);
+            default: throw std::runtime_error("Unknown resolution");
+            }
+        }
+
+        uint32_t GetLightBounces() const {
+            return this->lightBounces;
+        }
+
+        Benchmark GetBenchmarkInfo() const {
+            return this->benchmarkInfo;
+        }
+
+        glm::uvec2 GetTileSize() const {
+            return this->tileSize;
+        }
+
+        bool ShouldSaveImage() const {
+            return this->saveOutputImage;
+        }
+
+        bool ShouldGetStatsAS() const {
+            return this->getStatsAS;
+        }
+
+        void SetSPP(uint32_t spp) {
+            this->benchmarkInfo.spp = spp;
+        }
+
+        void Print() const {
+            std::cout << "[Config]"
+                << "\n CPU: 11th Gen Intel Core i5 - 2.40GHz"
+                << "\n GPU: NVIDIA GeForce MX350 - 2Gb VRAM"
+                << "\n Scene: " << this->GetScene()
+                << "\n API: " << (!this->api ? "Vulkan" : "CUDA")
+                << "\n Acc. Structure: " << (!this->accelerationStructureType ? "Binned SAH-BVH" : "Havran SAH-KdTree")
+                << "\n Resolution: " << this->GetResolution().x << "x" << this->GetResolution().y
+                << "\n Tile Size: " << this->GetTileSize().x << "x" << this->GetTileSize().y
+                << "\n SPP: " << this->benchmarkInfo.spp
+                << "\n Max Light Bounces: " << this->lightBounces << "\n";
+        }
+
+        std::string InlineString() const {
+            return "-spp" + std::to_string(this->benchmarkInfo.spp)
+                + "-r" + std::to_string(GetResolution().x) + "x" + std::to_string(GetResolution().y)
+                + "-lb" + std::to_string(this->lightBounces)
+                + (!this->api ? "-vulkan" : "-cuda")
+                + (!this->accelerationStructureType ? "-bvh" : "-kdtree");
+        }
+    };
+
+    struct GPUTreeStatistics {
+        struct uint64gpu_t { uint32_t lo, hi; };
+        uint64gpu_t rays;
+        uint64gpu_t isecs;
+        uint64gpu_t traversals;
+    };
+
+    struct TreeStatistics {
+        uint64_t rays;
+        uint64_t isecs;
+        uint64_t traversals;
+    };
+
+
+    struct Statistics {
+        TreeStatistics treeStats;
+        float elapsedTotalTime = 0.0f;
+        float fps = 0.0f; // time/spp
+        float avgKernelTime = 0.0f;
+
+        float accStructBuildTime = 0.0f;
+        uint32_t accStructMemoryUsage = 0;
+
+        uint32_t sceneTriangles = 0;
+
+        float rmse = 0.0f;
+        float psnr = 0.0f;
+    };
+};
+
+#endif

@@ -3,7 +3,7 @@
 #include <queue>
 
 
-KdTree::KdTree(const OBJLoader::MeshGeometry& meshgeo): AccelerationStructure(meshgeo), meshgeo(meshgeo) {
+KdTree::KdTree(const OBJLoader::MeshGeometry& meshgeo): AccelerationStructure(meshgeo) /*, meshgeo(meshgeo)*/ {
 	static_assert(alignof(Node) == 16);
     static_assert(std::is_trivially_copyable_v<Node>);
     size_t triCount = this->triangles.size();
@@ -79,7 +79,76 @@ KdTree::SplitInfo KdTree::SplitSAH(const AABB& bounds, int l, int r) {
     if (minCost >= Ci * triCount) // SAH wasn't effective enough
         return { -1, -1, 0, 0, true };
 
-    /*
+    int nl = 0, nr = 0;
+    for (size_t i = 0; i < bestIdx; ++i)
+        if (this->events[bestAxis][i].type == EventType::START)
+            indexArena[r + nl++] = this->events[bestAxis][i].idx;
+
+    for (size_t i = bestIdx+1; i < events[bestAxis].size(); ++i)
+        if (this->events[bestAxis][i].type == EventType::END)
+            indexArena[r + nl + nr++] = this->events[bestAxis][i].idx;
+
+    return { nl, nr, splitPos, bestAxis };
+}
+
+uint32_t KdTree::Build(int l, int r, const AABB& bounds) {
+    uint32_t nodeIdx = this->size++;
+    Node& node = this->tree[nodeIdx];
+
+    const int triCount = r - l;
+
+    /*printf("[Node %d | %d]:\n", nodeIdx, triCount);
+    for (int i = l; i < r; i++)
+        printf("f %d %d %d\n", triangles[indexArena[i]].v0 + 1, triangles[indexArena[i]].v1 + 1, triangles[indexArena[i]].v2 + 1);*/
+
+    auto makeLeaf = [&]() {
+        node.left = node.right = -1;
+        node.triCount = triCount;
+        node.triIdx = outBuffer.size();
+        outBuffer.insert(outBuffer.end(), indexArena.begin() + l, indexArena.begin() + r);
+        return nodeIdx;
+    };
+
+    if (triCount <= leafSize) return makeLeaf();
+
+    auto [nl, nr, splitPos, axis, shouldLeaf] = SplitSAH(bounds, l, r);
+    
+    if(shouldLeaf) return makeLeaf();
+
+    node.splitPos = splitPos;
+    node.axis = axis;
+
+    AABB lB = bounds;
+    AABB rB = bounds;
+    lB.max[axis] = rB.min[axis] = splitPos;
+
+    node.right = Build(r + nl, r + nl + nr, rB);
+    node.left = Build(r, r + nl, lB);
+
+    node.triIdx = 0;
+    node.triCount = 0;
+    return nodeIdx;
+}
+
+int KdTree::GetHeight() const {
+    if (tree.empty()) return 0;
+    int h = 0;
+    std::queue<int32_t> q;
+    q.push(0);
+    while (!q.empty()) {
+        size_t sz = q.size();
+        while (sz--) {
+            int32_t node = q.front();
+            q.pop();
+            if (this->tree[node].left >= 0) q.push(this->tree[node].left);
+            if (this->tree[node].right >= 0) q.push(this->tree[node].right);
+        }
+        h++;
+    }
+    return h;
+}
+
+/*
     int newTris = 0;
     auto split_triangle = [&](const Triangle& tri) {
         enum Side { LEFT = 0, ON = 1, RIGHT = 2 };
@@ -199,79 +268,11 @@ KdTree::SplitInfo KdTree::SplitSAH(const AABB& bounds, int l, int r) {
         bool left  = tri.bbox.max[bestAxis] < splitPos + EPS;
         bool right = tri.bbox.min[bestAxis] > splitPos - EPS;
         bool planar = splitPos - tri.bbox.min[bestAxis] < EPS && tri.bbox.max[bestAxis] - splitPos < EPS;
-        if(!(left || right || planar)) 
+        if(!(left || right || planar))
             split_triangle(tri); // isec
     }
-    */
 
-    int nl = 0, nr = 0;
-    for (size_t i = bestIdx+1; i < events[bestAxis].size(); ++i)
-        if (this->events[bestAxis][i].type == EventType::END)
-            indexArena[r + nr++] = this->events[bestAxis][i].idx;
-    for (size_t i = 0; i < bestIdx; ++i)
-        if (this->events[bestAxis][i].type == EventType::START)
-            indexArena[r + nr + nl++] = this->events[bestAxis][i].idx;
-
-    return { nl, nr, splitPos, bestAxis };
-
-    /*r += newTris;
+    r += newTris;
     int mid = std::partition(indexArena.begin() + l, indexArena.begin() + r, [&](const uint32_t idx) { return triangles[idx].bbox.max[bestAxis] <= splitPos; }) - indexArena.begin();
-    return { mid, r, splitPos, bestAxis };*/
-}
-
-uint32_t KdTree::Build(int l, int r, const AABB& bounds) {
-    uint32_t nodeIdx = this->size++;
-    Node& node = this->tree[nodeIdx];
-
-    const int triCount = r - l;
-
-    /*printf("[Node %d | %d]:\n", nodeIdx, triCount);
-    for (int i = l; i < r; i++)
-        printf("f %d %d %d\n", triangles[indexArena[i]].v0 + 1, triangles[indexArena[i]].v1 + 1, triangles[indexArena[i]].v2 + 1);*/
-
-    auto makeLeaf = [&]() {
-        node.left = node.right = -1;
-        node.triCount = triCount;
-        node.triIdx = outBuffer.size();
-        outBuffer.insert(outBuffer.end(), indexArena.begin() + l, indexArena.begin() + r);
-        return nodeIdx;
-    };
-
-    if (triCount <= leafSize) return makeLeaf();
-
-    auto [nl, nr, splitPos, axis, shouldLeaf] = SplitSAH(bounds, l, r);
-    
-    if(shouldLeaf) return makeLeaf();
-
-    node.splitPos = splitPos;
-    node.axis = axis;
-
-    AABB lB = bounds;
-    AABB rB = bounds;
-    lB.max[axis] = rB.min[axis] = splitPos;
-
-    node.left = Build(r + nr, r + nr + nl, lB);
-    node.right = Build(r, r + nr, rB);
-
-    node.triIdx = 0;
-    node.triCount = 0;
-    return nodeIdx;
-}
-
-int KdTree::GetHeight() const {
-    if (tree.empty()) return 0;
-    int h = 0;
-    std::queue<int32_t> q;
-    q.push(0);
-    while (!q.empty()) {
-        size_t sz = q.size();
-        while (sz--) {
-            int32_t node = q.front();
-            q.pop();
-            if (this->tree[node].left >= 0) q.push(this->tree[node].left);
-            if (this->tree[node].right >= 0) q.push(this->tree[node].right);
-        }
-        h++;
-    }
-    return h;
-}
+    return { mid, r, splitPos, bestAxis };
+    */
