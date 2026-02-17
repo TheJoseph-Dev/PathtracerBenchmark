@@ -1,7 +1,7 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_DISABLE_FIND_PACKAGE_Doxygen TRUE)
-project(VulkanApp)
+project(PathtracerBenchmark)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Vulkan REQUIRED)
@@ -14,5 +14,5 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src
 )
 file(GLOB_RECURSE SOURCES "src/*.cpp")
-add_executable(VulkanApp ${SOURCES})
-target_link_libraries(VulkanApp Vulkan::Vulkan glfw)
+add_executable(PathtracerBenchmark ${SOURCES})
+target_link_libraries(PathtracerBenchmark Vulkan::Vulkan glfw)

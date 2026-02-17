@@ -2,7 +2,7 @@
 #define BVH_H
 #include <vector>
 #include <glm/glm.hpp>
-#include "OBJLoader.h"
+#include "models/io/OBJLoader.h"
 #include "AccelerationStructure.h"
 
 class BVH final : public AccelerationStructure {

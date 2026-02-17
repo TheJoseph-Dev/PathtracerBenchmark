@@ -12,16 +12,17 @@
 #include <optional>
 #include <chrono>
 #include <glm/glm.hpp>
-#include "models/OBJLoader.h"
-#include "models/BVH.h"
-#include "models/KdTreeBinned.h"
-#include "models/KdTree.h"
-#include "models/EXR.h"
-#include "models/PPM.h"
+#include "models/io/OBJLoader.h"
+#include "models/acceleration_structures/BVH.h"
+#include "models/acceleration_structures/KdTreeBinned.h"
+#include "models/acceleration_structures/KdTree.h"
+#include "models/io/EXR.h"
+#include "models/io/PPM.h"
+#include "models/vulkan/Buffer.h"
+#include "models/vulkan/Shader.h"
 #include "PathtracerSettings.h"
-
-std::string RESOURCE_PATH_PREFIX = std::string("..\\..\\..\\src\\resources\\");
-#define RESOURCE(filepath) "..\\..\\..\\src\\resources\\" filepath
+#include "models/compute_backends/SPIRV.h"
+#include "models/compute_backends/CUDA.h"
 
 #ifdef DEBUG
 constexpr bool enableValidationLayers = true;
@@ -58,42 +59,6 @@ struct Vertex {
     }
 };
 
-// RAII Implementation
-struct Buffer {
-    VkDevice device{ VK_NULL_HANDLE };
-    VkBuffer buffer{ VK_NULL_HANDLE };
-    VkDeviceMemory memory{ VK_NULL_HANDLE };
-    VkDeviceSize size{ 0 };
-
-    ~Buffer() {
-        if (buffer)
-            vkDestroyBuffer(device, buffer, nullptr);
-        if (memory)
-            vkFreeMemory(device, memory, nullptr);
-        buffer = VK_NULL_HANDLE;
-        memory = VK_NULL_HANDLE;
-    }
-
-    Buffer() {};
-
-    Buffer(const Buffer&) = delete;
-    Buffer& operator=(const Buffer&) = delete;
-
-    Buffer(Buffer&& other) noexcept {
-        *this = std::move(other);
-    }
-
-    Buffer& operator=(Buffer&& other) noexcept {
-        device = other.device;
-        buffer = other.buffer;
-        memory = other.memory;
-        size = other.size;
-        other.buffer = VK_NULL_HANDLE;
-        other.memory = VK_NULL_HANDLE;
-        return *this;
-    }
-};
-
 class Vulkan {
 
     // How many frames you let the CPU start rendering before the GPU is done
@@ -103,8 +68,9 @@ class Vulkan {
     static constexpr uint32_t SWAPCHAIN_IMAGE_COUNT = 2;
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2; //SWAPCHAIN_IMAGE_COUNT - 1;
     static constexpr uint32_t PING_PONG_FRAMES = 2;
-    static constexpr uint32_t nDescriptorSets = 2; // Frag and Compute
     static constexpr uint32_t PATHTRACER_IMG_COUNT = PING_PONG_FRAMES + 1; // + 1 comes from acc out image
+
+    std::unique_ptr<Pathtracer::ComputeBackend> computeBackend;
 
     VkInstance instance; // Connection between Vulkan and the main program
     VkPhysicalDevice physicalDevice;
@@ -131,10 +97,8 @@ class Vulkan {
     VkRect2D scissor; // Cut viewport filter >:/
 
     VkDescriptorSetLayout descriptorSetLayout;
-    VkDescriptorSetLayout computeDescriptorSetLayout;
     VkDescriptorPool descriptorPool;
     VkDescriptorSet fragDescriptorSet[PING_PONG_FRAMES];
-    VkDescriptorSet computeDescriptorSet[PING_PONG_FRAMES];
 
     VkImage pathtracerImages[PATHTRACER_IMG_COUNT];
     VkDeviceMemory pathtracerImagesMemory[PATHTRACER_IMG_COUNT];
@@ -146,9 +110,9 @@ class Vulkan {
 
     Buffer vertexBuffer;
     VkPipelineLayout pipelineLayout;
-    VkPipelineLayout computePipelineLayout;
+    //VkPipelineLayout computePipelineLayout;
     VkPipeline graphicsPipeline;
-    VkPipeline computePipeline;
+    //VkPipeline computePipeline;
 
     VkCommandPool commandPool;
     VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
@@ -163,6 +127,7 @@ class Vulkan {
 
     Pathtracer::Config pathtracerConfig;
     Pathtracer::Statistics pathtracerStatistics;
+    Pathtracer::FrameContext pathtracerState{};
     const uint32_t WIDTH, HEIGHT;
 public:
     Vulkan(const Pathtracer::Config& pathtracerConfig) :
@@ -179,6 +144,10 @@ public:
         createWindowSurface(window);
         createDevice();
         createSwapchain(window);
+        createCommandPool();
+        createDescriptorPool();
+        createPathtracerImages();
+        createComputeBackend();
         createGraphicsPipeline();
     }
 
@@ -293,6 +262,10 @@ private:
         VkPhysicalDeviceFeatures2 deviceFeatures2;
         VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures{};
         dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+        VkPhysicalDeviceShaderAtomicInt64Features atomic64Feature{};
+        atomic64Feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
+        atomic64Feature.shaderBufferInt64Atomics = VK_TRUE;
+        atomic64Feature.shaderSharedInt64Atomics = VK_TRUE;
 
         for (const auto& device : devices) {
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -378,8 +351,10 @@ private:
         dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
         dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
 
+        dynamicRenderingFeatures.pNext = &atomic64Feature;
         deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         deviceFeatures2.features = {};
+        deviceFeatures2.features.shaderInt64 = VK_TRUE;
         deviceFeatures2.pNext = &dynamicRenderingFeatures;
 
         VkDeviceCreateInfo deviceInfo{};
@@ -526,34 +501,34 @@ private:
         }
     }
 
-    enum ShaderType {
-        VERTEX,
-        FRAGMENT,
-        COMPUTE
-    };
+    void createPathtracerImages() {
+        createImage2D(this->WIDTH, this->HEIGHT);
+        create2DLinearImageSampler();
+        create2DNearestImageSampler();
+    }
 
-    std::optional<VkShaderModule> createShaderModule(const std::string& path, ShaderType type) {
-        std::ifstream shaderFile(RESOURCE_PATH_PREFIX + path, std::ios::ate | std::ios::binary);
-        if (!shaderFile.is_open()) { std::cerr << "Failed to read shader file\n"; return std::nullopt; }
-
-        size_t shaderFileSize = static_cast<size_t>(shaderFile.tellg());
-        std::vector<char> shaderBuffer(shaderFileSize);
-
-        shaderFile.seekg(0);
-        shaderFile.read(shaderBuffer.data(), shaderFileSize);
-        shaderFile.close();
-
-        VkShaderModule shaderModule;
-        VkShaderModuleCreateInfo shaderModuleInfo{};
-        shaderModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        shaderModuleInfo.codeSize = shaderBuffer.size();
-        shaderModuleInfo.pCode = reinterpret_cast<const uint32_t*>(shaderBuffer.data());
-        if (vkCreateShaderModule(this->device, &shaderModuleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-            std::cerr << "Failed to create VkShaderModule\n";
-            return std::nullopt;
+    void createComputeBackend() {
+        if (pathtracerConfig.GetComputeBackendType() == Pathtracer::ComputeBackendType::SPIRV_T) {
+            Pathtracer::ComputeBackend::VulkanContext vkCtx = { this->physicalDevice, this->device, this->commandPool, this->graphicsQueue };
+            std::vector<VkImageView> imgViews = {}; 
+            imgViews.reserve(PATHTRACER_IMG_COUNT);
+            for (uint32_t i = 0; i < PATHTRACER_IMG_COUNT; i++) imgViews.push_back(this->pathtracerImageViews[i]);
+            Pathtracer::ComputeBackend::PathtracerVulkanResources vkRsrcs = 
+            { 
+                imgViews,
+                this->pathtracerImageSampler,
+                this->pathtracerImages[PATHTRACER_IMG_COUNT-1],
+                this->descriptorPool,
+                this->pathtracerConfig,
+                this->PING_PONG_FRAMES,
+                this->PATHTRACER_IMG_COUNT
+            };
+            this->computeBackend = std::make_unique<Pathtracer::SPIRV>(vkCtx, vkRsrcs);
         }
-
-        return shaderModule;
+        else {
+            Pathtracer::ComputeBackend::CudaContext cuCtx;
+            this->computeBackend = std::make_unique<Pathtracer::CUDA>(cuCtx);
+        }
     }
 
     VkCommandBuffer beginSingleTimeCommands() const {
@@ -589,22 +564,6 @@ private:
         vkFreeCommandBuffers(this->device, this->commandPool, 1, &commandBuffer);
     }
 
-    struct CameraUBO {
-        glm::vec4 cameraPos;
-        glm::vec4 cameraRot;
-    };
-
-    struct PathtracerUBO {
-        glm::vec2 iResolution;
-        float iTime;
-        int iFrame;
-        //int accumulate;
-        //vec3 pad0;
-        CameraUBO camera;
-    };
-
-    Pathtracer::PushConstants pathtracerPC;
-
     void createDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayout* dsl) {
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -614,7 +573,21 @@ private:
         vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, dsl);
     }
 
-    void createDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
+    void createDescriptorPool() {
+        std::vector<VkDescriptorPoolSize> poolSizes = {
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 * PING_PONG_FRAMES }, // 2 fragment textures (double buffering)
+        };
+
+        if (this->pathtracerConfig.GetComputeBackendType() == Pathtracer::SPIRV_T) {
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 * PING_PONG_FRAMES });  // 1 lastFrameTex
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 * PING_PONG_FRAMES });          // Only for compute UBO
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 * PING_PONG_FRAMES });           // compute output image + acc image framebuffer
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, Pathtracer::SPIRV::SSBOsCount * PING_PONG_FRAMES }); // SSBOs
+        }
+
+        const uint32_t nDescriptorSets = 1 + (this->pathtracerConfig.GetComputeBackendType() == Pathtracer::SPIRV_T);
+        const uint32_t maxSets = nDescriptorSets * PING_PONG_FRAMES;
+
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
@@ -624,7 +597,7 @@ private:
         vkCreateDescriptorPool(this->device, &poolInfo, nullptr, &this->descriptorPool);
     }
 
-    VkDescriptorSet allocateDescriptorSet(VkDescriptorSetLayout* dsl) {
+    VkDescriptorSet allocateDescriptorSet(VkDescriptorSetLayout* dsl) const {
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = this->descriptorPool;
@@ -736,118 +709,6 @@ private:
         throw std::runtime_error("failed to find suitable memory type!");
     }
 
-    Buffer createUniformBuffer(VkDeviceSize size, const void* initialData) {
-        Buffer ubo{};
-        ubo.device = this->device;
-        ubo.size = size;
-
-        createBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ubo.buffer, ubo.memory);
-
-        // Upload initial data
-        if (initialData) {
-            void* data;
-            vkMapMemory(device, ubo.memory, 0, size, 0, &data);
-            memcpy(data, initialData, (size_t)size);
-            vkUnmapMemory(device, ubo.memory);
-        }
-
-        return ubo;
-    }
-
-    void updateUniformBuffer(const Buffer& ubo, const void* newData, VkDeviceSize size) {
-        void* data;
-        vkMapMemory(device, ubo.memory, 0, size, 0, &data);
-        memcpy(data, newData, (size_t)size);
-        vkUnmapMemory(device, ubo.memory);
-    }
-
-    const uint32_t SSBOsCount = 8;
-    enum SSBOBinding {
-        BVH_NODES = 3,
-        KDTREE_NODES = 4,
-        KDTREE_INDICES = 5,
-        TRIANGLES = 6,
-        VERTICES = 7,
-        EMISSIVES = 8,
-        MATERIALS = 9,
-
-        STATISTICS = 11
-    };
-    std::vector<Buffer> pathtracerSSBOs;
-    std::vector<Buffer> stagingBuffers;
-
-    Buffer createStagingBuffer(VkDeviceSize size, const void* initialData) {
-        Buffer staging{};
-        staging.device = this->device;
-        staging.size = size;
-        createBuffer(
-            size,
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            staging.buffer,
-            staging.memory
-        );
-
-        // Map & copy initial data
-        if (initialData) {
-            void* data;
-            vkMapMemory(device, staging.memory, 0, size, 0, &data);
-            memcpy(data, initialData, size);
-            vkUnmapMemory(device, staging.memory);
-        }
-        else {
-            void* data;
-            vkMapMemory(device, staging.memory, 0, size, 0, &data);
-            memset(data, 0, size);
-            vkUnmapMemory(device, staging.memory);
-        }
-
-        return staging;
-    }
-
-    Buffer createStorageBuffer(VkDeviceSize size, const void* initialData, bool keepStaging = false) {
-        Buffer staging = createStagingBuffer(size, initialData);
-
-        // Create device-local GPU buffer
-        Buffer gpuBuffer{};
-        gpuBuffer.device = this->device;
-        gpuBuffer.size = size;
-        createBuffer(
-            size,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            gpuBuffer.buffer,
-            gpuBuffer.memory
-        );
-
-        // Copy staging => device-local buffer
-        copyBuffer(staging.buffer, gpuBuffer.buffer, size);
-
-        if (keepStaging) this->stagingBuffers.push_back(std::move(staging));
-        
-        return gpuBuffer; // C++ guarantees it stays alive, so ~Buffer not called here
-    }
-
-    void createSSBO(const VkBuffer& buffer, uint32_t binding) {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = buffer;
-        bufferInfo.offset = 0;
-        bufferInfo.range = VK_WHOLE_SIZE;
-
-        VkWriteDescriptorSet write{};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        write.descriptorCount = 1;
-        write.pBufferInfo = &bufferInfo;
-        for (int i = 0; i < PING_PONG_FRAMES; i++) {
-            write.dstSet = computeDescriptorSet[i];
-            vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-        }
-    }
-
-
     void create2DLinearImageSampler() {
         VkSamplerCreateInfo dataSamplerInfo{};
         dataSamplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -936,18 +797,6 @@ private:
             pathtracerImageLayouts[i] = imgLayout;
         }
 
-        // Acc image staging buffer
-        Buffer stagingAcc{};
-        stagingAcc.device = this->device;
-        stagingAcc.size = this->WIDTH * this->HEIGHT * sizeof(glm::vec4);
-        createBuffer(
-            stagingAcc.size, // size in bytes
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT, // for vkCmdCopyImageToBuffer
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            stagingAcc.buffer,
-            stagingAcc.memory
-        );
-        this->stagingBuffers.push_back(std::move(stagingAcc));
     }
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer cmdbf = VK_NULL_HANDLE) const {
@@ -1078,11 +927,6 @@ private:
 
         pathtracerImageLayouts[textureIndex] = VK_IMAGE_LAYOUT_GENERAL;
 
-        // Bind compute pipeline and dispatch
-        // Bind compute pipeline and descriptors
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSet[currentFrame%PING_PONG_FRAMES], 0, nullptr);
-
         /*
         A timestamp query measures GPU time between two points in the command buffer
         It does not measure "this dispatch" unless you bracket it
@@ -1090,18 +934,14 @@ private:
         vkCmdResetQueryPool(commandBuffer, timestampPools[currentFrame % PING_PONG_FRAMES], 0, 2);
         vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[currentFrame % PING_PONG_FRAMES], 0);
 
-        // Dispatch compute
-        // Tiling to avoid TDR
-        const uint32_t TILE_Y = this->pathtracerConfig.GetTileSize().y;
-        const uint32_t TILE_X = this->pathtracerConfig.GetTileSize().x;
-        for (uint32_t tileY = 0; tileY < this->HEIGHT; tileY += TILE_Y) {
-            for (uint32_t tileX = 0; tileX < this->WIDTH; tileX += TILE_X) {
-                this->pathtracerPC.ct.tileOffset = { tileX, tileY };
-                vkCmdPushConstants( commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::PushConstants), &this->pathtracerPC );
-                vkCmdDispatch( commandBuffer, (TILE_X + Pathtracer::local_size_x-1) / Pathtracer::local_size_x, (TILE_Y + Pathtracer::local_size_y-1) / Pathtracer::local_size_y, 1 );
-            }
-        }
-
+        Pathtracer::ComputeBackend::DispatchConext dispatchCtx = {
+            .commandBuffer = commandBuffer,
+            .currentFrame = (uint32_t)currentFrame,
+            .tileSize = this->pathtracerConfig.GetTileSize(),
+            .lightBounces = this->pathtracerConfig.GetLightBounces()
+        };
+        this->computeBackend->dispatch(dispatchCtx);
+        
         vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[currentFrame % PING_PONG_FRAMES], 1);
 
 
@@ -1125,10 +965,7 @@ private:
         pathtracerImageLayouts[textureIndex] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 
-    PathtracerUBO pathtracerState{};
-    Buffer pathtracerUBO;
-    void createGraphicsPipeline() {
-        // Graphics Pipeline
+    void createCommandPool() {
         VkCommandPoolCreateInfo cmdPoolInfo{};
         cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -1138,7 +975,10 @@ private:
             std::cerr << "Failed to create VkCreateCommandPool\n";
             return;
         }
+    }
 
+    void createGraphicsPipeline() {
+        // Graphics Pipeline
         // Gotta change cmake.txt
         char buffer[FILENAME_MAX];
         _getcwd(buffer, FILENAME_MAX);
@@ -1147,94 +987,31 @@ private:
         // Shaders
         system(RESOURCE("shaders\\runtime_compile.bat"));
 
-        VkShaderModule vsShaderModule = this->createShaderModule("shaders\\vert.spv", ShaderType::VERTEX).value();
-        VkShaderModule fsShaderModule = this->createShaderModule("shaders\\frag.spv", ShaderType::FRAGMENT).value();
+        Shader vertexShader = Shader("shaders\\vert.spv", Shader::Type::VERTEX, this->device);
+        Shader fragmentShader = Shader("shaders\\frag.spv", Shader::Type::FRAGMENT, this->device);
 
-        VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-        vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-        vertShaderStageInfo.module = vsShaderModule;
-        vertShaderStageInfo.pName = "main";
+        VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShader.GetShaderCreateInfo(), fragmentShader.GetShaderCreateInfo() };
 
-        VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-        fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        fragShaderStageInfo.module = fsShaderModule;
-        fragShaderStageInfo.pName = "main";
-
-        VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-
-        // Pathtracer Descriptor Set
         pathtracerState.iFrame = 0;
         pathtracerState.iResolution = glm::vec2(this->WIDTH, this->HEIGHT);
         pathtracerState.iTime = 0;
         pathtracerState.camera.cameraPos = glm::vec4(-0.0f, 0.1f, -0.6f, 0.0);
         pathtracerState.camera.cameraRot = glm::vec4(0, 0,0,0);
-        pathtracerUBO = createUniformBuffer(sizeof(PathtracerUBO), &pathtracerState);
-
-        std::vector<VkDescriptorSetLayoutBinding> computeBindings = {
-            { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::BVH_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::KDTREE_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::KDTREE_INDICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::TRIANGLES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::VERTICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::EMISSIVES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::MATERIALS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 10, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::STATISTICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-        };
-        createDescriptorSetLayout(computeBindings, &this->computeDescriptorSetLayout);
-
 
         std::vector<VkDescriptorSetLayoutBinding> fragBindings = {
             { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
         };
         createDescriptorSetLayout(fragBindings, &this->descriptorSetLayout);
 
-        this->pathtracerSSBOs.reserve(SSBOsCount);
-        std::vector<VkDescriptorPoolSize> poolSizes = {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 * PING_PONG_FRAMES },         // Only for compute UBO
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * PING_PONG_FRAMES }, // 1 lastFrameTex + 2 fragment textures (double buffering)
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 * PING_PONG_FRAMES },          // compute output image + acc image framebuffer
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SSBOsCount * PING_PONG_FRAMES } // SSBOs
-        };
-
-        createDescriptorPool(poolSizes, nDescriptorSets * PING_PONG_FRAMES);
-
-        createImage2D(this->WIDTH, this->HEIGHT);
-        create2DLinearImageSampler();
-        create2DNearestImageSampler();
-
-        for (int i = 0; i < PING_PONG_FRAMES; i++) {
-            this->computeDescriptorSet[i] = allocateDescriptorSet(&computeDescriptorSetLayout);
+        for (int i = 0; i < PING_PONG_FRAMES; i++)
             this->fragDescriptorSet[i] = allocateDescriptorSet(&descriptorSetLayout);
-        }
 
-        for (int i = 0; i < PING_PONG_FRAMES; i++) {
-
-            // Compute descriptor set
-            updateUniformBufferDescriptorSet(computeDescriptorSet[i], 1, pathtracerUBO.buffer, sizeof(PathtracerUBO));
-
-            // Output storage image for compute
-            updateStorageImageDescriptorSet(computeDescriptorSet[i], 0, pathtracerImageViews[i], VK_IMAGE_LAYOUT_GENERAL);
-
-            // Acc image
-            updateStorageImageDescriptorSet(computeDescriptorSet[i], 10, pathtracerImageViews[PATHTRACER_IMG_COUNT-1], VK_IMAGE_LAYOUT_GENERAL);
-
-            // Input sampler for compute (previous frame texture)
-            updateCombinedImageSamplerDescriptorSet(computeDescriptorSet[i], 2, pathtracerImageSampler, pathtracerImageViews[1 - i]);
-
+        for (int i = 0; i < PING_PONG_FRAMES; i++)
             // Fragment shader reads current frame image
             updateCombinedImageSamplerDescriptorSet(fragDescriptorSet[i], 0, fragImageSampler, pathtracerImageViews[i]);
-        }
 
-        this->pathtracerPC.ct.tileSize = this->pathtracerConfig.GetTileSize();
-        this->pathtracerPC.lightBounces = this->pathtracerConfig.GetLightBounces();
 
-        std::string sceneFilepath = RESOURCE("3DModels\\") + this->pathtracerConfig.GetScene();
+        std::string sceneFilepath = RESOURCE("scenes\\") + this->pathtracerConfig.GetScene();
         OBJLoader objloader((sceneFilepath + ".obj").c_str());
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
         std::vector<OBJLoader::Vertex> objVertices = objloader.GetObjVertices();
@@ -1256,9 +1033,10 @@ private:
         for (auto& lt : lightTris) lt.indices = glm::uvec4(lt.indices.x+vertexOffset, lt.indices.y+vertexOffset, lt.indices.z+vertexOffset, materials.size()-1);
 
         // Create SSBOs
-        //std::vector<glm::uvec3> meshTris(triangles.size());
-        //for (size_t i = 0; i < triangles.size(); i++) meshTris[i] = { triangles[i].indices.x, triangles[i].indices.y, triangles[i].indices.z };
         OBJLoader::MeshGeometry mergedMesh{ objVertices, triangles };
+
+        std::vector<uint32_t> indices = {};
+        std::variant<std::vector<BVH::Node>, std::vector<KdTree::Node>> treeVariant;
 
         if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH) {
             BVH bvh = BVH(mergedMesh);
@@ -1275,23 +1053,10 @@ private:
             triangles = std::move(reordered);
             
             const std::vector<BVH::Node>& tree = bvh.GetTree();
+            treeVariant = tree;
             pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
-
-            pathtracerSSBOs.emplace_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
-            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::BVH_NODES); // BVH Nodes
-
-            // Dummy
-            pathtracerSSBOs.emplace_back(createStorageBuffer(4, nullptr));
-            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_NODES);
-
-            pathtracerSSBOs.emplace_back(createStorageBuffer(4, nullptr));
-            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
         }
         else {
-            // Dummy
-            pathtracerSSBOs.emplace_back(createStorageBuffer(4, nullptr));
-            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::BVH_NODES);
-
             KdTree kdh = KdTree(mergedMesh);
             auto t0 = std::chrono::high_resolution_clock::now();
             kdh.Build();
@@ -1300,6 +1065,7 @@ private:
             //kdh.Print();
 
             const std::vector<KdTree::Node>& tree = kdh.GetTree();
+            treeVariant = tree;
             pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
 
             /*
@@ -1307,10 +1073,7 @@ private:
             triangles = kdh.GetTriangles();
             */
 
-            pathtracerSSBOs.emplace_back(createStorageBuffer(tree.size() * sizeof(tree[0]), tree.data()));
-            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_NODES); // Node ranges correspond to the indices array, which contain actual triangle indices
-
-            const std::vector<uint32_t>& indices = kdh.GetIndices();
+            indices = kdh.GetIndices();
 
             
             /*
@@ -1319,28 +1082,19 @@ private:
                 printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.y].position.x, objVertices[triangles[idx].indices.y].position.y, objVertices[triangles[idx].indices.y].position.z);
                 printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.z].position.x, objVertices[triangles[idx].indices.z].position.y, objVertices[triangles[idx].indices.z].position.z);
             }
-            */
-            
-
-            pathtracerSSBOs.emplace_back(createStorageBuffer(indices.size() * sizeof(indices[0]), indices.data()));
-            createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);            
+            */  
         }
 
-        pathtracerSSBOs.emplace_back(createStorageBuffer(triangles.size() * sizeof(triangles[0]), triangles.data()));
-        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::TRIANGLES); // Triangles
-
-        pathtracerSSBOs.emplace_back(createStorageBuffer(objVertices.size() * sizeof(objVertices[0]), objVertices.data()));
-        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::VERTICES); // Vertices
-
-        pathtracerSSBOs.emplace_back(createStorageBuffer(lightTris.size() * sizeof(lightTris[0]), lightTris.data()));
-        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::EMISSIVES); // Emissives/Light
-
-        pathtracerSSBOs.emplace_back(createStorageBuffer(materials.size() * sizeof(materials[0]), materials.data()));
-        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::MATERIALS); // Materials
-
-        pathtracerSSBOs.emplace_back(createStorageBuffer(sizeof(Pathtracer::GPUTreeStatistics), nullptr, true));
-        createSSBO(pathtracerSSBOs.back().buffer, SSBOBinding::STATISTICS); // Statistics
-
+        Pathtracer::ComputeBackend::SceneData sceneData = {
+            .vertices = objVertices,
+            .triangles = triangles,
+            .lightTriangles = lightTris,
+            .tree = std::move(treeVariant),
+            .indices_kdtree = indices,
+            .materials = materials
+        };
+        
+        this->computeBackend->init(sceneData);
 
         // Dynamic State
         std::vector<VkDynamicState> dynamicStates = {
@@ -1539,57 +1293,7 @@ private:
             return;
         }
 
-        // Descriptor set layout for compute (storage image + uniform + sampler)
-        VkPipelineLayoutCreateInfo computePipelineLayoutInfo{};
-        computePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        computePipelineLayoutInfo.setLayoutCount = 1;
-        computePipelineLayoutInfo.pSetLayouts = &computeDescriptorSetLayout;
-
-        VkPushConstantRange pushConstantRange{};
-        pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-        pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(Pathtracer::PushConstants);
-        computePipelineLayoutInfo.pushConstantRangeCount = 1;
-        computePipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-        
-        vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &computePipelineLayout);
-
-        Pathtracer::SpecializedConstants spec = {
-            .useNEE = VK_TRUE,
-            .useMIS = VK_TRUE,
-            .useBVH = (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH),
-            .useStats = this->pathtracerConfig.ShouldGetStatsAS()
-        };
-
-        VkSpecializationMapEntry entries[] = {
-            { 1, offsetof(Pathtracer::SpecializedConstants, useNEE), sizeof(VkBool32) },
-            { 2, offsetof(Pathtracer::SpecializedConstants, useMIS), sizeof(VkBool32) },
-            { 3, offsetof(Pathtracer::SpecializedConstants, useBVH), sizeof(VkBool32) },
-            { 4, offsetof(Pathtracer::SpecializedConstants, useStats), sizeof(VkBool32) }
-        };
-
-        VkSpecializationInfo specInfo{
-            .mapEntryCount = 4,
-            .pMapEntries = entries,
-            .dataSize = sizeof(Pathtracer::SpecializedConstants),
-            .pData = &spec
-         };
-
-        // Compute pipeline
-        VkShaderModule pathtracerComputeShaderModule = this->createShaderModule("shaders\\pathtracer.spv", ShaderType::COMPUTE).value();
-        VkComputePipelineCreateInfo computePipelineInfo{};
-        computePipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        computePipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        computePipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-        computePipelineInfo.stage.module = pathtracerComputeShaderModule;
-        computePipelineInfo.stage.pName = "main";
-        computePipelineInfo.stage.pSpecializationInfo = &specInfo;
-        computePipelineInfo.layout = computePipelineLayout;
-        vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineInfo, nullptr, &computePipeline);
-
-        vkDestroyShaderModule(device, vsShaderModule, nullptr);
-        vkDestroyShaderModule(device, fsShaderModule, nullptr);
-        vkDestroyShaderModule(device, pathtracerComputeShaderModule, nullptr);
+        // Compute Pipeline
 
         // 
         VkCommandBufferAllocateInfo cmdBufferAllocInfo{};
@@ -1640,6 +1344,7 @@ public:
     void shutdown() {
         vkDeviceWaitIdle(device);
 
+        computeBackend.reset();
         
         // Synchronization objects
         for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
@@ -1659,17 +1364,12 @@ public:
 
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
-        vkDestroyDescriptorSetLayout(device, computeDescriptorSetLayout, nullptr);
 
         
         // Pipelines & layouts
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
 
-        vkDestroyPipeline(device, computePipeline, nullptr);
-
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-
-        vkDestroyPipelineLayout(device, computePipelineLayout, nullptr);
 
         
         // Command pool (implicitly frees command buffers)
@@ -1700,11 +1400,6 @@ public:
         
         // Buffers
         vertexBuffer.~Buffer();
-        
-        pathtracerSSBOs.clear();
-        stagingBuffers.clear();
-
-        pathtracerUBO.~Buffer();
         
         // Device / instance
         vkDestroyDevice(device, nullptr);
@@ -1803,7 +1498,7 @@ public:
         );
         swapchainImageLayouts[imageIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        updateUniformBuffer(pathtracerUBO, &pathtracerState, sizeof(PathtracerUBO));
+        this->computeBackend->updateFrameContext(&pathtracerState, sizeof(pathtracerState));
         transitionCompute(this->commandBuffers[currentFrame], pathtracerImages[textureIndex], currentFrame);
 
         VkRenderingAttachmentInfo colorAttachment{};
@@ -1832,7 +1527,6 @@ public:
         VkBuffer vertexBuffers[] = { this->vertexBuffer.buffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(this->commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
-        //vkCmdDraw(this->commandBuffers[currentFrame], 6, 1, 0, 0);
 
         vkCmdBindDescriptorSets(
             this->commandBuffers[currentFrame],
@@ -1928,58 +1622,15 @@ public:
         Pathtracer::Benchmark binfo = this->pathtracerConfig.GetBenchmarkInfo();
         if (!binfo.btype) return {};
 
-        const uint32_t STAGING_STATS = 1, STAGING_ACC = 0;
+        //const uint32_t STAGING_STATS = 1, STAGING_ACC = 0;
         VkImage accImg = this->pathtracerImages[PATHTRACER_IMG_COUNT - 1];
 
-        VkCommandBuffer cmdbf = beginSingleTimeCommands();
-        transitionImageLayout(accImg, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, cmdbf);
-
-        VkBufferImageCopy imgCopy{};
-        imgCopy.bufferOffset = 0;
-        imgCopy.bufferRowLength = 0; // tightly packed
-        imgCopy.bufferImageHeight = 0;
-        imgCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imgCopy.imageSubresource.mipLevel = 0;
-        imgCopy.imageSubresource.baseArrayLayer = 0;
-        imgCopy.imageSubresource.layerCount = 1;
-        imgCopy.imageOffset = { 0, 0, 0 };
-        imgCopy.imageExtent = { this->WIDTH, this->HEIGHT, 1 };
-
-        vkCmdCopyImageToBuffer(cmdbf, accImg, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->stagingBuffers[STAGING_ACC].buffer, 1, &imgCopy);
-
-        const Buffer& statsSSBO = this->pathtracerSSBOs.back();
-        const Buffer& stagingStats = this->stagingBuffers[STAGING_STATS];
-
-        VkBufferCopy statsCopy{};
-        statsCopy.srcOffset = 0;
-        statsCopy.dstOffset = 0;
-        statsCopy.size = sizeof(Pathtracer::GPUTreeStatistics);
-
-        vkCmdCopyBuffer(cmdbf, statsSSBO.buffer, stagingStats.buffer, 1, &statsCopy);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &cmdbf;
-
-        endSingleTimeCommands(cmdbf);
-        vkQueueWaitIdle(this->graphicsQueue);
+        //VkCommandBuffer cmdbf = beginSingleTimeCommands();
+        transitionImageLayout(accImg, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
         std::vector<glm::vec4> pixels;
-        void* mappedPixels = nullptr;
-        vkMapMemory(this->device, this->stagingBuffers[STAGING_ACC].memory, 0, VK_WHOLE_SIZE, 0, &mappedPixels);
-        pixels.resize(this->WIDTH * this->HEIGHT);
-        memcpy(pixels.data(), mappedPixels, this->WIDTH * this->HEIGHT * sizeof(glm::vec4));
-        vkUnmapMemory(this->device, this->stagingBuffers[STAGING_ACC].memory);
+        this->computeBackend->GetBackendAccOutImgPixels(pixels);
 
-        void* mappedStats = nullptr;
-        vkMapMemory(this->device, stagingStats.memory, 0, sizeof(Pathtracer::GPUTreeStatistics), 0, &mappedStats);
-        Pathtracer::GPUTreeStatistics gpuTreeStats = *reinterpret_cast<Pathtracer::GPUTreeStatistics*>(mappedStats);
-        vkUnmapMemory(this->device, stagingStats.memory);
-
-        //std::cout << "[STATS]\n RAYS: " << gpuTreeStats.rays.hi << " " << gpuTreeStats.rays.lo << "\n TRAVERSALS: " << gpuTreeStats.traversals.hi << " " << gpuTreeStats.traversals.lo << "\n ISECS: " << gpuTreeStats.isecs.hi << " " << gpuTreeStats.isecs.lo << "\n";
-        Pathtracer::TreeStatistics treeStats { gpuTreeStats.rays.lo | (uint64_t(gpuTreeStats.rays.hi) << 32ULL), gpuTreeStats.isecs.lo | (uint64_t(gpuTreeStats.isecs.hi) << 32ULL), gpuTreeStats.traversals.lo | (uint64_t(gpuTreeStats.traversals.hi) << 32ULL) };
-        
         /*
         VkClearColorValue clearVal = { 0.f, 0.f, 0.f, 0.f };
         VkImageSubresourceRange range{};
@@ -1990,7 +1641,7 @@ public:
         */
 
         Pathtracer::Statistics stats = this->pathtracerStatistics;
-        stats.treeStats = treeStats;
+        stats.treeStats = this->computeBackend->GetBackendStatistics();
         
         for (auto& px : pixels)
             px /= static_cast<float>(binfo.spp);

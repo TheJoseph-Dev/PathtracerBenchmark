@@ -1,6 +1,13 @@
 #ifndef PATHTRACER_SETTINGS_H
 #define PATHTRACER_SETTINGS_H
 
+#include <cstdint>
+#include <glm/glm.hpp>
+#include <vulkan/vulkan.h>
+#include <string>
+#include <stdexcept>
+#include <iostream>
+
 namespace Pathtracer {
 
     constexpr uint32_t local_size_x = 64;
@@ -45,9 +52,9 @@ namespace Pathtracer {
         KD_TREE = 1
     };
 
-    enum API {
-        VULKAN = 0, /*SPIR-V*/
-        CUDA = 1
+    enum ComputeBackendType {
+        SPIRV_T = 0,
+        CUDA_T = 1
     };
 
     enum Scene {
@@ -69,7 +76,7 @@ namespace Pathtracer {
 
     class Config {
         const AccelerationStructureType accelerationStructureType;
-        const API api;
+        const ComputeBackendType cbType;
         const Scene scene;
         const Resolution resolution;
         const uint32_t lightBounces;
@@ -80,8 +87,8 @@ namespace Pathtracer {
 
     public:
 
-        Config(AccelerationStructureType as, API api, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false, bool getStatsAS = true)
-            : accelerationStructureType(as), api(api), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize), getStatsAS(getStatsAS)
+        Config(AccelerationStructureType as, ComputeBackendType cbType, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false, bool getStatsAS = true)
+            : accelerationStructureType(as), cbType(cbType), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize), getStatsAS(getStatsAS)
         {
         }
 
@@ -89,8 +96,8 @@ namespace Pathtracer {
             return accelerationStructureType;
         }
 
-        API GetAPI() const {
-            return api;
+        ComputeBackendType GetComputeBackendType() const {
+            return cbType;
         }
 
         /*
@@ -151,7 +158,7 @@ namespace Pathtracer {
                 << "\n CPU: 11th Gen Intel Core i5 - 2.40GHz"
                 << "\n GPU: NVIDIA GeForce MX350 - 2Gb VRAM"
                 << "\n Scene: " << this->GetScene()
-                << "\n API: " << (!this->api ? "Vulkan" : "CUDA")
+                << "\n Compute Backend: " << (!this->cbType ? "SPIR-V" : "CUDA")
                 << "\n Acc. Structure: " << (!this->accelerationStructureType ? "Binned SAH-BVH" : "Havran SAH-KdTree")
                 << "\n Resolution: " << this->GetResolution().x << "x" << this->GetResolution().y
                 << "\n Tile Size: " << this->GetTileSize().x << "x" << this->GetTileSize().y
@@ -163,17 +170,19 @@ namespace Pathtracer {
             return "-spp" + std::to_string(this->benchmarkInfo.spp)
                 + "-r" + std::to_string(GetResolution().x) + "x" + std::to_string(GetResolution().y)
                 + "-lb" + std::to_string(this->lightBounces)
-                + (!this->api ? "-vulkan" : "-cuda")
+                + (!this->cbType ? "-spirv" : "-cuda")
                 + (!this->accelerationStructureType ? "-bvh" : "-kdtree");
         }
     };
 
+    /*
     struct GPUTreeStatistics {
         struct uint64gpu_t { uint32_t lo, hi; };
         uint64gpu_t rays;
         uint64gpu_t isecs;
         uint64gpu_t traversals;
     };
+    */
 
     struct TreeStatistics {
         uint64_t rays;
@@ -196,6 +205,21 @@ namespace Pathtracer {
         float rmse = 0.0f;
         float psnr = 0.0f;
     };
+
+    struct alignas(16) Camera {
+        glm::vec4 cameraPos;
+        glm::vec4 cameraRot;
+    };
+
+    struct alignas(16) FrameContext {
+        glm::vec2 iResolution;
+        float iTime;
+        int iFrame;
+        //int accumulate;
+        //vec3 pad0;
+        Camera camera;
+    };
+
 };
 
 #endif

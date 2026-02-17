@@ -1,7 +1,7 @@
 #define DEBUG
 #include "Pathtracer.h"
 
-Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
+static Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
@@ -9,7 +9,7 @@ Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
 
     Config pathtracerConfig(
         AccelerationStructureType::KD_TREE,
-        API::VULKAN,
+        ComputeBackendType::SPIRV_T,
         scene,
         Resolution::R1024x1024,
         12,
@@ -20,34 +20,34 @@ Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     return pathtracerConfig;
 }
 
-Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype) {
+static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
-    benchmarkInfo.spp = 100;
+    benchmarkInfo.spp = 10;
 
     Config pathtracerConfig(
         acctype,
-        API::VULKAN,
+        ComputeBackendType::SPIRV_T,
         scene,
         Resolution::R1024x1024,
         4,
         benchmarkInfo,
         glm::uvec2(64, 64),
-        false,
+        true,
         true
     );
     return pathtracerConfig;
 }
 
-Pathtracer::Config imgrefConfig(Pathtracer::Scene scene) {
+static Pathtracer::Config imgrefConfig(Pathtracer::Scene scene) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::IMGREF;
 
     Config pathtracerConfig(
         AccelerationStructureType::BVH,
-        API::VULKAN,
+        ComputeBackendType::SPIRV_T,
         scene,
         Resolution::R1024x1024,
         12,
@@ -62,7 +62,7 @@ int main() {
 
     {   
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::KD_TREE));
+        App pathtracer(debugConfig(Scene::BUNNY, AccelerationStructureType::KD_TREE));
         pathtracer.run();
     }
 
