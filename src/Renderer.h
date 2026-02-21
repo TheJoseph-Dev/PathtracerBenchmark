@@ -1,5 +1,5 @@
-#ifndef VULKAN_H
-#define VULKAN_H
+#ifndef VULKAN_RENDERER_H
+#define VULKAN_RENDERER_H
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -13,16 +13,19 @@
 #include <chrono>
 #include <glm/glm.hpp>
 #include "models/io/OBJLoader.h"
+#include "models/io/EXR.h"
+#include "models/io/PPM.h"
 #include "models/acceleration_structures/BVH.h"
 #include "models/acceleration_structures/KdTreeBinned.h"
 #include "models/acceleration_structures/KdTree.h"
-#include "models/io/EXR.h"
-#include "models/io/PPM.h"
 #include "models/vulkan/Buffer.h"
 #include "models/vulkan/Shader.h"
+#include "models/vulkan/Vulkan.h"
 #include "PathtracerSettings.h"
 #include "models/compute_backends/SPIRV.h"
+#ifdef HAS_CUDA
 #include "models/compute_backends/CUDA.h"
+#endif
 
 #ifdef DEBUG
 constexpr bool enableValidationLayers = true;
@@ -59,7 +62,7 @@ struct Vertex {
     }
 };
 
-class Vulkan {
+class Renderer {
 
     // How many frames you let the CPU start rendering before the GPU is done
     // MAX_FRAMES_IN_FLIGHT: How many frames the CPU can work on at once
@@ -67,8 +70,6 @@ class Vulkan {
     // They are not directly tied, but you need to consider things like: MAX_FRAMES_IN_FLIGHT = min(MAX_FRAMES_IN_FLIGHT, SC.size())
     static constexpr uint32_t SWAPCHAIN_IMAGE_COUNT = 2;
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2; //SWAPCHAIN_IMAGE_COUNT - 1;
-    static constexpr uint32_t PING_PONG_FRAMES = 2;
-    static constexpr uint32_t PATHTRACER_IMG_COUNT = PING_PONG_FRAMES + 1; // + 1 comes from acc out image
 
     std::unique_ptr<Pathtracer::ComputeBackend> computeBackend;
 
@@ -76,10 +77,22 @@ class Vulkan {
     VkPhysicalDevice physicalDevice;
     VkDevice device; // After selecting a Physical Device, create a logical device to interface with it
     VkPhysicalDeviceProperties physicalDeviceProperties;
-    std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+
+#ifdef HAS_CUDA
+    const std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME
         //VK_KHR_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME - Not available
     };
+
+    PFN_vkGetMemoryWin32HandleKHR vkGetMemoryWin32HandleKHR = nullptr;
+#else
+    const std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        //VK_KHR_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME - Not available
+    };
+#endif
+
 
     uint32_t graphicsQueueFamilyIndex = 0, presentQueueFamilyIndex = 0, computeQueueFamilyIndex = 0;
     VkQueue graphicsQueue; // Handle to interact with device graphics queue;
@@ -100,11 +113,11 @@ class Vulkan {
     VkDescriptorPool descriptorPool;
     VkDescriptorSet fragDescriptorSet[PING_PONG_FRAMES];
 
-    VkImage pathtracerImages[PATHTRACER_IMG_COUNT];
+    /*VkImage pathtracerImages[PATHTRACER_IMG_COUNT];
     VkDeviceMemory pathtracerImagesMemory[PATHTRACER_IMG_COUNT];
     VkImageView pathtracerImageViews[PATHTRACER_IMG_COUNT];
     VkImageLayout pathtracerImageLayouts[PATHTRACER_IMG_COUNT];
-    VkSampler pathtracerImageSampler;
+    VkSampler pathtracerImageSampler;*/
     VkSampler fragImageSampler;
     int textureIndex = 0;
 
@@ -130,12 +143,12 @@ class Vulkan {
     Pathtracer::FrameContext pathtracerState{};
     const uint32_t WIDTH, HEIGHT;
 public:
-    Vulkan(const Pathtracer::Config& pathtracerConfig) :
+    Renderer(const Pathtracer::Config& pathtracerConfig) :
         pathtracerConfig(pathtracerConfig), WIDTH(pathtracerConfig.GetResolution().x), HEIGHT(pathtracerConfig.GetResolution().y)
     {
     }
 
-    ~Vulkan() {
+    ~Renderer() {
         this->shutdown();
     }
 
@@ -146,9 +159,9 @@ public:
         createSwapchain(window);
         createCommandPool();
         createDescriptorPool();
-        createPathtracerImages();
         createComputeBackend();
         createGraphicsPipeline();
+        initPathtracerState();
     }
 
 private:
@@ -236,6 +249,13 @@ private:
             }
         }
 #endif
+#ifdef HAS_CUDA
+        
+        /*this->vkGetMemoryWin32HandleKHR = (PFN_vkGetMemoryWin32HandleKHR)vkGetDeviceProcAddr(device, "vkGetMemoryWin32HandleKHR");
+        if (!vkGetMemoryWin32HandleKHR)
+            std::cerr << "Failed to load vkGetMemoryWin32HandleKHR" << std::endl;*/
+#endif
+
     }
 
     void createWindowSurface(GLFWwindow* window) {
@@ -501,76 +521,16 @@ private:
         }
     }
 
-    void createPathtracerImages() {
-        createImage2D(this->WIDTH, this->HEIGHT);
-        create2DLinearImageSampler();
-        create2DNearestImageSampler();
-    }
-
     void createComputeBackend() {
-        if (pathtracerConfig.GetComputeBackendType() == Pathtracer::ComputeBackendType::SPIRV_T) {
-            Pathtracer::ComputeBackend::VulkanContext vkCtx = { this->physicalDevice, this->device, this->commandPool, this->graphicsQueue };
-            std::vector<VkImageView> imgViews = {}; 
-            imgViews.reserve(PATHTRACER_IMG_COUNT);
-            for (uint32_t i = 0; i < PATHTRACER_IMG_COUNT; i++) imgViews.push_back(this->pathtracerImageViews[i]);
-            Pathtracer::ComputeBackend::PathtracerVulkanResources vkRsrcs = 
-            { 
-                imgViews,
-                this->pathtracerImageSampler,
-                this->pathtracerImages[PATHTRACER_IMG_COUNT-1],
-                this->descriptorPool,
-                this->pathtracerConfig,
-                this->PING_PONG_FRAMES,
-                this->PATHTRACER_IMG_COUNT
-            };
-            this->computeBackend = std::make_unique<Pathtracer::SPIRV>(vkCtx, vkRsrcs);
-        }
+        Pathtracer::SPIRV::VulkanContext vkCtx = { this->physicalDevice, this->device, this->commandPool, this->graphicsQueue, this->descriptorPool };
+        if (pathtracerConfig.GetComputeBackendType() == Pathtracer::ComputeBackendType::SPIRV_T) 
+            this->computeBackend = std::make_unique<Pathtracer::SPIRV>(vkCtx, this->pathtracerConfig);
         else {
-            Pathtracer::ComputeBackend::CudaContext cuCtx;
-            this->computeBackend = std::make_unique<Pathtracer::CUDA>(cuCtx);
+            #ifdef HAS_CUDA
+            Pathtracer::CUDA::CudaContext cuCtx;
+            this->computeBackend = std::make_unique<Pathtracer::CUDA>(cuCtx, vkCtx, this->pathtracerConfig);
+            #endif
         }
-    }
-
-    VkCommandBuffer beginSingleTimeCommands() const {
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = this->commandPool;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(this->device, &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        return commandBuffer;
-    }
-
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer) const {
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(this->graphicsQueue);
-
-        vkFreeCommandBuffers(this->device, this->commandPool, 1, &commandBuffer);
-    }
-
-    void createDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayout* dsl) {
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
-
-        vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, dsl);
     }
 
     void createDescriptorPool() {
@@ -597,118 +557,6 @@ private:
         vkCreateDescriptorPool(this->device, &poolInfo, nullptr, &this->descriptorPool);
     }
 
-    VkDescriptorSet allocateDescriptorSet(VkDescriptorSetLayout* dsl) const {
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = this->descriptorPool;
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = dsl;
-
-        VkDescriptorSet descriptorSet;
-        vkAllocateDescriptorSets(this->device, &allocInfo, &descriptorSet);
-        return descriptorSet;
-    }
-
-    void updateUniformBufferDescriptorSet(VkDescriptorSet descriptorSet, uint32_t binding, VkBuffer buffer, VkDeviceSize size) {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = buffer;
-        bufferInfo.offset = 0;
-        bufferInfo.range = size;
-
-        VkWriteDescriptorSet descriptorWrite{};
-        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = descriptorSet;
-        descriptorWrite.dstBinding = binding;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = &bufferInfo;
-
-        vkUpdateDescriptorSets(this->device, 1, &descriptorWrite, 0, nullptr);
-    }
-
-    void updateStorageImageDescriptorSet(VkDescriptorSet descriptorSet, uint32_t binding, VkImageView imageView, VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL) {
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageView = imageView;
-        imageInfo.imageLayout = layout; // usually GENERAL for compute
-
-        VkWriteDescriptorSet write{};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet = descriptorSet;
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        write.descriptorCount = 1;
-        write.pImageInfo = &imageInfo;
-
-        vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-    }
-
-    void updateCombinedImageSamplerDescriptorSet(VkDescriptorSet descriptorSet, uint32_t binding, VkSampler sampler, VkImageView imageView, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.sampler = sampler;
-        imageInfo.imageView = imageView;
-        imageInfo.imageLayout = layout;
-
-        VkWriteDescriptorSet write{};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet = descriptorSet;
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write.descriptorCount = 1;
-        write.pImageInfo = &imageInfo;
-
-        vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-    }
-
-    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size;
-        bufferInfo.usage = usage;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-        if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate buffer memory!");
-        }
-
-        vkBindBufferMemory(this->device, buffer, bufferMemory, 0);
-    }
-
-    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-        VkBufferCopy copyRegion{};
-        copyRegion.size = size;
-        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-        endSingleTimeCommands(commandBuffer);
-    }
-
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-                return i;
-
-        throw std::runtime_error("failed to find suitable memory type!");
-    }
-
     void create2DLinearImageSampler() {
         VkSamplerCreateInfo dataSamplerInfo{};
         dataSamplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -725,208 +573,40 @@ private:
         vkCreateSampler(this->device, &dataSamplerInfo, nullptr, &this->fragImageSampler);
     }
 
-    void create2DNearestImageSampler() {
-        VkSamplerCreateInfo dataSamplerInfo{};
-        dataSamplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        dataSamplerInfo.magFilter = VK_FILTER_NEAREST;
-        dataSamplerInfo.minFilter = VK_FILTER_NEAREST;
-        dataSamplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        dataSamplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        dataSamplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        dataSamplerInfo.anisotropyEnable = VK_FALSE;
-        dataSamplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        dataSamplerInfo.unnormalizedCoordinates = VK_FALSE;
+    VkCommandBuffer beginSingleTimeCommands() const {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = commandPool;
+        allocInfo.commandBufferCount = 1;
 
-        vkCreateSampler(this->device, &dataSamplerInfo, nullptr, &this->pathtracerImageSampler);
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        return commandBuffer;
     }
 
-    void createImage2D(uint32_t width, uint32_t height) {
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer) const {
+        vkEndCommandBuffer(commandBuffer);
 
-        // Double Buffer
-        for (int i = 0; i < PATHTRACER_IMG_COUNT; i++) {
-            this->pathtracerImages[i] = {};
-            this->pathtracerImagesMemory[i] = {};
-            this->pathtracerImageViews[i] = {};
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
 
-            VkImageCreateInfo dataImageInfo{};
-            dataImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            dataImageInfo.imageType = VK_IMAGE_TYPE_2D;
-            dataImageInfo.extent.width = width;
-            dataImageInfo.extent.height = height;
-            dataImageInfo.extent.depth = 1;
-            dataImageInfo.mipLevels = 1;
-            dataImageInfo.arrayLayers = 1;
-            dataImageInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            dataImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-            dataImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            dataImageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-            dataImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            dataImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(this->graphicsQueue);
 
-            vkCreateImage(this->device, &dataImageInfo, nullptr, &this->pathtracerImages[i]);
-
-            VkMemoryRequirements memRequirements;
-            vkGetImageMemoryRequirements(this->device, this->pathtracerImages[i], &memRequirements);
-
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize = memRequirements.size;
-            allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-            if (vkAllocateMemory(this->device, &allocInfo, nullptr, &this->pathtracerImagesMemory[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to allocate image memory!");
-            }
-
-            vkBindImageMemory(this->device, pathtracerImages[i], pathtracerImagesMemory[i], 0);
-
-            VkImageViewCreateInfo dataTextureInfo{};
-            dataTextureInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            dataTextureInfo.image = this->pathtracerImages[i];
-            dataTextureInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            dataTextureInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            dataTextureInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            dataTextureInfo.subresourceRange.baseMipLevel = 0;
-            dataTextureInfo.subresourceRange.levelCount = 1;
-            dataTextureInfo.subresourceRange.baseArrayLayer = 0;
-            dataTextureInfo.subresourceRange.layerCount = 1;
-
-            vkCreateImageView(this->device, &dataTextureInfo, nullptr, &pathtracerImageViews[i]);
-
-            VkImageLayout imgLayout = i != PATHTRACER_IMG_COUNT-1 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
-            transitionImageLayout(this->pathtracerImages[i], VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, imgLayout);
-            pathtracerImageLayouts[i] = imgLayout;
-        }
-
+        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
 
-    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer cmdbf = VK_NULL_HANDLE) const {
-        VkCommandBuffer commandBuffer = cmdbf ? cmdbf : beginSingleTimeCommands();
-
-        /*
-            One of the most common ways to perform layout transitions is using an image memory barrier. A pipeline barrier like that is generally
-            used to synchronize access to resources, like ensuring that a write to a buffer completes before reading from it,
-            but it can also be used to transition image layouts and transfer queue family ownership when VK_SHARING_MODE_EXCLUSIVE is used.
-            There is an equivalent buffer memory barrier to do this for buffers.
-        */
-
-        VkImageMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = image;
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
-        VkPipelineStageFlags sourceStage;
-        VkPipelineStageFlags destinationStage;
-
-        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        }
-        else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        }
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        }
-        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        }
-        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
-            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        }
-        else if (oldLayout == VK_IMAGE_LAYOUT_GENERAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        }
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        }
-        else if (oldLayout == VK_IMAGE_LAYOUT_GENERAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        }
-        else {
-            throw std::invalid_argument("unsupported layout transition!");
-        }
-
-        vkCmdPipelineBarrier(
-            commandBuffer,
-            sourceStage, destinationStage,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
-
-        if(!cmdbf) endSingleTimeCommands(commandBuffer);
-    }
-
-    void transitionCompute(VkCommandBuffer commandBuffer, VkImage image, int currentFrame) {
-        // Transition SHADER_READ_ONLY_OPTIMAL -> GENERAL for compute
-        VkImageMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.image = image;
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
-
-        // Track old layout per frame
-        //printf("=== (COMPUTE) BEFORE BARRIER LAYOUT: %d ===\n", pathtracerImageLayouts[textureIndex]);
-        barrier.oldLayout = pathtracerImageLayouts[textureIndex];
-        barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        barrier.srcAccessMask = (barrier.oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) ? 0 : VK_ACCESS_SHADER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        //printf("[FRAME %d] Pre-compute barrier: oldLayout=%d newLayout=%d\n", currentFrame, barrier.oldLayout, barrier.newLayout);
-
-        vkCmdPipelineBarrier(
-            commandBuffer,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,  // previous use
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,   // upcoming use
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
-
-        pathtracerImageLayouts[textureIndex] = VK_IMAGE_LAYOUT_GENERAL;
-
+    void dispatchCompute(VkCommandBuffer commandBuffer, int currentFrame) {
         /*
         A timestamp query measures GPU time between two points in the command buffer
         It does not measure "this dispatch" unless you bracket it
@@ -937,32 +617,13 @@ private:
         Pathtracer::ComputeBackend::DispatchConext dispatchCtx = {
             .commandBuffer = commandBuffer,
             .currentFrame = (uint32_t)currentFrame,
+            .textureIndex = (uint32_t)textureIndex,
             .tileSize = this->pathtracerConfig.GetTileSize(),
             .lightBounces = this->pathtracerConfig.GetLightBounces()
         };
         this->computeBackend->dispatch(dispatchCtx);
         
         vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[currentFrame % PING_PONG_FRAMES], 1);
-
-
-        // Transition GENERAL -> SHADER_READ_ONLY_OPTIMAL for graphics
-        barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        vkCmdPipelineBarrier(
-            commandBuffer,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
-        //printf("[FRAME %d] Pre-compute barrier: oldLayout=%d newLayout=%d\n", currentFrame, barrier.oldLayout, barrier.newLayout);
-
-        pathtracerImageLayouts[textureIndex] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 
     void createCommandPool() {
@@ -977,40 +638,15 @@ private:
         }
     }
 
-    void createGraphicsPipeline() {
-        // Graphics Pipeline
-        // Gotta change cmake.txt
-        char buffer[FILENAME_MAX];
-        _getcwd(buffer, FILENAME_MAX);
-        std::cout << "Current working directory: " << buffer << std::endl;
-
-        // Shaders
-        system(RESOURCE("shaders\\runtime_compile.bat"));
-
-        Shader vertexShader = Shader("shaders\\vert.spv", Shader::Type::VERTEX, this->device);
-        Shader fragmentShader = Shader("shaders\\frag.spv", Shader::Type::FRAGMENT, this->device);
-
-        VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShader.GetShaderCreateInfo(), fragmentShader.GetShaderCreateInfo() };
-
+    void initPathtracerState() {
         pathtracerState.iFrame = 0;
         pathtracerState.iResolution = glm::vec2(this->WIDTH, this->HEIGHT);
         pathtracerState.iTime = 0;
         pathtracerState.camera.cameraPos = glm::vec4(-0.0f, 0.1f, -0.6f, 0.0);
-        pathtracerState.camera.cameraRot = glm::vec4(0, 0,0,0);
+        pathtracerState.camera.cameraRot = glm::vec4(0, 0, 0, 0);
+    }
 
-        std::vector<VkDescriptorSetLayoutBinding> fragBindings = {
-            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
-        };
-        createDescriptorSetLayout(fragBindings, &this->descriptorSetLayout);
-
-        for (int i = 0; i < PING_PONG_FRAMES; i++)
-            this->fragDescriptorSet[i] = allocateDescriptorSet(&descriptorSetLayout);
-
-        for (int i = 0; i < PING_PONG_FRAMES; i++)
-            // Fragment shader reads current frame image
-            updateCombinedImageSamplerDescriptorSet(fragDescriptorSet[i], 0, fragImageSampler, pathtracerImageViews[i]);
-
-
+    void initComputeBackend() {
         std::string sceneFilepath = RESOURCE("scenes\\") + this->pathtracerConfig.GetScene();
         OBJLoader objloader((sceneFilepath + ".obj").c_str());
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
@@ -1030,7 +666,7 @@ private:
         // Merge light vertices
         uint32_t vertexOffset = objVertices.size();
         objVertices.insert(objVertices.end(), lightVerts.begin(), lightVerts.end());
-        for (auto& lt : lightTris) lt.indices = glm::uvec4(lt.indices.x+vertexOffset, lt.indices.y+vertexOffset, lt.indices.z+vertexOffset, materials.size()-1);
+        for (auto& lt : lightTris) lt.indices = glm::uvec4(lt.indices.x + vertexOffset, lt.indices.y + vertexOffset, lt.indices.z + vertexOffset, materials.size() - 1);
 
         // Create SSBOs
         OBJLoader::MeshGeometry mergedMesh{ objVertices, triangles };
@@ -1051,7 +687,7 @@ private:
             std::vector<OBJLoader::Triangle> reordered(triangles.size());
             for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[bvht[i].oIdx];
             triangles = std::move(reordered);
-            
+
             const std::vector<BVH::Node>& tree = bvh.GetTree();
             treeVariant = tree;
             pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
@@ -1075,14 +711,14 @@ private:
 
             indices = kdh.GetIndices();
 
-            
+
             /*
             for (uint32_t idx = 0; idx < triangles.size(); idx++) {
                 printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.x].position.x, objVertices[triangles[idx].indices.x].position.y, objVertices[triangles[idx].indices.x].position.z);
                 printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.y].position.x, objVertices[triangles[idx].indices.y].position.y, objVertices[triangles[idx].indices.y].position.z);
                 printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.z].position.x, objVertices[triangles[idx].indices.z].position.y, objVertices[triangles[idx].indices.z].position.z);
             }
-            */  
+            */
         }
 
         Pathtracer::ComputeBackend::SceneData sceneData = {
@@ -1093,8 +729,40 @@ private:
             .indices_kdtree = indices,
             .materials = materials
         };
-        
+
         this->computeBackend->init(sceneData);
+    }
+
+    void createGraphicsPipeline() {
+        // Graphics Pipeline
+        // Gotta change cmake.txt
+        char buffer[FILENAME_MAX];
+        _getcwd(buffer, FILENAME_MAX);
+        std::cout << "Current working directory: " << buffer << std::endl;
+
+        // Shaders
+        system(RESOURCE("shaders\\runtime_compile.bat"));
+
+        Shader vertexShader = Shader("shaders\\vert.spv", Shader::Type::VERTEX, this->device);
+        Shader fragmentShader = Shader("shaders\\frag.spv", Shader::Type::FRAGMENT, this->device);
+
+        VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShader.GetShaderCreateInfo(), fragmentShader.GetShaderCreateInfo() };
+
+        initComputeBackend();
+
+        std::vector<VkDescriptorSetLayoutBinding> fragBindings = {
+            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
+        };
+        Vulkan::createDescriptorSetLayout(device, fragBindings, &this->descriptorSetLayout);
+
+        for (int i = 0; i < PING_PONG_FRAMES; i++)
+            this->fragDescriptorSet[i] = Vulkan::allocateDescriptorSet(this->device, this->descriptorPool, &descriptorSetLayout);
+
+        create2DLinearImageSampler();
+        for (int i = 0; i < PING_PONG_FRAMES; i++)
+            // Fragment shader reads current frame image
+            Vulkan::updateCombinedImageSamplerDescriptorSet(device, fragDescriptorSet[i], 0, fragImageSampler, this->computeBackend->getPathtracerImageView(i));
+
 
         // Dynamic State
         std::vector<VkDynamicState> dynamicStates = {
@@ -1375,16 +1043,6 @@ public:
         // Command pool (implicitly frees command buffers)
         vkDestroyCommandPool(device, commandPool, nullptr);
 
-        
-        // Path tracer ping-pong images
-        for (uint32_t i = 0; i < PATHTRACER_IMG_COUNT; ++i) {
-            vkDestroyImageView(device, pathtracerImageViews[i], nullptr);
-            vkDestroyImage(device, pathtracerImages[i], nullptr);
-            vkFreeMemory(device, pathtracerImagesMemory[i], nullptr);
-        }
-
-        vkDestroySampler(device, pathtracerImageSampler, nullptr);
-
         vkDestroySampler(device, fragImageSampler, nullptr);
 
         
@@ -1499,7 +1157,7 @@ public:
         swapchainImageLayouts[imageIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         this->computeBackend->updateFrameContext(&pathtracerState, sizeof(pathtracerState));
-        transitionCompute(this->commandBuffers[currentFrame], pathtracerImages[textureIndex], currentFrame);
+        dispatchCompute(this->commandBuffers[currentFrame], currentFrame);
 
         VkRenderingAttachmentInfo colorAttachment{};
         colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -1623,13 +1281,9 @@ public:
         if (!binfo.btype) return {};
 
         //const uint32_t STAGING_STATS = 1, STAGING_ACC = 0;
-        VkImage accImg = this->pathtracerImages[PATHTRACER_IMG_COUNT - 1];
-
-        //VkCommandBuffer cmdbf = beginSingleTimeCommands();
-        transitionImageLayout(accImg, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
         std::vector<glm::vec4> pixels;
-        this->computeBackend->GetBackendAccOutImgPixels(pixels);
+        this->computeBackend->getBackendAccOutImgPixels(pixels);
 
         /*
         VkClearColorValue clearVal = { 0.f, 0.f, 0.f, 0.f };
@@ -1641,7 +1295,7 @@ public:
         */
 
         Pathtracer::Statistics stats = this->pathtracerStatistics;
-        stats.treeStats = this->computeBackend->GetBackendStatistics();
+        stats.treeStats = this->computeBackend->getBackendStatistics();
         
         for (auto& px : pixels)
             px /= static_cast<float>(binfo.spp);

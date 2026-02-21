@@ -34,7 +34,7 @@ static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::Accel
         4,
         benchmarkInfo,
         glm::uvec2(64, 64),
-        true,
+        false,
         true
     );
     return pathtracerConfig;
@@ -62,7 +62,7 @@ int main() {
 
     {   
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::BUNNY, AccelerationStructureType::KD_TREE));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::KD_TREE));
         pathtracer.run();
     }
 
