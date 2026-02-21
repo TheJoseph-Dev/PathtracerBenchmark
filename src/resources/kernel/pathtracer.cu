@@ -135,11 +135,11 @@ __device__ inline float clampf(float x, float a, float b) {
 }
 
 // 2D rotation helper — implements GLSL mat2 rotation applied to vec swizzles.
-// GLSL: v.ab *= mat2(cos,-sin, sin,cos)  =>  new_a = a*cos + b*sin, new_b = -a*sin + b*cos
+// GLSL: v.ab *= mat2(cos,-sin, sin,cos)  =>  new_a = a*cos - b*sin, new_b = a*sin + b*cos
 __device__ void rotate2D(float& a, float& b, float angle) {
     float c = cosf(angle), s = sinf(angle);
-    float na = a * c + b * s;
-    float nb = -a * s + b * c;
+    float na = a * c - b * s;
+    float nb = a * s + b * c;
     a = na;
     b = nb;
 }
@@ -809,8 +809,12 @@ __device__ RenderData worldRender(
         if (mat.emissivePower > 0.0f) {
             vec3 Le = mat.emissiveColor * mat.emissivePower;
             if (i > 0) {
-                float pdfLight = computeLightPdf(hitPoint, ray.origin, scene.closestHit.triIdx,
-                                                 eTriangles, vertices, lightCount);
+                // Guard against invalid light indices: triIdx must be a valid eTriangles index
+                float pdfLight = 0.0f;
+                if (lightCount > 0 && scene.closestHit.triIdx < lightCount) {
+                    pdfLight = computeLightPdf(hitPoint, ray.origin, scene.closestHit.triIdx,
+                                               eTriangles, vertices, lightCount);
+                }
                 float w = MISWeight(prevPdfBSDF, pdfLight);
                 radiance = radiance + throughput * Le * w;
             } else {
@@ -1007,43 +1011,52 @@ __global__ void pathtracerKernel(
     outImage[idx] = vec4(finalColor, 1.0f);
 }
 
-/*
 extern "C"
 void dispatchCUDAPathtracerKernel(
-    void* cudaImagePtr,
-    int width,
-    int height,
-    unsigned int frame
+    vec4* d_outImage,
+    vec4* d_accImage,
+    BVHNode* d_bvhNodes,
+    KdNode* d_kdNodes,
+    unsigned int* d_kdtreeIndices,
+    Triangle* d_triangles,
+    Vertex* d_vertices,
+    Triangle* d_eTriangles,
+    Material* d_mats,
+    Statistics* d_statistics,
+    const ComputeTile* ct,
+    const PathtracerUBO* state,
+    unsigned int triangleCount,
+    unsigned int lightCount,
+    unsigned int lightBounces,
+    bool USE_BVH,
+    bool USE_STATS
 )
 {
-    vec4* d_out = reinterpret_cast<vec4*>(cudaImagePtr);
-
     dim3 block(16, 16);
     dim3 grid(
-        (width + block.x - 1) / block.x,
-        (height + block.y - 1) / block.y
+        ((unsigned int)state->iResolution.x + block.x - 1) / block.x,
+        ((unsigned int)state->iResolution.y + block.y - 1) / block.y
     );
 
     pathtracerKernel<<<grid, block>>>(
-        d_out,
-        d_out,          // no accumulation for now
-        nullptr,        // bvh
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        {},
-        {},
-        0,
-        0,
-        4,
-        true,
-        false
+        d_outImage,
+        d_accImage,
+        d_bvhNodes,
+        d_kdNodes,
+        d_kdtreeIndices,
+        d_triangles,
+        d_vertices,
+        d_eTriangles,
+        d_mats,
+        d_statistics,
+        *ct,
+        *state,
+        triangleCount,
+        lightCount,
+        lightBounces,
+        USE_BVH,
+        USE_STATS
     );
 
     cudaDeviceSynchronize();
 }
-*/
