@@ -81,11 +81,14 @@ class Renderer {
 #ifdef HAS_CUDA
     const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME
+        VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME,
+        VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
+        VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
         //VK_KHR_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME - Not available
     };
-
-    PFN_vkGetMemoryWin32HandleKHR vkGetMemoryWin32HandleKHR = nullptr;
 #else
     const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -129,8 +132,6 @@ class Renderer {
 
     VkCommandPool commandPool;
     VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
-
-    VkQueryPool timestampPools[MAX_FRAMES_IN_FLIGHT];
 
     VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT]; // Ensures the submit waits until the acquired image is ready (from vkAcquireNextImageKHR)
     VkSemaphore renderFinishedSemaphores[SWAPCHAIN_IMAGE_COUNT]; // Ensures the present (vkQueuePresentKHR) waits until rendering to that image is done.
@@ -189,8 +190,15 @@ private:
 
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-        instanceInfo.enabledExtensionCount = glfwExtensionCount;
-        instanceInfo.ppEnabledExtensionNames = glfwExtensions;
+        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+        #ifdef HAS_CUDA
+        extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+        #endif
+
+        instanceInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());;
+        instanceInfo.ppEnabledExtensionNames = extensions.data();
         instanceInfo.enabledLayerCount = 0;
 
 #ifdef DEBUG
@@ -249,13 +257,6 @@ private:
             }
         }
 #endif
-#ifdef HAS_CUDA
-        
-        /*this->vkGetMemoryWin32HandleKHR = (PFN_vkGetMemoryWin32HandleKHR)vkGetDeviceProcAddr(device, "vkGetMemoryWin32HandleKHR");
-        if (!vkGetMemoryWin32HandleKHR)
-            std::cerr << "Failed to load vkGetMemoryWin32HandleKHR" << std::endl;*/
-#endif
-
     }
 
     void createWindowSurface(GLFWwindow* window) {
@@ -527,8 +528,8 @@ private:
             this->computeBackend = std::make_unique<Pathtracer::SPIRV>(vkCtx, this->pathtracerConfig);
         else {
             #ifdef HAS_CUDA
-            Pathtracer::CUDA::CudaContext cuCtx;
-            this->computeBackend = std::make_unique<Pathtracer::CUDA>(cuCtx, vkCtx, this->pathtracerConfig);
+            //Pathtracer::CUDA::CudaContext cuCtx;
+            this->computeBackend = std::make_unique<Pathtracer::CUDA>(vkCtx, this->pathtracerConfig);
             #endif
         }
     }
@@ -611,8 +612,6 @@ private:
         A timestamp query measures GPU time between two points in the command buffer
         It does not measure "this dispatch" unless you bracket it
         */
-        vkCmdResetQueryPool(commandBuffer, timestampPools[currentFrame % PING_PONG_FRAMES], 0, 2);
-        vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[currentFrame % PING_PONG_FRAMES], 0);
 
         Pathtracer::ComputeBackend::DispatchConext dispatchCtx = {
             .commandBuffer = commandBuffer,
@@ -622,8 +621,6 @@ private:
             .lightBounces = this->pathtracerConfig.GetLightBounces()
         };
         this->computeBackend->dispatch(dispatchCtx);
-        
-        vkCmdWriteTimestamp( commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[currentFrame % PING_PONG_FRAMES], 1);
     }
 
     void createCommandPool() {
@@ -761,7 +758,7 @@ private:
         create2DLinearImageSampler();
         for (int i = 0; i < PING_PONG_FRAMES; i++)
             // Fragment shader reads current frame image
-            Vulkan::updateCombinedImageSamplerDescriptorSet(device, fragDescriptorSet[i], 0, fragImageSampler, this->computeBackend->getPathtracerImageView(i));
+            Vulkan::updateCombinedImageSamplerDescriptorSet(device, fragDescriptorSet[i], 0, fragImageSampler, this->computeBackend->getPathtracerImageView(i), pathtracerConfig.GetComputeBackendType() == Pathtracer::CUDA_T ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 
         // Dynamic State
@@ -975,14 +972,6 @@ private:
             return;
         }
 
-        VkQueryPoolCreateInfo qpci{};
-        qpci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-        qpci.queryType = VK_QUERY_TYPE_TIMESTAMP;
-        qpci.queryCount = 2;
-
-        for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-            vkCreateQueryPool(device, &qpci, nullptr, &timestampPools[i]);
-
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -1018,7 +1007,6 @@ public:
         for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
             vkDestroyFence(device, inFlightFences[i], nullptr);
-            vkDestroyQueryPool(device, timestampPools[i], nullptr);
         }
 
         for (uint32_t i = 0; i < SWAPCHAIN_IMAGE_COUNT; ++i)
@@ -1077,14 +1065,9 @@ public:
             return;
         }
 
-        if (pathtracerState.iFrame >= MAX_FRAMES_IN_FLIGHT) {
+        if (pathtracerState.iFrame >= MAX_FRAMES_IN_FLIGHT)
             // Safe to read timestamp for the frame that last used this index
-            uint64_t timestamps[2];
-            vkGetQueryPoolResults( device, timestampPools[currentFrame], 0, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
-            uint64_t delta = timestamps[1] - timestamps[0];
-            double gpuTimeNs = double(delta) * physicalDeviceProperties.limits.timestampPeriod;
-            this->pathtracerStatistics.avgKernelTime += gpuTimeNs / 1e6;
-        }
+            this->pathtracerStatistics.avgKernelTime += this->computeBackend->queryDispatchTime(currentFrame, physicalDeviceProperties.limits.timestampPeriod);
 
         // Acquire swapchain image
         uint32_t imageIndex;
@@ -1157,7 +1140,8 @@ public:
         swapchainImageLayouts[imageIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         this->computeBackend->updateFrameContext(&pathtracerState, sizeof(pathtracerState));
-        dispatchCompute(this->commandBuffers[currentFrame], currentFrame);
+        if(this->pathtracerConfig.GetComputeBackendType() == Pathtracer::SPIRV_T)
+            dispatchCompute(this->commandBuffers[currentFrame], currentFrame);
 
         VkRenderingAttachmentInfo colorAttachment{};
         colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -1233,30 +1217,39 @@ public:
             return;
         }
 
+
+        std::vector<VkSemaphore> waitSemaphores = { this->imageAvailableSemaphores[currentFrame] };
+        std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        
+        std::vector<VkSemaphore> signalSemaphores = { this->renderFinishedSemaphores[imageIndex] };
+        
+        Pathtracer::ComputeBackend::SyncContext syncCtx = { waitSemaphores, waitStages, signalSemaphores, currentFrame };
+        this->computeBackend->sync(syncCtx);
+        
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[currentFrame] };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStages;
+        submitInfo.waitSemaphoreCount = waitSemaphores.size();
+        submitInfo.pWaitSemaphores = waitSemaphores.data();
+        submitInfo.pWaitDstStageMask = waitStages.data();
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &this->commandBuffers[currentFrame];
-        VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[imageIndex] };
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+        submitInfo.signalSemaphoreCount = signalSemaphores.size();
+        submitInfo.pSignalSemaphores = signalSemaphores.data();
 
         if (vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[currentFrame]) != VK_SUCCESS) {
             std::cerr << "Failed to submit to the graphics queue on VkQueueSubmit\n";
             return;
         }
 
+        // Dispatching here due to sync problems
+        if (this->pathtracerConfig.GetComputeBackendType() == Pathtracer::CUDA_T)
+            dispatchCompute(VK_NULL_HANDLE, currentFrame);
+
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+        presentInfo.waitSemaphoreCount = signalSemaphores.size();
+        presentInfo.pWaitSemaphores = signalSemaphores.data();
 
         VkSwapchainKHR swapChains[] = { this->swapChain };
         presentInfo.swapchainCount = 1;

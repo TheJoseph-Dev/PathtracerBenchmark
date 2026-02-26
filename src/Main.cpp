@@ -20,21 +20,21 @@ static Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     return pathtracerConfig;
 }
 
-static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype) {
+static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype, Pathtracer::ComputeBackendType computeBackendType) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
-    benchmarkInfo.spp = 10;
+    benchmarkInfo.spp = 64;
 
     Config pathtracerConfig(
         acctype,
-        ComputeBackendType::SPIRV_T,
+        computeBackendType,
         scene,
         Resolution::R1024x1024,
         4,
         benchmarkInfo,
         glm::uvec2(64, 64),
-        false,
+        true,
         true
     );
     return pathtracerConfig;
@@ -62,7 +62,7 @@ int main() {
 
     {   
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::KD_TREE));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::CUDA_T));
         pathtracer.run();
     }
 

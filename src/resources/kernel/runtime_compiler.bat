@@ -1,1 +1,1 @@
-nvcc -V && nvcc pathtracer.cu -o k -arch=sm_61 -allow-unsupported-compiler -Wno-deprecated-gpu-targets
+nvcc -V && nvcc pathtracer.cu -o k -arch=sm_61 -allow-unsupported-compiler -Wno-deprecated-gpu-targets --use_fast_math

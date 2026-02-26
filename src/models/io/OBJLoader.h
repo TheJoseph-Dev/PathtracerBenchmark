@@ -31,7 +31,7 @@ public:
 
 	~OBJLoader() { delete[] vData.vertices; delete[] ssbVData.vertices; };
 
-	struct Vertex {
+	struct alignas(16) Vertex {
 		glm::vec4 position;
 		glm::vec4 textureCoord;
 		glm::vec4 normal;
@@ -39,7 +39,7 @@ public:
 		static constexpr int GetStride() { return (4 * 3); }
 	};
 
-	struct Triangle {
+	struct alignas(16) Triangle {
 		glm::uvec4 indices;
 		glm::vec4 area;
 	};
@@ -49,7 +49,7 @@ public:
 		std::vector<Triangle> triangles;
 	};
 
-	struct Material {
+	struct alignas(16) Material {
 		glm::vec4 albedo = glm::vec4(1.0f);
 		float specular = 0.0f;
 		float roughness = 1.0f;

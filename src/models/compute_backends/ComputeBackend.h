@@ -31,6 +31,13 @@ namespace Pathtracer {
             uint32_t lightBounces;
         };
 
+        struct SyncContext {
+            std::vector<VkSemaphore>& waitSemaphores;
+            std::vector<VkPipelineStageFlags>& waitStages;
+            std::vector<VkSemaphore>& signalSemaphores;
+            uint32_t currentFrame;
+        };
+
         struct SceneData {
             std::span<const OBJLoader::Vertex> vertices;
             std::span<const OBJLoader::Triangle> triangles;
@@ -45,6 +52,11 @@ namespace Pathtracer {
         virtual void updateFrameContext(const FrameContext* newData, uint64_t size) const = 0;
         //virtual void resize(uint32_t width, uint32_t height) = 0;
         //virtual void cleanup() = 0;
+        virtual void sync(const SyncContext& syncCtx) const = 0;
+
+        [[nodiscard]]
+        virtual double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const = 0;
+
         ComputeBackend(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfig) : vkCtx(vkCtx), pathtracerConfig(pathtracerConfig) {
         
         }
@@ -55,6 +67,7 @@ namespace Pathtracer {
                 vkDestroyImage(vkCtx.device, pathtracerImages[i], nullptr);
                 vkFreeMemory(vkCtx.device, pathtracerImagesMemory[i], nullptr);
             }
+            vkDestroySampler(this->vkCtx.device, this->pathtracerImageSampler, nullptr);
         };
         virtual TreeStatistics getBackendStatistics() = 0;
         virtual void getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) = 0;

@@ -10,7 +10,8 @@ namespace Pathtracer {
         VkDescriptorSetLayout computeDescriptorSetLayout;
         VkPipelineLayout computePipelineLayout;
         VkPipeline computePipeline;
-        std::vector<VkDescriptorSet> computeDescriptorSet;
+        VkDescriptorSet computeDescriptorSet[PING_PONG_FRAMES];
+        VkQueryPool timestampPools[PING_PONG_FRAMES];
 
         enum SSBOBinding {
             BVH_NODES = 3,
@@ -48,7 +49,7 @@ namespace Pathtracer {
         static constexpr uint32_t SSBOsCount = 8;
 
         SPIRV(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfig) : ComputeBackend(vkCtx, pathtracerConfig) {
-            this->computeDescriptorSet.resize(PING_PONG_FRAMES);
+            //this->computeDescriptorSet.resize(PING_PONG_FRAMES);
             this->UBO = Buffer(vkCtx.physicalDevice, vkCtx.device, sizeof(Pathtracer::FrameContext), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             this->SSBOs.reserve(SSBOsCount);
         }
@@ -57,7 +58,7 @@ namespace Pathtracer {
             vkDestroyDescriptorSetLayout(vkCtx.device, computeDescriptorSetLayout, nullptr);
             vkDestroyPipeline(vkCtx.device, computePipeline, nullptr);
             vkDestroyPipelineLayout(vkCtx.device, computePipelineLayout, nullptr);
-            vkDestroySampler(vkCtx.device, pathtracerImageSampler, nullptr);
+            for (uint32_t i = 0; i < PING_PONG_FRAMES; i++) vkDestroyQueryPool(vkCtx.device, timestampPools[i], nullptr);
             SSBOs.clear();
             stagingBuffers.clear();
         }
@@ -353,6 +354,14 @@ namespace Pathtracer {
             createSSBO(SSBOs.back().buffer, SSBOBinding::STATISTICS); // Statistics
             
             createComputePipeline();
+
+            VkQueryPoolCreateInfo qpci{};
+            qpci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+            qpci.queryType = VK_QUERY_TYPE_TIMESTAMP;
+            qpci.queryCount = 2;
+
+            for (int i = 0; i < PING_PONG_FRAMES; i++)
+                vkCreateQueryPool(vkCtx.device, &qpci, nullptr, &timestampPools[i]);
         }
 
         void dispatch(const DispatchConext& dispatchCtx) override {
@@ -377,8 +386,8 @@ namespace Pathtracer {
 
             vkCmdPipelineBarrier(
                 dispatchCtx.commandBuffer,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,  // previous use
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,   // upcoming use
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 0,
                 0, nullptr,
                 0, nullptr,
@@ -392,6 +401,9 @@ namespace Pathtracer {
             vkCmdBindPipeline(dispatchCtx.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
             vkCmdBindDescriptorSets(dispatchCtx.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSet[dispatchCtx.currentFrame % PING_PONG_FRAMES], 0, nullptr);
             
+            vkCmdResetQueryPool(dispatchCtx.commandBuffer, timestampPools[dispatchCtx.currentFrame % PING_PONG_FRAMES], 0, 2);
+            vkCmdWriteTimestamp(dispatchCtx.commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[dispatchCtx.currentFrame % PING_PONG_FRAMES], 0);
+
             Pathtracer::PushConstants pathtracerPC{};
             pathtracerPC.ct.tileSize = dispatchCtx.tileSize;
             pathtracerPC.lightBounces = dispatchCtx.lightBounces;
@@ -407,6 +419,8 @@ namespace Pathtracer {
                     vkCmdDispatch(dispatchCtx.commandBuffer, (TILE_X + Pathtracer::local_size_x - 1) / Pathtracer::local_size_x, (TILE_Y + Pathtracer::local_size_y - 1) / Pathtracer::local_size_y, 1);
                 }
             }
+
+            vkCmdWriteTimestamp(dispatchCtx.commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[dispatchCtx.currentFrame % PING_PONG_FRAMES], 1);
 
             // Transition GENERAL -> SHADER_READ_ONLY_OPTIMAL for graphics
             barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -424,6 +438,16 @@ namespace Pathtracer {
                 1, &barrier
             );
             pathtracerImageLayouts[dispatchCtx.textureIndex] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+
+        void sync(const SyncContext& syncCtx) const override {}
+
+        double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const override {
+            uint64_t timestamps[2];
+            vkGetQueryPoolResults(vkCtx.device, timestampPools[frameIdx], 0, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
+            uint64_t delta = timestamps[1] - timestamps[0];
+            double gpuTimeNs = double(delta) * deviceTimestampPeriod;
+            return gpuTimeNs / 1e6;
         }
 
         Pathtracer::TreeStatistics getBackendStatistics() override {
@@ -473,9 +497,7 @@ namespace Pathtracer {
             VkCommandBuffer cmdbf = beginSingleTimeCommands();
             VkImage accImg = this->pathtracerImages[PATHTRACER_IMG_COUNT - 1];
             
-            //VkCommandBuffer cmdbf = beginSingleTimeCommands();
             Vulkan::transitionImageLayout(accImg, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, cmdbf);
-            //endSingleTimeCommands(cmdbf);
 
             vkCmdCopyImageToBuffer(cmdbf, accImg, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->stagingBuffers[STAGING_ACC].buffer, 1, &imgCopy);
 

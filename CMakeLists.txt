@@ -23,6 +23,7 @@ include_directories(
     vendor/io
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/resources/kernel
 )
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
@@ -47,6 +48,9 @@ if(CUDAToolkit_FOUND AND ENABLE_CUDA)
     target_compile_options(PathtracerBenchmark PRIVATE
         $<$<COMPILE_LANGUAGE:CUDA>:
             --use_fast_math
+            -Xptxas -v
+            -lineinfo
+            --maxrregcount=64
             -allow-unsupported-compiler
             -Wno-deprecated-gpu-targets
         >
