@@ -713,7 +713,7 @@ __device__ RenderData worldRender(
         vec3 N = scene.closestHit.normal;
         Material mat = scene.closestHit.mat;
 
-        // Emission — apply MIS weight when not the primary hit
+        // Emission ï¿½ apply MIS weight when not the primary hit
         if (mat.emissivePower > 0.0f) {
             vec3 Le = mat.emissiveColor * mat.emissivePower;
             if (i > 0) {
@@ -819,7 +819,7 @@ __global__ void pathtracerKernel(
     Statistics* __restrict__ statistics,
 
     ComputeTile ct,
-    const PathtracerUBO* state,
+    const PathtracerUBO* __restrict__ state,
     unsigned int triangleCount,
     unsigned int lightCount,
     unsigned int lightBounces,

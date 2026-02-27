@@ -383,6 +383,16 @@ namespace Pathtracer {
                 cudaEventCreate(&startEvents[i]);
                 cudaEventCreate(&stopEvents[i]);
             }
+
+            // Pre-signal all cudaWaitSemaphores so that the first Vulkan submission
+            // (which waits on vkWaitSemaphore at VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+            // does not deadlock before CUDA has had a chance to run and signal them.
+            for (uint32_t i = 0; i < PING_PONG_FRAMES; i++) {
+                cudaExternalSemaphoreSignalParams signalParams{};
+                CUDA_CHECK(cudaSignalExternalSemaphoresAsync(
+                    &this->cudaImages[i].cudaWaitSemaphore, &signalParams, 1, this->computeStream));
+            }
+            CUDA_CHECK(cudaStreamSynchronize(this->computeStream));
 		};
 
 		void dispatch(const DispatchConext& dispatchCtx) override {
@@ -472,7 +482,9 @@ namespace Pathtracer {
 		};
 
 		void updateFrameContext(const FrameContext* newData, uint64_t size) const override {
-            cudaMemcpy(this->d_frameContext, newData, size, cudaMemcpyHostToDevice);
+            // Use the same stream as the kernel so that the copy is ordered before the
+            // next kernel launch and does not race with a still-running previous kernel.
+            CUDA_CHECK(cudaMemcpyAsync(this->d_frameContext, newData, size, cudaMemcpyHostToDevice, this->computeStream));
 		};
 
         void sync(const SyncContext& syncCtx) const override {

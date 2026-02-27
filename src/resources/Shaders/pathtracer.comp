@@ -533,7 +533,7 @@ void TraversalBruteForce(Ray ray, inout Scene scene) {
         vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
         if (t < scene.d) {
             scene.d = t;
-            scene.closestHit.pos = v0;
+            scene.closestHit.pos = ray.origin + ray.dir * t;
             scene.closestHit.normal = Ng;
             scene.closestHit.mat = mats[tri.indices.w];
             scene.closestHit.triIdx = tIdx;
@@ -553,7 +553,7 @@ void EmissiveTraversalBF(Ray ray, inout Scene scene) {
         vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
         if (t < scene.d) {
             scene.d = t;
-            scene.closestHit.pos = v0;
+            scene.closestHit.pos = ray.origin + ray.dir * t;
             scene.closestHit.normal = Ng;
             scene.closestHit.mat = mats[tri.indices.w];
             scene.closestHit.triIdx = tIdx;
@@ -609,7 +609,7 @@ void genSeed() { uint idx = uint(gl_GlobalInvocationID.x + gl_GlobalInvocationID
 
 // Next Event Estimation
 // PDF: p = p(triangle) x p(point|triangle)
-// “Pick a point on a light, check visibility, and add its contribution now instead of hoping to hit it randomly later.”
+// ï¿½Pick a point on a light, check visibility, and add its contribution now instead of hoping to hit it randomly later.ï¿½
 // Mathematically: Lnee = \frac{Le \cdot f(\omega_i, \omega_o) \cdot \cos \theta_s \cos theta_l}{p(light)}
 
 struct LightSample {
