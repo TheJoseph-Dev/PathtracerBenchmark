@@ -133,13 +133,13 @@ __device__ IsecInfo RayAABBIsec(
 
 __device__ Scene world(
     const Ray& ray,
-    BVHNode* bvhNodes,
-    KdNode* kdNodes,
-    unsigned int* kdtreeIndices,
-    Triangle* triangles,
-    Vertex* vertices,
-    Triangle* eTriangles,
-    Material* mats,
+    const BVHNode* __restrict__ bvhNodes,
+    const KdNode* __restrict__ kdNodes,
+    const unsigned int* __restrict__ kdtreeIndices,
+    const Triangle* __restrict__ triangles,
+    const Vertex* __restrict__ vertices,
+    const Triangle* __restrict__ eTriangles,
+    const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
     bool USE_BVH,
@@ -152,10 +152,10 @@ __device__ Scene world(
 __device__ void TraversalBVH(
     const Ray& ray,
     Scene& scene,
-    BVHNode* bvhNodes,
-    Triangle* triangles,
-    Vertex* vertices,
-    Material* mats,
+    const BVHNode* __restrict__ bvhNodes,
+    const Triangle* __restrict__ triangles,
+    const Vertex* __restrict__ vertices,
+    const Material* __restrict__ mats,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
     unsigned long long& statsTraversals
@@ -289,11 +289,11 @@ struct SpaceContext {
 __device__ void TraversalKdTree(
     const Ray& ray,
     Scene& scene,
-    KdNode* kdNodes,
-    unsigned int* kdtreeIndices,
-    Triangle* triangles,
-    Vertex* vertices,
-    Material* mats,
+    const KdNode* __restrict__ kdNodes,
+    const unsigned int* __restrict__ kdtreeIndices,
+    const Triangle* __restrict__ triangles,
+    const Vertex* __restrict__ vertices,
+    const Material* __restrict__ mats,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
     unsigned long long& statsTraversals
@@ -375,9 +375,9 @@ __device__ void TraversalKdTree(
 __device__ void EmissiveTraversalBF(
     const Ray& ray,
     Scene& scene,
-    Triangle* eTriangles,
-    Vertex* vertices,
-    Material* mats,
+    const Triangle* __restrict__ eTriangles,
+    const Vertex* __restrict__ vertices,
+    const Material* __restrict__ mats,
     unsigned int lightCount
 )
 {
@@ -412,13 +412,13 @@ __device__ void EmissiveTraversalBF(
 
 __device__ Scene world(
     const Ray& ray,
-    BVHNode* bvhNodes,
-    KdNode* kdNodes,
-    unsigned int* kdtreeIndices,
-    Triangle* triangles,
-    Vertex* vertices,
-    Triangle* eTriangles,
-    Material* mats,
+    const BVHNode* __restrict__ bvhNodes,
+    const KdNode* __restrict__ kdNodes,
+    const unsigned int* __restrict__ kdtreeIndices,
+    const Triangle* __restrict__ triangles,
+    const Vertex* __restrict__ vertices,
+    const Triangle* __restrict__ eTriangles,
+    const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
     bool USE_BVH,
@@ -534,8 +534,8 @@ __device__ float computeLightPdf(
     const vec3& curPos,
     const vec3& prevPos,
     unsigned int triIdx,
-    Triangle* eTriangles,
-    Vertex* vertices,
+    const Triangle* __restrict__ eTriangles,
+    const Vertex* __restrict__ vertices,
     unsigned int lightCount
 ) {
     Triangle tri = eTriangles[triIdx];
@@ -564,14 +564,14 @@ __device__ LightSample sampleNEE(
     const vec3& hitPos,
     const vec3& N,
     unsigned int& seed,
-    Triangle* eTriangles,
-    Vertex* vertices,
-    Material* mats,
+    const Triangle* __restrict__ eTriangles,
+    const Vertex* __restrict__ vertices,
+    const Material* __restrict__ mats,
     unsigned int lightCount,
-    BVHNode* bvhNodes,
-    KdNode* kdNodes,
-    unsigned int* kdtreeIndices,
-    Triangle* triangles,
+    const BVHNode* __restrict__ bvhNodes,
+    const KdNode* __restrict__ kdNodes,
+    const unsigned int* __restrict__ kdtreeIndices,
+    const Triangle* __restrict__ triangles,
     unsigned int triangleCount,
     bool USE_BVH,
     unsigned long long& statsRays,
@@ -668,13 +668,13 @@ __device__ vec3 sampleGGX(const vec3& N, const vec3& V, float roughness, float& 
 __device__ RenderData worldRender(
     const vec2& uv,
     Ray ray,
-    BVHNode* bvhNodes,
-    KdNode* kdNodes,
-    unsigned int* kdtreeIndices,
-    Triangle* triangles,
-    Vertex* vertices,
-    Triangle* eTriangles,
-    Material* mats,
+    const BVHNode* __restrict__ bvhNodes,
+    const KdNode* __restrict__ kdNodes,
+    const unsigned int* __restrict__ kdtreeIndices,
+    const Triangle* __restrict__ triangles,
+    const Vertex* __restrict__ vertices,
+    const Triangle* __restrict__ eTriangles,
+    const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
     bool USE_BVH,
@@ -806,17 +806,17 @@ __device__ RenderData worldRender(
 
 __global__ void pathtracerKernel(
     cudaSurfaceObject_t outImage,
-    vec4* accImage,
+    vec4* __restrict__ accImage,
 
-    BVHNode* bvhNodes,
-    KdNode* kdNodes,
-    unsigned int* kdtreeIndices,
-    Triangle* triangles,
-    Vertex* vertices,
-    Triangle* eTriangles,
-    Material* mats,
+    const BVHNode* __restrict__ bvhNodes,
+    const KdNode* __restrict__ kdNodes,
+    const unsigned int* __restrict__ kdtreeIndices,
+    const Triangle* __restrict__ triangles,
+    const Vertex* __restrict__ vertices,
+    const Triangle* __restrict__ eTriangles,
+    const Material* __restrict__ mats,
 
-    Statistics* statistics,
+    Statistics* __restrict__ statistics,
 
     ComputeTile ct,
     const PathtracerUBO* state,
@@ -921,17 +921,17 @@ __global__ void pathtracerKernel(
 extern "C"
 void dispatchCUDAPathtracerKernel(
     cudaSurfaceObject_t d_outImage,
-    vec4* d_accImage,
-    BVHNode* d_bvhNodes,
-    KdNode* d_kdNodes,
-    unsigned int* d_kdtreeIndices,
-    Triangle* d_triangles,
-    Vertex* d_vertices,
-    Triangle* d_eTriangles,
-    Material* d_mats,
-    Statistics* d_statistics,
+    vec4* __restrict__ d_accImage,
+    const BVHNode* __restrict__ d_bvhNodes,
+    const KdNode* __restrict__ d_kdNodes,
+    const unsigned int* __restrict__ d_kdtreeIndices,
+    const Triangle* __restrict__ d_triangles,
+    const Vertex* __restrict__ d_vertices,
+    const Triangle* __restrict__ d_eTriangles,
+    const Material* __restrict__ d_mats,
+    Statistics* __restrict__ d_statistics,
     ComputeTile ct,
-    const PathtracerUBO* state,
+    const PathtracerUBO* __restrict__ state,
     unsigned int triangleCount,
     unsigned int lightCount,
     unsigned int lightBounces,
@@ -939,7 +939,7 @@ void dispatchCUDAPathtracerKernel(
     bool USE_STATS
 )
 {
-    dim3 block(64, 1);
+    dim3 block(128, 1);
     dim3 grid(
         ((unsigned int)ct.tileSize.x + block.x - 1) / block.x,
         ((unsigned int)ct.tileSize.y + block.y - 1) / block.y

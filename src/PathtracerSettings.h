@@ -10,7 +10,7 @@
 
 namespace Pathtracer {
 
-    constexpr uint32_t local_size_x = 64;
+    constexpr uint32_t local_size_x = 128;
     constexpr uint32_t local_size_y = 1;
 
     struct PushConstants {

@@ -33,7 +33,7 @@ static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::Accel
         Resolution::R1024x1024,
         4,
         benchmarkInfo,
-        glm::uvec2(64, 64),
+        glm::uvec2(256, 256),
         true,
         true
     );
