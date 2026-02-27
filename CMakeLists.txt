@@ -49,9 +49,6 @@ if(CUDAToolkit_FOUND AND ENABLE_CUDA)
         $<$<COMPILE_LANGUAGE:CUDA>:
             --use_fast_math
             -Xptxas -v
-            -Xptxas -d
-            -lineinfo
-            --maxrregcount=64
             -allow-unsupported-compiler
             -Wno-deprecated-gpu-targets
         >

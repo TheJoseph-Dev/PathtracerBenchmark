@@ -67,6 +67,7 @@ namespace Pathtracer {
 		Kernel::vec4* d_accImage = nullptr;
         std::vector<void*> sceneDeviceBuffers;
         Pathtracer::FrameContext* d_frameContext = nullptr;
+        Pathtracer::FrameContext* h_frameContext = nullptr; // pinned host staging buffer for async UBO DMA
         Pathtracer::TreeStatistics* d_treeStats = nullptr;
         //PushConstants::ComputeTile* d_computeTile = nullptr;
 
@@ -86,6 +87,7 @@ namespace Pathtracer {
             if (d_accImage) cudaFree(d_accImage);
 			if (d_treeStats) cudaFree(d_treeStats);
             if (d_frameContext) cudaFree(d_frameContext);
+            if (h_frameContext) cudaFreeHost(h_frameContext);
             for (void* bptr : sceneDeviceBuffers) if (bptr) cudaFree(bptr);
             for (uint32_t i = 0; i < PING_PONG_FRAMES; i++) {
                 cudaDestroyExternalMemory(this->cudaImages[i].externalMemory);
@@ -375,6 +377,7 @@ namespace Pathtracer {
             createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.materials.data(), sceneData.materials.size() * sizeof(sceneData.materials[0]));
 
             cudaMalloc(&d_frameContext, sizeof(Pathtracer::FrameContext));
+            CUDA_CHECK(cudaMallocHost(&h_frameContext, sizeof(Pathtracer::FrameContext)));
             cudaMalloc(&d_treeStats, sizeof(Pathtracer::TreeStatistics));
             cudaMemset(d_treeStats, 0, sizeof(Pathtracer::TreeStatistics));
             cudaMalloc(&d_accImage, WIDTH*HEIGHT*sizeof(Kernel::vec4));
@@ -405,76 +408,40 @@ namespace Pathtracer {
             bool USE_BVH = pathtracerConfig.GetAccelerationStructureType() == AccelerationStructureType::BVH;
             bool USE_STATS = pathtracerConfig.ShouldGetStatsAS();
 
-            Kernel::ComputeTile ct = { .tileSize = uint2(dispatchCtx.tileSize.x, dispatchCtx.tileSize.y) };
+            // Single full-image dispatch avoids thousands of per-tile kernel launches
+            // (each C++ kernel launch carries ~5-20us overhead; the SPIR-V backend records
+            // all tile dispatches inside one command buffer so the GPU runs them without
+            // any CPU round-trip). For very high resolutions or bounce counts where the
+            // Windows TDR limit (~2s) may trigger, reduce the tile size via Config.
+            Kernel::ComputeTile ct = {
+                .tileSize   = uint2(WIDTH, HEIGHT),
+                .tileOffset = uint2(0, 0)
+            };
 
             cudaEventRecord(this->startEvents[dispatchCtx.currentFrame], this->computeStream);
 
-            const uint32_t TILE_Y = this->pathtracerConfig.GetTileSize().y;
-            const uint32_t TILE_X = this->pathtracerConfig.GetTileSize().x;
-            for (uint32_t tileY = 0; tileY < HEIGHT; tileY += TILE_Y) {
-                for (uint32_t tileX = 0; tileX < WIDTH; tileX += TILE_X) {
-                    ct.tileOffset = { tileX, tileY };
-                    Kernel::dispatchCUDAPathtracerKernel(
-                        this->cudaImages[dispatchCtx.currentFrame].surface,
-                        (Kernel::vec4*)this->d_accImage,
-                        USE_BVH ? (Kernel::BVHNode*)this->sceneDeviceBuffers[DeviceBufferIndex::BVH_NODES] : nullptr,
-                        !USE_BVH ? (Kernel::KdNode*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_NODES] : nullptr,
-                        (uint32_t*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_INDICES],
-                        (Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLES],
-                        (Kernel::Vertex*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTICES],
-                        (Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::EMISSIVES],
-                        (Kernel::Material*)this->sceneDeviceBuffers[DeviceBufferIndex::MATERIALS],
-                        (Kernel::Statistics*)this->d_treeStats,
-                        ct,
-                        (Kernel::PathtracerUBO*)this->d_frameContext,
-                        triangleCount,
-                        emissiveTriangleCount,
-                        dispatchCtx.lightBounces,
-                        USE_BVH,
-                        USE_STATS
-                    );
-
-                    #ifdef DEBUG
-                    /*cudaError_t err = cudaGetLastError();
-                    if (err != cudaSuccess)
-                        printf("Kernel launch error: %s (%d, %d)\n", cudaGetErrorString(err), tileX, tileY);*/
-                    #endif
-                }
-            }
+            Kernel::dispatchCUDAPathtracerKernel(
+                this->cudaImages[dispatchCtx.currentFrame].surface,
+                (Kernel::vec4*)this->d_accImage,
+                USE_BVH ? (Kernel::BVHNode*)this->sceneDeviceBuffers[DeviceBufferIndex::BVH_NODES] : nullptr,
+                !USE_BVH ? (Kernel::KdNode*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_NODES] : nullptr,
+                (uint32_t*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_INDICES],
+                (Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLES],
+                (Kernel::Vertex*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTICES],
+                (Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::EMISSIVES],
+                (Kernel::Material*)this->sceneDeviceBuffers[DeviceBufferIndex::MATERIALS],
+                (Kernel::Statistics*)this->d_treeStats,
+                ct,
+                (Kernel::PathtracerUBO*)this->d_frameContext,
+                triangleCount,
+                emissiveTriangleCount,
+                dispatchCtx.lightBounces,
+                USE_BVH,
+                USE_STATS
+            );
 
             cudaEventRecord(this->stopEvents[dispatchCtx.currentFrame], this->computeStream);
             
-            /*
-            VkImageMemoryBarrier barrier{};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-
-            barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-            barrier.srcAccessMask = 0; // external
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
-            barrier.dstQueueFamilyIndex = 0;
-
-            barrier.image = pathtracerImages[dispatchCtx.currentFrame];
-
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = 1;
-
-            vkCmdPipelineBarrier(
-                dispatchCtx.commandBuffer,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0,
-                0, nullptr,
-                0, nullptr,
-                1, &barrier
-            );
-            */
             cudaExternalSemaphoreSignalParams signalParams{};
             cudaError_t e = cudaSignalExternalSemaphoresAsync(&this->cudaImages[dispatchCtx.currentFrame].cudaWaitSemaphore, &signalParams, 1, this->computeStream);
             if (e != cudaSuccess)
@@ -482,9 +449,12 @@ namespace Pathtracer {
 		};
 
 		void updateFrameContext(const FrameContext* newData, uint64_t size) const override {
-            // Use the same stream as the kernel so that the copy is ordered before the
-            // next kernel launch and does not race with a still-running previous kernel.
-            CUDA_CHECK(cudaMemcpyAsync(this->d_frameContext, newData, size, cudaMemcpyHostToDevice, this->computeStream));
+            // Stage through a pinned (page-locked) host buffer so cudaMemcpyAsync is
+            // truly asynchronous: the CUDA runtime can DMA directly from pinned memory
+            // without an internal staging copy, and stream ordering guarantees the
+            // transfer completes before the kernel that follows it on computeStream.
+            memcpy(h_frameContext, newData, size);
+            CUDA_CHECK(cudaMemcpyAsync(this->d_frameContext, h_frameContext, size, cudaMemcpyHostToDevice, this->computeStream));
 		};
 
         void sync(const SyncContext& syncCtx) const override {
