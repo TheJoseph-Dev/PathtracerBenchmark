@@ -9,16 +9,16 @@ namespace Kernel {
         uint2 tileOffset;
     };
 
-    struct alignas(16) CameraUBO {
+    struct alignas(16) Camera {
         vec4 cameraPos;
         vec4 cameraRot;
     };
 
-    struct alignas(16) PathtracerUBO {
+    struct alignas(16) PathtracerState {
         float2 iResolution;
         float  iTime;
         int    iFrame;
-        CameraUBO camera;
+        Camera camera;
     };
 
     struct alignas(16) Vertex {
@@ -62,6 +62,18 @@ namespace Kernel {
         vec3  emissiveColor;
         float emissivePower;
     };
+
+    /*
+    struct alignas(16) Params {
+        PathtracerUBO state;
+        ComputeTile ct;
+        unsigned int triangleCount;
+        unsigned int lightCount;
+        unsigned int lightBounces;
+        bool USE_BVH;
+        bool USE_STATS;
+    };
+    */
 
     struct Ray {
         vec3 origin;

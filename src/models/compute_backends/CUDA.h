@@ -5,6 +5,12 @@
 #include "pathtracer_kernel_types.h"
 #include <cuda_runtime.h>
 
+#ifdef DEBUG
+//#define NVTX_USE_ANSI_STRING
+//#define NVTX_NO_LIB
+//#include <nvtx3/nvToolsExt.h>
+#endif
+
 #define CUDA_CHECK(x) \
     do { cudaError_t err = x; if (err != cudaSuccess) \
         throw std::runtime_error(cudaGetErrorString(err)); } while(0)
@@ -22,7 +28,7 @@ namespace Kernel {
         Kernel::Material* d_mats,
         Kernel::Statistics* d_statistics,
         Kernel::ComputeTile ct,
-        const Kernel::PathtracerUBO* state,
+        const Kernel::PathtracerState* state,
         unsigned int triangleCount,
         unsigned int lightCount,
         unsigned int lightBounces,
@@ -382,7 +388,13 @@ namespace Pathtracer {
             for (uint32_t i = 0; i < PING_PONG_FRAMES; i++) {
                 cudaEventCreate(&startEvents[i]);
                 cudaEventCreate(&stopEvents[i]);
+
+                cudaExternalSemaphoreSignalParams signalParams{};
+                CUDA_CHECK(cudaSignalExternalSemaphoresAsync(
+                    &this->cudaImages[i].cudaWaitSemaphore, &signalParams, 1, this->computeStream));
             }
+
+            CUDA_CHECK(cudaStreamSynchronize(this->computeStream));
 		};
 
 		void dispatch(const DispatchConext& dispatchCtx) override {
@@ -404,6 +416,8 @@ namespace Pathtracer {
             for (uint32_t tileY = 0; tileY < HEIGHT; tileY += TILE_Y) {
                 for (uint32_t tileX = 0; tileX < WIDTH; tileX += TILE_X) {
                     ct.tileOffset = { tileX, tileY };
+                    //nvtxRangePush("CUDA Pathtracer Tile");
+                    
                     Kernel::dispatchCUDAPathtracerKernel(
                         this->cudaImages[dispatchCtx.currentFrame].surface,
                         (Kernel::vec4*)this->d_accImage,
@@ -416,20 +430,26 @@ namespace Pathtracer {
                         (Kernel::Material*)this->sceneDeviceBuffers[DeviceBufferIndex::MATERIALS],
                         (Kernel::Statistics*)this->d_treeStats,
                         ct,
-                        (Kernel::PathtracerUBO*)this->d_frameContext,
+                        (Kernel::PathtracerState*)this->d_frameContext,
                         triangleCount,
                         emissiveTriangleCount,
                         dispatchCtx.lightBounces,
                         USE_BVH,
                         USE_STATS
                     );
-
+                    //nvtxRangePop();
                     #ifdef DEBUG
+                    //cudaStreamSynchronize(this->computeStream);
                     /*cudaError_t err = cudaGetLastError();
                     if (err != cudaSuccess)
                         printf("Kernel launch error: %s (%d, %d)\n", cudaGetErrorString(err), tileX, tileY);*/
                     #endif
                 }
+            }
+
+            if (USE_STATS) { // Required to measure the accurate kernel time
+                cudaDeviceSynchronize();
+                cudaEventSynchronize(this->stopEvents[dispatchCtx.currentFrame]);
             }
 
             cudaEventRecord(this->stopEvents[dispatchCtx.currentFrame], this->computeStream);
@@ -482,6 +502,7 @@ namespace Pathtracer {
         }
 
         double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const override {
+            cudaDeviceSynchronize();
             cudaEventSynchronize(stopEvents[frameIdx]);
             float ms;
             cudaEventElapsedTime(&ms, startEvents[frameIdx], stopEvents[frameIdx]);
@@ -490,12 +511,14 @@ namespace Pathtracer {
 
 		TreeStatistics getBackendStatistics() override { 
             TreeStatistics ts;
+            cudaDeviceSynchronize();
             cudaMemcpy(&ts, this->d_treeStats, sizeof(Pathtracer::TreeStatistics), cudaMemcpyDeviceToHost);
             return ts;
         };
 		void getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) override {
             const uint32_t WIDTH = this->pathtracerConfig.GetResolution().x, HEIGHT = this->pathtracerConfig.GetResolution().y;
             pixels.resize(WIDTH * HEIGHT);
+            cudaDeviceSynchronize();
             cudaMemcpy(pixels.data(), d_accImage, WIDTH * HEIGHT * sizeof(glm::vec4), cudaMemcpyDeviceToHost);
         };
 	};

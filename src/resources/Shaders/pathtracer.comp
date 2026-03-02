@@ -533,7 +533,7 @@ void TraversalBruteForce(Ray ray, inout Scene scene) {
         vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
         if (t < scene.d) {
             scene.d = t;
-            scene.closestHit.pos = v0;
+            scene.closestHit.pos = ray.origin + ray.dir * t;
             scene.closestHit.normal = Ng;
             scene.closestHit.mat = mats[tri.indices.w];
             scene.closestHit.triIdx = tIdx;

@@ -2,7 +2,7 @@
 // pathtracer.cu
 // CUDA conversion of Vulkan GLSL path tracer
 // ============================================================
-
+#pragma unroll
 #include <stdio.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -410,6 +410,17 @@ __device__ void EmissiveTraversalBF(
     }
 }
 
+__device__ vec4 skyColor(vec2 uv) {
+    
+    float red = 0.1;
+    float green = 0.25;
+    float blue = 0.5;
+    
+    vec4 color = vec4(red, green, blue, 1.0) * 1.0; 
+    //color = vec4(0.5);
+    return vec4(0.0);
+}
+
 __device__ Scene world(
     const Ray& ray,
     const BVHNode* __restrict__ bvhNodes,
@@ -717,13 +728,10 @@ __device__ RenderData worldRender(
         if (mat.emissivePower > 0.0f) {
             vec3 Le = mat.emissiveColor * mat.emissivePower;
             if (i > 0) {
-                float pdfLight = computeLightPdf(hitPoint, ray.origin, scene.closestHit.triIdx,
-                                                 eTriangles, vertices, lightCount);
+                float pdfLight = computeLightPdf(hitPoint, ray.origin, scene.closestHit.triIdx, eTriangles, vertices, lightCount);
                 float w = MISWeight(prevPdfBSDF, pdfLight);
                 radiance = radiance + throughput * Le * w;
-            } else {
-                radiance = radiance + throughput * Le;
-            }
+            } else radiance = radiance + throughput * Le;
             break;
         }
 
@@ -819,7 +827,7 @@ __global__ void pathtracerKernel(
     Statistics* __restrict__ statistics,
 
     ComputeTile ct,
-    const PathtracerUBO* state,
+    const PathtracerState* __restrict__ state,
     unsigned int triangleCount,
     unsigned int lightCount,
     unsigned int lightBounces,
@@ -931,7 +939,7 @@ void dispatchCUDAPathtracerKernel(
     const Material* __restrict__ d_mats,
     Statistics* __restrict__ d_statistics,
     ComputeTile ct,
-    const PathtracerUBO* __restrict__ state,
+    const PathtracerState* __restrict__ state,
     unsigned int triangleCount,
     unsigned int lightCount,
     unsigned int lightBounces,
