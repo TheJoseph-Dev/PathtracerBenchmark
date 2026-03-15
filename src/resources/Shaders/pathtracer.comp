@@ -134,7 +134,7 @@ layout(std430, binding = 9) readonly buffer Materials { Material mats[]; };
 layout(binding = 10, rgba32f) uniform image2D accImage;
 layout(std430, binding = 11) buffer Statistics {
     uint64_t rays; // Rays cast (primary + secondary) | Overall work done; basic throughput metric
-    uint64_t isecs; // Primitive intersections | Measures geometry testing cost; can identify heavy scenes
+    uint64_t isecs; // Primitive intersections | Measures geometry testing cost; can identify heavy hits
     uint64_t traversals; // Nodes visited | AS Efficiency; algorithm-level performance
 } statistics;
 
@@ -241,14 +241,7 @@ struct Ray {
   vec3 dir;
 };
 
-struct SceneObject {
-    vec3 pos;
-    vec3 normal;
-    vec3 normal2;
-    Material mat;
-    uint triIdx;
-};
-
+/*
 struct Sphere {
     vec3 pos;
     float radius;
@@ -260,26 +253,29 @@ struct Box {
     vec3 size;
     Material mat;
 };
+*/
 
-struct Scene {
-    float d; // HitPoint Distance
-    float d2; // Second HitPoint (if exists)
-    SceneObject closestHit;
+struct Hit {
+    float t;
+    float u;
+    float v;
+    uint triIdx;
 };
 
 struct RenderData {
-    Scene scene;
+    //Hit hit;
     vec4 color;
 };
 
 #define MAX_DIST 100.0
 //#define MAX_LIGHT_BOUNCES 4 /*8*/
-#define MAX_TRAVERSAL_DEPTH 64
+#define MAX_TRAVERSAL_DEPTH 32
 #define MIN_TRACE_DIST 0.0001
 #define NORMAL_OFFSET 0.0001
 
 vec3 lightPos = (vec3(2.0, 3.0, 3.0))*1.0;
 
+/*
 float iSphere(in Ray ray, in Sphere sph, out float d2)
 {
 	//sphere at origin has equation |xyz| = r
@@ -318,6 +314,7 @@ float boxIntersection( in vec3 ro, in vec3 rd, vec3 boxSize, out vec3 outNormal 
         -1.0 :        // no hit
         min(tN, tF);
 }
+*/
 
 vec3 triIntersect( in vec3 ro, in vec3 rd, in vec3 v0, in vec3 v1, in vec3 v2 )
 {
@@ -364,7 +361,7 @@ IsecInfo RayAABBIsec(Ray ray, vec3 bbMin, vec3 bbMax, vec3 invDir) {
     - Pre-sorted triangles in leaves
     - Quantized bounds
 */
-void TraversalBVH(Ray ray, inout Scene scene) {
+void TraversalBVH(Ray ray, inout Hit hit) {
     //if(USE_STATS) atomicAdd(statistics.rays, 1ul);
     statsRays++;
     vec3 invDir = 1.0 / ray.dir;
@@ -381,7 +378,7 @@ void TraversalBVH(Ray ray, inout Scene scene) {
         // Test current node
         /*
         IsecInfo isec = RayAABBIsec(ray, n, invDir);
-        if (isec.tmax < isec.tmin || isec.tmin > scene.d)
+        if (isec.tmax < isec.tmin || isec.tmin > hit.t)
             continue;
         */
 
@@ -397,19 +394,14 @@ void TraversalBVH(Ray ray, inout Scene scene) {
                 vec3 v1 = vertices[tri.indices.y].position.xyz;
                 vec3 v2 = vertices[tri.indices.z].position.xyz;
 
-                float t = triIntersect(ray.origin, ray.dir, v0, v1, v2).x;
-                if (miss(t)) continue;
+                vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+                if (miss(isec.x)) continue;
 
-                if (t > scene.d) continue;
-                vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
-                vec3 hitPos = ray.origin + ray.dir * t;
-                scene.closestHit.pos = hitPos;
-                scene.closestHit.normal = Ng;
-                scene.closestHit.normal2 = Ng;
-                scene.closestHit.triIdx = n.triIdx + i;
-                scene.d = t;
-                scene.d2 = t;
-                scene.closestHit.mat = mats[tri.indices.w];
+                if (isec.x > hit.t) continue;
+                hit.t = isec.x;
+                hit.u = isec.y;
+                hit.v = isec.z;
+                hit.triIdx = n.triIdx + i;
             }
         } else {
             int left = n.left;
@@ -420,12 +412,12 @@ void TraversalBVH(Ray ray, inout Scene scene) {
 
             if (left >= 0) {
                 lIsec = RayAABBIsec(ray, bvhNodes[left].bboxMin.xyz, bvhNodes[left].bboxMax.xyz, invDir);
-                hitL = !(lIsec.tmax < lIsec.tmin || lIsec.tmin > scene.d);
+                hitL = !(lIsec.tmax < lIsec.tmin || lIsec.tmin > hit.t);
             }
 
             if (right >= 0) {
                 rIsec = RayAABBIsec(ray, bvhNodes[right].bboxMin.xyz, bvhNodes[right].bboxMax.xyz, invDir);
-                hitR = !(rIsec.tmax < rIsec.tmin || rIsec.tmin > scene.d);
+                hitR = !(rIsec.tmax < rIsec.tmin || rIsec.tmin > hit.t);
             }
 
             if (hitL && hitR) {
@@ -450,7 +442,7 @@ struct SpaceContext {
     float tmax;
 };
 
-void TraversalKdTree(Ray ray, inout Scene scene) {
+void TraversalKdTree(Ray ray, inout Hit hit) {
     //if(USE_STATS) atomicAdd(statistics.rays, 1ul);
     statsRays++;
     vec3 invDir = 1.0 / ray.dir;
@@ -464,7 +456,7 @@ void TraversalKdTree(Ray ray, inout Scene scene) {
         SpaceContext sc = stack[--stkptr];
         KdNode n = kdNodes[sc.node];
 
-        if (sc.tmin >= scene.d || sc.tmin > sc.tmax) continue;
+        if (sc.tmin >= hit.t || sc.tmin > sc.tmax) continue;
 
         bool isLeaf = (n.left == -1);
         if (isLeaf) {
@@ -477,19 +469,14 @@ void TraversalKdTree(Ray ray, inout Scene scene) {
                 vec3 v1 = vertices[tri.indices.y].position.xyz;
                 vec3 v2 = vertices[tri.indices.z].position.xyz;
 
-                float t = triIntersect(ray.origin, ray.dir, v0, v1, v2).x;
-                if (miss(t)) continue;
+                vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+                if (miss(isec.x)) continue;
 
-                if (t > scene.d) continue;
-                vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
-                vec3 hitPos = ray.origin + ray.dir * t;
-                scene.closestHit.pos = hitPos;
-                scene.closestHit.normal = Ng;
-                scene.closestHit.normal2 = Ng;
-                scene.closestHit.triIdx = n.triIdx + i;
-                scene.d = t;
-                scene.d2 = t;
-                scene.closestHit.mat = mats[tri.indices.w];
+                if (isec.x > hit.t) continue;
+                hit.t = isec.x;
+                hit.u = isec.y;
+                hit.v = isec.z;
+                hit.triIdx = kdtreeIndices[n.triIdx + i];
             }
         } else {
             float tsplit = (n.splitPos - ray.origin[n.axis]) * invDir[n.axis];
@@ -521,57 +508,51 @@ void TraversalKdTree(Ray ray, inout Scene scene) {
     far(left, tsplit2, tsplit0)
 */
 
-void TraversalBruteForce(Ray ray, inout Scene scene) {
+void TraversalBruteForce(Ray ray, inout Hit hit) {
     for (uint tIdx = 0; tIdx < triangles.length(); ++tIdx) {
         Triangle tri = triangles[tIdx];
         vec3 v0 = vertices[tri.indices.x].position.xyz;
         vec3 v1 = vertices[tri.indices.y].position.xyz;
         vec3 v2 = vertices[tri.indices.z].position.xyz;
-        vec3 hit = triIntersect(ray.origin, ray.dir, v0, v1, v2);
-        float t = hit.x;
-        if (miss(t)) continue;
-        vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
-        if (t < scene.d) {
-            scene.d = t;
-            scene.closestHit.pos = ray.origin + ray.dir * t;
-            scene.closestHit.normal = Ng;
-            scene.closestHit.mat = mats[tri.indices.w];
-            scene.closestHit.triIdx = tIdx;
-        }
+        vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+        
+        if (miss(isec.x)) continue;
+        if (isec.x >= hit.t) continue;
+        hit.t = isec.x;
+        hit.u = isec.y;
+        hit.v = isec.z;
+        hit.triIdx = tIdx;
     }
 }
 
-void EmissiveTraversalBF(Ray ray, inout Scene scene) {
+void EmissiveTraversalBF(Ray ray, inout Hit hit) {
     for (uint tIdx = 0; tIdx < eTriangles.length(); ++tIdx) {
         Triangle tri = eTriangles[tIdx];
         vec3 v0 = vertices[tri.indices.x].position.xyz;
         vec3 v1 = vertices[tri.indices.y].position.xyz;
         vec3 v2 = vertices[tri.indices.z].position.xyz;
-        vec3 hit = triIntersect(ray.origin, ray.dir, v0, v1, v2);
-        float t = hit.x;
-        if (miss(t)) continue;
-        vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
-        if (t < scene.d) {
-            scene.d = t;
-            scene.closestHit.pos = v0;
-            scene.closestHit.normal = Ng;
-            scene.closestHit.mat = mats[tri.indices.w];
-            scene.closestHit.triIdx = tIdx;
+        vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+        if (miss(isec.x)) continue;
+        if (isec.x < hit.t) {
+            hit.t = isec.x;
+            hit.u = isec.y;
+            hit.v = isec.z;
+            hit.triIdx = tIdx | (1<<30);
         }
     }
 }
 
-Scene world(Ray ray) {
-    Scene scene;
-    scene.d = MAX_DIST;
-    scene.d2 = MAX_DIST;
+Hit world(Ray ray) {
+    Hit hit;
+    hit.t = MAX_DIST;
+    //hit.d2 = MAX_DIST;
 
-    if(USE_BVH) TraversalBVH(ray, scene);
-    else TraversalKdTree(ray, scene);
+    if(USE_BVH) TraversalBVH(ray, hit);
+    else TraversalKdTree(ray, hit);
 
-    EmissiveTraversalBF(ray, scene);
+    EmissiveTraversalBF(ray, hit);
 
-    return scene;
+    return hit;
 }
 
 vec3 worldNormals(Ray ray, float world) {
@@ -609,7 +590,7 @@ void genSeed() { uint idx = uint(gl_GlobalInvocationID.x + gl_GlobalInvocationID
 
 // Next Event Estimation
 // PDF: p = p(triangle) x p(point|triangle)
-// “Pick a point on a light, check visibility, and add its contribution now instead of hoping to hit it randomly later.”
+// ï¿½Pick a point on a light, check visibility, and add its contribution now instead of hoping to hit it randomly later.ï¿½
 // Mathematically: Lnee = \frac{Le \cdot f(\omega_i, \omega_o) \cdot \cos \theta_s \cos theta_l}{p(light)}
 
 struct LightSample {
@@ -679,8 +660,8 @@ LightSample sampleNEE(vec3 hitPos, vec3 N) {
     shadow.origin = hitPos + N * NORMAL_OFFSET;
     shadow.dir = wi;
 
-    Scene sh = world(shadow);
-    if (sh.d < dist - 2.0*NORMAL_OFFSET) return ls;
+    Hit sh = world(shadow);
+    if (sh.t < dist - 2.0*NORMAL_OFFSET) return ls;
 
     ls.wi = wi;
     ls.pdf = computeLightPdf(lightPos, hitPos, lidx);
@@ -799,27 +780,35 @@ float MISWeight(float pdf_a, float pdf_b) {
 }
 
 RenderData worldRender(vec2 uv, Ray ray) {
-    Scene scene;
+    Hit hit;
     vec3 radiance = vec3(0.0);
     vec3 throughput = vec3(1.0);
 
     float prevPdfBSDF = 1.0;
     for(int i = 0; i < pc.lightBounces; i++) {
-        scene = world(ray);
-        if(scene.d >= MAX_DIST) { 
+        hit = world(ray);
+        if(hit.t >= MAX_DIST) { 
             radiance += throughput * skyColor(uv).rgb; 
             break; 
         }
 
-        vec3 hitPoint = ray.origin + ray.dir * scene.d;
-        vec3 N = scene.closestHit.normal;
-        Material mat = scene.closestHit.mat;
+        uint triIdx = (hit.triIdx&(~(1u<<30)));
+        bool isLightHit = (hit.triIdx&(1u<<30)) != 0;
+        Triangle tri = !isLightHit ? triangles[triIdx] : eTriangles[triIdx];
+
+        vec3 v0 = vertices[tri.indices.x].position.xyz;
+        vec3 v1 = vertices[tri.indices.y].position.xyz;
+        vec3 v2 = vertices[tri.indices.z].position.xyz;
+
+        vec3 hitPoint = ray.origin + ray.dir * hit.t;
+        vec3 N = normalize(cross(v1-v0, v2-v0));
+        Material mat = mats[tri.indices.w];
 
         // Emission if hit light
         if(mat.emissivePower > 0.0) {
             vec3 Le = mat.emissiveColor * mat.emissivePower;
             if(i > 0) {
-                float pdfLight = computeLightPdf(hitPoint, ray.origin, scene.closestHit.triIdx);
+                float pdfLight = computeLightPdf(hitPoint, ray.origin, triIdx);
                 float w = MISWeight(prevPdfBSDF, pdfLight);
                 radiance += throughput * Le * w;
             }
@@ -887,7 +876,7 @@ RenderData worldRender(vec2 uv, Ray ray) {
     }
 
     if (any(isnan(radiance)) || any(isinf(radiance))) radiance = vec3(0.0);
-    return RenderData(scene, vec4(radiance, 1.0));
+    return RenderData(vec4(radiance, 1.0));
 }
 
 

@@ -82,25 +82,18 @@ namespace Kernel {
         __device__ Ray(const vec3& origin, const vec3& dir) : origin(origin), dir(dir) {}
     };
 
-    struct SceneObject {
-        vec3 pos;
-        vec3 normal;
-        vec3 normal2;
-        Material mat;
+    struct Hit {
+        float t;
+        float u;
+        float v;
         unsigned int triIdx;
     };
 
-    struct Scene {
-        float d;
-        float d2;
-        SceneObject closestHit;
-    };
-
     struct RenderData {
-        Scene scene;
+        //Hit hit;
         vec4 color;
 
-        __device__ RenderData(const Scene& scene, const vec4& color) : scene(scene), color(color) {};
+        __device__ RenderData(/*const Hit& hit, */const vec4& color) : /*hit(hit),*/ color(color) {};
     };
 
     struct Statistics {
