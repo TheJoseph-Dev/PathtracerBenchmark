@@ -257,7 +257,8 @@ namespace Pathtracer {
             Pathtracer::SpecializedConstants spec = {
                 .useNEE = VK_TRUE,
                 .useMIS = VK_TRUE,
-                .useBVH = (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH),
+                .useBVH = (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH
+                    || this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH4),
                 .useStats = this->pathtracerConfig.ShouldGetStatsAS()
             };
 
@@ -319,7 +320,8 @@ namespace Pathtracer {
                 SSBOs.emplace_back( createStorageBuffer(nodes.size() * sizeof(nodes[0]), nodes.data() ) );
             }, sceneData.tree);
 
-            if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH) {
+            if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH
+                || this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH4) {
                 createSSBO(SSBOs.back().buffer, SSBOBinding::BVH_NODES);
                 // Dummy
                 SSBOs.emplace_back(createStorageBuffer(4, nullptr));

@@ -16,6 +16,7 @@
 #include "models/io/EXR.h"
 #include "models/io/PPM.h"
 #include "models/acceleration_structures/BVH.h"
+#include "models/acceleration_structures/BVH4.h"
 #include "models/acceleration_structures/KdTreeBinned.h"
 #include "models/acceleration_structures/KdTree.h"
 #include "models/vulkan/Buffer.h"
@@ -669,9 +670,32 @@ private:
         OBJLoader::MeshGeometry mergedMesh{ objVertices, triangles };
 
         std::vector<uint32_t> indices = {};
-        std::variant<std::vector<BVH::Node>, std::vector<KdTree::Node>> treeVariant;
+        std::variant<std::vector<BVH::Node>, std::vector<BVH4::Node>, std::vector<KdTree::Node>> treeVariant;
 
-        if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH) {
+        const bool requestedBVH4 = this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH4;
+        const bool canUseBVH4 = requestedBVH4 && this->pathtracerConfig.GetComputeBackendType() == Pathtracer::ComputeBackendType::CUDA_T;
+        if (requestedBVH4 && !canUseBVH4)
+            std::cerr << "[WARN] BVH4 is currently CUDA-only. Falling back to BVH2 for this run.\n";
+
+        if (canUseBVH4) {
+            BVH4 bvh4 = BVH4(mergedMesh);
+            auto t0 = std::chrono::high_resolution_clock::now();
+            bvh4.Build();
+            auto t1 = std::chrono::high_resolution_clock::now();
+            pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
+
+            auto bvh4t = bvh4.GetTriangles();
+
+            // Reordering to match BVH leaf partitions (triIdx; triCount) in CUDA traversal
+            std::vector<OBJLoader::Triangle> reordered(triangles.size());
+            for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[bvh4t[i].oIdx];
+            triangles = std::move(reordered);
+
+            const std::vector<BVH4::Node>& tree = bvh4.GetTree();
+            treeVariant = tree;
+            pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
+        }
+        else if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH || requestedBVH4) {
             BVH bvh = BVH(mergedMesh);
             auto t0 = std::chrono::high_resolution_clock::now();
             bvh.Build();

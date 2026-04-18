@@ -41,6 +41,14 @@ namespace Kernel {
         vec4 bboxMax;
     };
 
+    struct alignas(16) BVH4Node {
+        int child[4];
+        unsigned int triIdx;
+        unsigned int triCount;
+        vec4 bboxMin[4];
+        vec4 bboxMax[4];
+    };
+
     struct alignas(16) KdNode {
         int left;
         int right;

@@ -3148,3 +3148,513 @@
 
  Acc. Structure Memory: 336 bytes (Nodes only)
 
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837821
+ TRAVERSALS: 1819942289
+ ISECS: 5645939718
+
+ RAYS/s: 9.94886e+07
+ NODES/RAY: 5.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 3.446 s
+
+ FPS: 18.5723 spp/s
+
+ Avg. Kernel Time: 49.6617 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837821
+ TRAVERSALS: 1819942289
+ ISECS: 5645939718
+
+ RAYS/s: 1.20125e+08
+ NODES/RAY: 5.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 2.854 s
+
+ FPS: 22.4247 spp/s
+
+ Avg. Kernel Time: 41.2555 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837821
+ TRAVERSALS: 1819942289
+ ISECS: 5645939718
+
+ RAYS/s: 1.36861e+08
+ NODES/RAY: 5.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 2.505 s
+
+ FPS: 25.5489 spp/s
+
+ Avg. Kernel Time: 35.9735 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837821
+ TRAVERSALS: 1819942289
+ ISECS: 5645939718
+
+ RAYS/s: 1.29765e+08
+ NODES/RAY: 5.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 2.642 s
+
+ FPS: 24.2241 spp/s
+
+ Avg. Kernel Time: 38.1859 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837821
+ TRAVERSALS: 1819942289
+ ISECS: 5645939718
+
+ RAYS/s: 1.26789e+08
+ NODES/RAY: 5.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 2.704 s
+
+ FPS: 23.6686 spp/s
+
+ Avg. Kernel Time: 37.4689 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 16074344
+ TRAVERSALS: 85337063
+ ISECS: 264772337
+
+ RAYS/s: 282969
+ NODES/RAY: 5.3089
+ ISECS/RAY: 16.4717
+
+ Total Elapsed Time: 56.806 s
+
+ FPS: 0.0528113 spp/s
+
+ Avg. Kernel Time: 6455.36 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837821
+ TRAVERSALS: 1819942289
+ ISECS: 5645939718
+
+ RAYS/s: 1.22837e+08
+ NODES/RAY: 5.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 2.791 s
+
+ FPS: 22.9309 spp/s
+
+ Avg. Kernel Time: 40.068 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837821
+ TRAVERSALS: 1819942289
+ ISECS: 5645939718
+
+ RAYS/s: 9.33909e+07
+ NODES/RAY: 5.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 3.671 s
+
+ FPS: 17.4339 spp/s
+
+ Avg. Kernel Time: 51.9207 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837821
+ TRAVERSALS: 1819942289
+ ISECS: 5645939718
+
+ RAYS/s: 1.31406e+08
+ NODES/RAY: 5.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 2.609 s
+
+ FPS: 24.5305 spp/s
+
+ Avg. Kernel Time: 37.735 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH4
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 69528814
+ TRAVERSALS: 69528814
+ ISECS: 139057628
+
+ RAYS/s: 1.35534e+08
+ NODES/RAY: 1
+ ISECS/RAY: 2
+
+ Total Elapsed Time: 0.513 s
+
+ FPS: 124.756 spp/s
+
+ Avg. Kernel Time: 4.01245 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 800 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH4
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837820
+ TRAVERSALS: 1134266653
+ ISECS: 5645939696
+
+ RAYS/s: 7.87771e+07
+ NODES/RAY: 3.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 4.352 s
+
+ FPS: 14.7059 spp/s
+
+ Avg. Kernel Time: 63.4537 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 800 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH4
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342837820
+ TRAVERSALS: 1134266653
+ ISECS: 5645939696
+
+ RAYS/s: 7.55649e+07
+ NODES/RAY: 3.30846
+ ISECS/RAY: 16.4683
+
+ Total Elapsed Time: 4.537 s
+
+ FPS: 14.1062 spp/s
+
+ Avg. Kernel Time: 65.9898 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 800 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: bunny-cbx
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH4
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 144056
+ RAYS: 355094231
+ TRAVERSALS: 5341236976
+ ISECS: 5599277388
+
+ RAYS/s: 1.24945e+07
+ NODES/RAY: 15.0417
+ ISECS/RAY: 15.7684
+
+ Total Elapsed Time: 28.42 s
+
+ FPS: 2.25194 spp/s
+
+ Avg. Kernel Time: 428.469 ms
+
+ Acc. Structure Build Time: 1.818000 s
+
+ Acc. Structure Memory: 6018240 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: bunny-cbx
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 144056
+ RAYS: 355094231
+ TRAVERSALS: 8837260254
+ ISECS: 5592394517
+
+ RAYS/s: 8.88157e+06
+ NODES/RAY: 24.8871
+ ISECS/RAY: 15.749
+
+ Total Elapsed Time: 39.981 s
+
+ FPS: 1.60076 spp/s
+
+ Avg. Kernel Time: 607.548 ms
+
+ Acc. Structure Build Time: 1.852000 s
+
+ Acc. Structure Memory: 2370384 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: bunny-cbx
+ Compute Backend: CUDA
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 144056
+ RAYS: 14757395258967641292
+ TRAVERSALS: 14757395258967641292
+ ISECS: 14757395258967641292
+
+ RAYS/s: 6.61767e+19
+ NODES/RAY: 1
+ ISECS/RAY: 1
+
+ Total Elapsed Time: 0.223 s
+
+ FPS: 286.996 spp/s
+
+ Avg. Kernel Time: -1.04019e+08 ms
+
+ Acc. Structure Build Time: 14.969000 s
+
+ Acc. Structure Memory: 10663904 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: bunny-cbx
+ Compute Backend: CUDA
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 144056
+ RAYS: 14757395258967641292
+ TRAVERSALS: 14757395258967641292
+ ISECS: 14757395258967641292
+
+ RAYS/s: 6.55884e+19
+ NODES/RAY: 1
+ ISECS/RAY: 1
+
+ Total Elapsed Time: 0.225 s
+
+ FPS: 284.444 spp/s
+
+ Avg. Kernel Time: -1.04019e+08 ms
+
+ Acc. Structure Build Time: 15.534000 s
+
+ Acc. Structure Memory: 10663904 bytes (Nodes only)
+
+[Config]
+ CPU: 11th Gen Intel Core i5 - 2.40GHz
+ GPU: NVIDIA GeForce MX350 - 2Gb VRAM
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 14757395258967641292
+ TRAVERSALS: 14757395258967641292
+ ISECS: 14757395258967641292
+
+ RAYS/s: 1.34403e+19
+ NODES/RAY: 1
+ ISECS/RAY: 1
+
+ Total Elapsed Time: 1.098 s
+
+ FPS: 58.2878 spp/s
+
+ Avg. Kernel Time: -1.04019e+08 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 672 bytes (Nodes only)
+

@@ -49,7 +49,8 @@ namespace Pathtracer {
 
     enum AccelerationStructureType {
         BVH = 0,
-        KD_TREE = 1
+        BVH4 = 1,
+        KD_TREE = 2
     };
 
     enum ComputeBackendType {
@@ -154,12 +155,28 @@ namespace Pathtracer {
         }
 
         void Print() const {
+            std::string accStructName;
+            switch (this->accelerationStructureType) {
+            case AccelerationStructureType::BVH:
+                accStructName = "Binned SAH-BVH";
+                break;
+            case AccelerationStructureType::BVH4:
+                accStructName = "Binned SAH-BVH4";
+                break;
+            case AccelerationStructureType::KD_TREE:
+                accStructName = "Havran SAH-KdTree";
+                break;
+            default:
+                accStructName = "Unknown";
+                break;
+            }
+
             std::cout << "[Config]"
                 << "\n CPU: 11th Gen Intel Core i5 - 2.40GHz"
                 << "\n GPU: NVIDIA GeForce MX350 - 2Gb VRAM"
                 << "\n Scene: " << this->GetScene()
                 << "\n Compute Backend: " << (!this->cbType ? "SPIR-V" : "CUDA")
-                << "\n Acc. Structure: " << (!this->accelerationStructureType ? "Binned SAH-BVH" : "Havran SAH-KdTree")
+                << "\n Acc. Structure: " << accStructName
                 << "\n Resolution: " << this->GetResolution().x << "x" << this->GetResolution().y
                 << "\n Tile Size: " << this->GetTileSize().x << "x" << this->GetTileSize().y
                 << "\n SPP: " << this->benchmarkInfo.spp
@@ -167,11 +184,27 @@ namespace Pathtracer {
         }
 
         std::string InlineString() const {
+            std::string accStructTag;
+            switch (this->accelerationStructureType) {
+            case AccelerationStructureType::BVH:
+                accStructTag = "-bvh";
+                break;
+            case AccelerationStructureType::BVH4:
+                accStructTag = "-bvh4";
+                break;
+            case AccelerationStructureType::KD_TREE:
+                accStructTag = "-kdtree";
+                break;
+            default:
+                accStructTag = "-unknown";
+                break;
+            }
+
             return "-spp" + std::to_string(this->benchmarkInfo.spp)
                 + "-r" + std::to_string(GetResolution().x) + "x" + std::to_string(GetResolution().y)
                 + "-lb" + std::to_string(this->lightBounces)
                 + (!this->cbType ? "-spirv" : "-cuda")
-                + (!this->accelerationStructureType ? "-bvh" : "-kdtree");
+                + accStructTag;
         }
     };
 

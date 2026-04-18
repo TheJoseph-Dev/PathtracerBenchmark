@@ -4,6 +4,7 @@
 #include "PathtracerSettings.h"
 #include "models/vulkan/Buffer.h"
 #include "models/acceleration_structures/BVH.h"
+#include "models/acceleration_structures/BVH4.h"
 #include "models/acceleration_structures/KdTree.h"
 #include "models/Helper.h"
 #include <vector>
@@ -42,7 +43,7 @@ namespace Pathtracer {
             std::span<const OBJLoader::Vertex> vertices;
             std::span<const OBJLoader::Triangle> triangles;
             std::span<const OBJLoader::Triangle> lightTriangles;
-            std::variant<std::vector<BVH::Node>, std::vector<KdTree::Node>> tree;
+            std::variant<std::vector<BVH::Node>, std::vector<BVH4::Node>, std::vector<KdTree::Node>> tree;
             std::span<const uint32_t> indices_kdtree;
             std::span<const OBJLoader::Material> materials;
         };

@@ -20,6 +20,7 @@ namespace Kernel {
         cudaSurfaceObject_t d_outImage,
         Kernel::vec4* d_accImage,
         Kernel::BVHNode* d_bvhNodes,
+        Kernel::BVH4Node* d_bvh4Nodes,
         Kernel::KdNode* d_kdNodes,
         unsigned int* d_kdtreeIndices,
         Kernel::Triangle* d_triangles,
@@ -33,6 +34,7 @@ namespace Kernel {
         unsigned int lightCount,
         unsigned int lightBounces,
         bool USE_BVH,
+        bool USE_BVH4,
         bool USE_STATS
     );
 };
@@ -405,6 +407,7 @@ namespace Pathtracer {
 
             const uint32_t WIDTH = this->pathtracerConfig.GetResolution().x, HEIGHT = this->pathtracerConfig.GetResolution().y;
             bool USE_BVH = pathtracerConfig.GetAccelerationStructureType() == AccelerationStructureType::BVH;
+            bool USE_BVH4 = pathtracerConfig.GetAccelerationStructureType() == AccelerationStructureType::BVH4;
             bool USE_STATS = pathtracerConfig.ShouldGetStatsAS();
 
             Kernel::ComputeTile ct = { .tileSize = uint2(dispatchCtx.tileSize.x, dispatchCtx.tileSize.y) };
@@ -422,7 +425,8 @@ namespace Pathtracer {
                         this->cudaImages[dispatchCtx.currentFrame].surface,
                         (Kernel::vec4*)this->d_accImage,
                         USE_BVH ? (Kernel::BVHNode*)this->sceneDeviceBuffers[DeviceBufferIndex::BVH_NODES] : nullptr,
-                        !USE_BVH ? (Kernel::KdNode*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_NODES] : nullptr,
+                        USE_BVH4 ? (Kernel::BVH4Node*)this->sceneDeviceBuffers[DeviceBufferIndex::BVH_NODES] : nullptr,
+                        (!USE_BVH && !USE_BVH4) ? (Kernel::KdNode*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_NODES] : nullptr,
                         (uint32_t*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_INDICES],
                         (Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLES],
                         (Kernel::Vertex*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTICES],
@@ -435,6 +439,7 @@ namespace Pathtracer {
                         emissiveTriangleCount,
                         dispatchCtx.lightBounces,
                         USE_BVH,
+                        USE_BVH4,
                         USE_STATS
                     );
                     //nvtxRangePop();
