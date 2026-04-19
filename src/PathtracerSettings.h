@@ -85,11 +85,12 @@ namespace Pathtracer {
         const glm::uvec2 tileSize;
         const bool saveOutputImage;
         const bool getStatsAS; // Enables or not the atomics
+        const bool saveStatistics;
 
     public:
 
-        Config(AccelerationStructureType as, ComputeBackendType cbType, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false, bool getStatsAS = true)
-            : accelerationStructureType(as), cbType(cbType), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize), getStatsAS(getStatsAS)
+        Config(AccelerationStructureType as, ComputeBackendType cbType, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false, bool getStatsAS = true, bool saveStatistics = true)
+            : accelerationStructureType(as), cbType(cbType), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize), getStatsAS(getStatsAS), saveStatistics(saveStatistics)
         {
         }
 
@@ -146,6 +147,10 @@ namespace Pathtracer {
             return this->saveOutputImage;
         }
 
+        bool ShouldSaveStatistics() const {
+            return this->saveStatistics;
+        }
+
         bool ShouldGetStatsAS() const {
             return this->getStatsAS;
         }
@@ -154,7 +159,7 @@ namespace Pathtracer {
             this->benchmarkInfo.spp = spp;
         }
 
-        void Print() const {
+        void Print(const std::string& cpuName = "Unknown CPU", const std::string& gpuName = "Unknown GPU", const std::string& dateTime = "") const {
             std::string accStructName;
             switch (this->accelerationStructureType) {
             case AccelerationStructureType::BVH:
@@ -171,9 +176,14 @@ namespace Pathtracer {
                 break;
             }
 
-            std::cout << "[Config]"
-                << "\n CPU: 11th Gen Intel Core i5 - 2.40GHz"
-                << "\n GPU: NVIDIA GeForce MX350 - 2Gb VRAM"
+            std::cout << "[Config]";
+
+            if (!dateTime.empty())
+                std::cout << "\n Date/Time: " << dateTime;
+
+            std::cout
+                << "\n CPU: " << cpuName
+                << "\n GPU: " << gpuName
                 << "\n Scene: " << this->GetScene()
                 << "\n Compute Backend: " << (!this->cbType ? "SPIR-V" : "CUDA")
                 << "\n Acc. Structure: " << accStructName

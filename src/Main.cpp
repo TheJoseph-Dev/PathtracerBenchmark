@@ -58,11 +58,38 @@ static Pathtracer::Config imgrefConfig(Pathtracer::Scene scene) {
     return pathtracerConfig;
 }
 
+static Pathtracer::Config warmupConfig() {
+    using namespace Pathtracer;
+    Benchmark benchmarkInfo = {};
+    benchmarkInfo.btype = BenchmarkType::SPP;
+    benchmarkInfo.spp = 64;
+
+    Config pathtracerConfig(
+        AccelerationStructureType::BVH,
+        ComputeBackendType::SPIRV_T,
+        Scene::CORNELL_BOX,
+        Resolution::R1024x1024,
+        8,
+        benchmarkInfo,
+        glm::uvec2(256, 256),
+        false,
+        false,
+        false
+    );
+    return pathtracerConfig;
+}
+
 int main() {
 
-    {   
+    {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::BUNNY, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
+        App pathtracer(warmupConfig());
+        pathtracer.run();
+    }
+
+    {
+        using namespace Pathtracer;
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
         pathtracer.run();
     }
 

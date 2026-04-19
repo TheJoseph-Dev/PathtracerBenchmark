@@ -278,6 +278,7 @@ private:
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
         physicalDevice = devices[0];
+        vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
         std::cout << "\n Available Devices:\n";
         VkPhysicalDeviceProperties deviceProperties;
@@ -1267,6 +1268,10 @@ public:
 
     void wait() const {
         vkQueueWaitIdle(this->graphicsQueue);
+    }
+
+    std::string GetGPUName() const {
+        return std::string(this->physicalDeviceProperties.deviceName);
     }
 
     Pathtracer::Statistics GetStatistics() const {
