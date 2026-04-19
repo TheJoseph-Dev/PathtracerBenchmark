@@ -22,11 +22,13 @@ namespace Pathtracer {
             EMISSIVES = 8,
             MATERIALS = 9,
 
-            STATISTICS = 11
+            STATISTICS = 11,
+            BVH4_NODES = 12
         };
         std::vector<Buffer> SSBOs; // pathtracerSSBOs
         std::vector<Buffer> stagingBuffers;
 		Buffer UBO; // pathtracerUBO
+        AccelerationStructureType activeTreeType = AccelerationStructureType::BVH;
 
         static constexpr VkDescriptorSetLayoutBinding computeBindings[] = {
             { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
@@ -41,12 +43,13 @@ namespace Pathtracer {
             { SSBOBinding::MATERIALS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 10, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::STATISTICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::BVH4_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
         };
         static constexpr uint32_t bindingCount = sizeof(computeBindings) / sizeof(computeBindings[0]);
 
     public:
 
-        static constexpr uint32_t SSBOsCount = 8;
+        static constexpr uint32_t SSBOsCount = 9;
 
         SPIRV(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfig) : ComputeBackend(vkCtx, pathtracerConfig) {
             //this->computeDescriptorSet.resize(PING_PONG_FRAMES);
@@ -257,8 +260,8 @@ namespace Pathtracer {
             Pathtracer::SpecializedConstants spec = {
                 .useNEE = VK_TRUE,
                 .useMIS = VK_TRUE,
-                .useBVH = (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH
-                    || this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH4),
+                .useBVH = this->activeTreeType == Pathtracer::AccelerationStructureType::BVH,
+                .useBVH4 = this->activeTreeType == Pathtracer::AccelerationStructureType::BVH4,
                 .useStats = this->pathtracerConfig.ShouldGetStatsAS()
             };
 
@@ -266,11 +269,12 @@ namespace Pathtracer {
                 { 1, offsetof(Pathtracer::SpecializedConstants, useNEE), sizeof(VkBool32) },
                 { 2, offsetof(Pathtracer::SpecializedConstants, useMIS), sizeof(VkBool32) },
                 { 3, offsetof(Pathtracer::SpecializedConstants, useBVH), sizeof(VkBool32) },
-                { 4, offsetof(Pathtracer::SpecializedConstants, useStats), sizeof(VkBool32) }
+                { 4, offsetof(Pathtracer::SpecializedConstants, useBVH4), sizeof(VkBool32) },
+                { 5, offsetof(Pathtracer::SpecializedConstants, useStats), sizeof(VkBool32) }
             };
 
             VkSpecializationInfo specInfo{
-                .mapEntryCount = 4,
+                .mapEntryCount = 5,
                 .pMapEntries = entries,
                 .dataSize = sizeof(Pathtracer::SpecializedConstants),
                 .pData = &spec
@@ -291,6 +295,11 @@ namespace Pathtracer {
 
         void init(const SceneData& sceneData) override {
             const uint32_t WIDTH = this->pathtracerConfig.GetResolution().x, HEIGHT = this->pathtracerConfig.GetResolution().y;
+
+            const bool isBVH = std::holds_alternative<std::vector<BVH::Node>>(sceneData.tree);
+            const bool isBVH4 = std::holds_alternative<std::vector<BVH4::Node>>(sceneData.tree);
+            this->activeTreeType = isBVH4 ? Pathtracer::AccelerationStructureType::BVH4
+                : (isBVH ? Pathtracer::AccelerationStructureType::BVH : Pathtracer::AccelerationStructureType::KD_TREE);
             
             createPathtracerImages();
             createDescriptorSetLayout();
@@ -320,8 +329,7 @@ namespace Pathtracer {
                 SSBOs.emplace_back( createStorageBuffer(nodes.size() * sizeof(nodes[0]), nodes.data() ) );
             }, sceneData.tree);
 
-            if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH
-                || this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH4) {
+            if (this->activeTreeType == Pathtracer::AccelerationStructureType::BVH) {
                 createSSBO(SSBOs.back().buffer, SSBOBinding::BVH_NODES);
                 // Dummy
                 SSBOs.emplace_back(createStorageBuffer(4, nullptr));
@@ -329,6 +337,21 @@ namespace Pathtracer {
 
                 SSBOs.emplace_back(createStorageBuffer(4, nullptr));
                 createSSBO(SSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
+
+                SSBOs.emplace_back(createStorageBuffer(4, nullptr));
+                createSSBO(SSBOs.back().buffer, SSBOBinding::BVH4_NODES);
+            }
+            else if (this->activeTreeType == Pathtracer::AccelerationStructureType::BVH4) {
+                SSBOs.emplace_back(createStorageBuffer(4, nullptr));
+                createSSBO(SSBOs.back().buffer, SSBOBinding::BVH_NODES);
+
+                SSBOs.emplace_back(createStorageBuffer(4, nullptr));
+                createSSBO(SSBOs.back().buffer, SSBOBinding::KDTREE_NODES);
+
+                SSBOs.emplace_back(createStorageBuffer(4, nullptr));
+                createSSBO(SSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
+
+                createSSBO(SSBOs[0].buffer, SSBOBinding::BVH4_NODES);
             }
             else {
                 createSSBO(SSBOs.back().buffer, SSBOBinding::KDTREE_NODES);
@@ -338,6 +361,9 @@ namespace Pathtracer {
 
                 SSBOs.emplace_back(createStorageBuffer(sceneData.indices_kdtree.size() * sizeof(sceneData.indices_kdtree[0]), sceneData.indices_kdtree.data()));
                 createSSBO(SSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
+
+                SSBOs.emplace_back(createStorageBuffer(4, nullptr));
+                createSSBO(SSBOs.back().buffer, SSBOBinding::BVH4_NODES);
             }
 
             SSBOs.emplace_back(createStorageBuffer(sceneData.triangles.size() * sizeof(sceneData.triangles[0]), sceneData.triangles.data()));

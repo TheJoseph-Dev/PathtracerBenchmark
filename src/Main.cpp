@@ -62,7 +62,7 @@ int main() {
 
     {   
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH4, ComputeBackendType::CUDA_T));
+        App pathtracer(debugConfig(Scene::BUNNY, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
         pathtracer.run();
     }
 

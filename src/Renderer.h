@@ -672,12 +672,7 @@ private:
         std::vector<uint32_t> indices = {};
         std::variant<std::vector<BVH::Node>, std::vector<BVH4::Node>, std::vector<KdTree::Node>> treeVariant;
 
-        const bool requestedBVH4 = this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH4;
-        const bool canUseBVH4 = requestedBVH4 && this->pathtracerConfig.GetComputeBackendType() == Pathtracer::ComputeBackendType::CUDA_T;
-        if (requestedBVH4 && !canUseBVH4)
-            std::cerr << "[WARN] BVH4 is currently CUDA-only. Falling back to BVH2 for this run.\n";
-
-        if (canUseBVH4) {
+        if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH4) {
             BVH4 bvh4 = BVH4(mergedMesh);
             auto t0 = std::chrono::high_resolution_clock::now();
             bvh4.Build();
@@ -695,7 +690,7 @@ private:
             treeVariant = tree;
             pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
         }
-        else if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH || requestedBVH4) {
+        else if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH) {
             BVH bvh = BVH(mergedMesh);
             auto t0 = std::chrono::high_resolution_clock::now();
             bvh.Build();

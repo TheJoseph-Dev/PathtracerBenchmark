@@ -27,6 +27,7 @@ namespace Pathtracer {
         VkBool32 useNEE = VK_TRUE;
         VkBool32 useMIS = VK_TRUE;
         VkBool32 useBVH = VK_TRUE;
+        VkBool32 useBVH4 = VK_FALSE;
         VkBool32 useStats = VK_TRUE;
     };
 

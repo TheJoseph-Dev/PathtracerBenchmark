@@ -19,6 +19,8 @@ public:
         int32_t child[4];
         uint32_t triIdx;
         uint32_t triCount;
+        uint32_t pad0;
+        uint32_t pad1;
         glm::vec4 bboxMin[4];
         glm::vec4 bboxMax[4];
     };

@@ -21,7 +21,8 @@ layout(binding = 0, rgba32f) writeonly uniform image2D outImage;
 layout(constant_id = 1) const bool USE_NEE = true;
 layout(constant_id = 2) const bool USE_MIS = true;
 layout(constant_id = 3) const bool USE_BVH = true;
-layout(constant_id = 4) const bool USE_STATS = true;
+layout(constant_id = 4) const bool USE_BVH4 = false;
+layout(constant_id = 5) const bool USE_STATS = true;
 
 struct ComputeTile {
     uvec2 tileSize;
@@ -80,6 +81,16 @@ struct BVHNode {
     vec4 bboxMax;
 };
 
+struct BVH4Node {
+    int child[4];
+    uint triIdx;
+    uint triCount;
+    uint pad0;
+    uint pad1;
+    vec4 bboxMin[4];
+    vec4 bboxMax[4];
+};
+
 struct KdNode {
     int left;
     int right;
@@ -99,6 +110,7 @@ struct Triangle {
 layout(std430, binding = 3) readonly buffer BVHNodes { BVHNode bvhNodes[]; };
 layout(std430, binding = 4) readonly buffer KdTreeNodes { KdNode kdNodes[]; };
 layout(std430, binding = 5) readonly buffer KdTreeIndices { uint kdtreeIndices[]; };
+layout(std430, binding = 12) readonly buffer BVH4Nodes { BVH4Node bvh4Nodes[]; };
 
 layout(std430, binding = 6) readonly buffer Triangles { Triangle triangles[]; };
 layout(std430, binding = 7) readonly buffer MeshData { Vertex vertices[]; };
@@ -436,6 +448,74 @@ void TraversalBVH(Ray ray, inout Hit hit) {
     }
 }
 
+void TraversalBVH4(Ray ray, inout Hit hit) {
+    statsRays++;
+    vec3 invDir = 1.0 / ray.dir;
+    int stack[MAX_TRAVERSAL_DEPTH];
+    int stkptr = 0;
+    stack[stkptr++] = 0;
+
+    while (stkptr > 0) {
+        statsTraversals++;
+        int nodeIdx = stack[--stkptr];
+        BVH4Node n = bvh4Nodes[nodeIdx];
+
+        bool isLeaf = (n.child[0] == -1);
+        if (isLeaf) {
+            for (uint i = 0; i < n.triCount; ++i) {
+                statsIsecs++;
+                Triangle tri = triangles[n.triIdx + i];
+
+                vec3 v0 = vertices[tri.indices.x].position.xyz;
+                vec3 v1 = vertices[tri.indices.y].position.xyz;
+                vec3 v2 = vertices[tri.indices.z].position.xyz;
+
+                vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+                if (miss(isec.x)) continue;
+
+                if (isec.x > hit.t) continue;
+                hit.t = isec.x;
+                hit.u = isec.y;
+                hit.v = isec.z;
+                hit.triIdx = n.triIdx + i;
+            }
+        }
+        else {
+            int childIds[4];
+            float childTmin[4];
+            int hitCount = 0;
+
+            for (int i = 0; i < 4; i++) {
+                int childIdx = n.child[i];
+                if (childIdx < 0)
+                    continue;
+
+                IsecInfo isec = RayAABBIsec(ray, n.bboxMin[i].xyz, n.bboxMax[i].xyz, invDir);
+                bool childHit = !(isec.tmax < isec.tmin || isec.tmin > hit.t);
+                if (!childHit)
+                    continue;
+
+                int insertPos = hitCount;
+                while (insertPos > 0 && childTmin[insertPos - 1] > isec.tmin) {
+                    childTmin[insertPos] = childTmin[insertPos - 1];
+                    childIds[insertPos] = childIds[insertPos - 1];
+                    insertPos--;
+                }
+                childTmin[insertPos] = isec.tmin;
+                childIds[insertPos] = childIdx;
+                hitCount++;
+            }
+
+            const int freeSlots = MAX_TRAVERSAL_DEPTH - stkptr;
+            const int keepCount = min(hitCount, freeSlots);
+
+            // Keep nearest children when stack is near capacity.
+            for (int i = keepCount - 1; i >= 0; i--)
+                stack[stkptr++] = childIds[i];
+        }
+    }
+}
+
 struct SpaceContext {
     uint node;
     float tmin;
@@ -548,6 +628,7 @@ Hit world(Ray ray) {
     //hit.d2 = MAX_DIST;
 
     if(USE_BVH) TraversalBVH(ray, hit);
+    else if (USE_BVH4) TraversalBVH4(ray, hit);
     else TraversalKdTree(ray, hit);
 
     EmissiveTraversalBF(ray, hit);

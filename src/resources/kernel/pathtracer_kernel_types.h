@@ -45,6 +45,8 @@ namespace Kernel {
         int child[4];
         unsigned int triIdx;
         unsigned int triCount;
+        unsigned int pad0;
+        unsigned int pad1;
         vec4 bboxMin[4];
         vec4 bboxMax[4];
     };
