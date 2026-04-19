@@ -73,11 +73,13 @@ class Renderer {
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2; //SWAPCHAIN_IMAGE_COUNT - 1;
 
     std::unique_ptr<Pathtracer::ComputeBackend> computeBackend;
+    bool initSucceeded = false;
 
-    VkInstance instance; // Connection between Vulkan and the main program
-    VkPhysicalDevice physicalDevice;
-    VkDevice device; // After selecting a Physical Device, create a logical device to interface with it
-    VkPhysicalDeviceProperties physicalDeviceProperties;
+    VkInstance instance = VK_NULL_HANDLE; // Connection between Vulkan and the main program
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE; // After selecting a Physical Device, create a logical device to interface with it
+    VkPhysicalDeviceProperties physicalDeviceProperties{};
+    VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 
 #ifdef HAS_CUDA
     const std::vector<const char*> deviceExtensions = {
@@ -99,45 +101,45 @@ class Renderer {
 
 
     uint32_t graphicsQueueFamilyIndex = 0, presentQueueFamilyIndex = 0, computeQueueFamilyIndex = 0;
-    VkQueue graphicsQueue; // Handle to interact with device graphics queue;
-    VkSurfaceKHR surface; // Handle to interact with window
-    VkQueue presentQueue; // Handle to interact with window surface queue;
+    VkQueue graphicsQueue = VK_NULL_HANDLE; // Handle to interact with device graphics queue;
+    VkSurfaceKHR surface = VK_NULL_HANDLE; // Handle to interact with window
+    VkQueue presentQueue = VK_NULL_HANDLE; // Handle to interact with window surface queue;
 
-    VkSurfaceFormatKHR surfaceFormat;
-    VkExtent2D extent;
-    VkSwapchainKHR swapChain;
+    VkSurfaceFormatKHR surfaceFormat{};
+    VkExtent2D extent{};
+    VkSwapchainKHR swapChain = VK_NULL_HANDLE;
     std::vector<VkImage> swapChainImages;
     std::vector<VkImageView> swapChainImageViews;
-    VkImageLayout swapchainImageLayouts[SWAPCHAIN_IMAGE_COUNT];
+    VkImageLayout swapchainImageLayouts[SWAPCHAIN_IMAGE_COUNT]{};
 
-    VkViewport viewport;
-    VkRect2D scissor; // Cut viewport filter >:/
+    VkViewport viewport{};
+    VkRect2D scissor{}; // Cut viewport filter >:/
 
-    VkDescriptorSetLayout descriptorSetLayout;
-    VkDescriptorPool descriptorPool;
-    VkDescriptorSet fragDescriptorSet[PING_PONG_FRAMES];
+    VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+    VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+    VkDescriptorSet fragDescriptorSet[PING_PONG_FRAMES]{};
 
     /*VkImage pathtracerImages[PATHTRACER_IMG_COUNT];
     VkDeviceMemory pathtracerImagesMemory[PATHTRACER_IMG_COUNT];
     VkImageView pathtracerImageViews[PATHTRACER_IMG_COUNT];
     VkImageLayout pathtracerImageLayouts[PATHTRACER_IMG_COUNT];
     VkSampler pathtracerImageSampler;*/
-    VkSampler fragImageSampler;
+    VkSampler fragImageSampler = VK_NULL_HANDLE;
     int textureIndex = 0;
 
     Buffer vertexBuffer;
-    VkPipelineLayout pipelineLayout;
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     //VkPipelineLayout computePipelineLayout;
-    VkPipeline graphicsPipeline;
+    VkPipeline graphicsPipeline = VK_NULL_HANDLE;
     //VkPipeline computePipeline;
 
-    VkCommandPool commandPool;
-    VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
+    VkCommandPool commandPool = VK_NULL_HANDLE;
+    VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT]{};
 
-    VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT]; // Ensures the submit waits until the acquired image is ready (from vkAcquireNextImageKHR)
-    VkSemaphore renderFinishedSemaphores[SWAPCHAIN_IMAGE_COUNT]; // Ensures the present (vkQueuePresentKHR) waits until rendering to that image is done.
+    VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT]{}; // Ensures the submit waits until the acquired image is ready (from vkAcquireNextImageKHR)
+    VkSemaphore renderFinishedSemaphores[SWAPCHAIN_IMAGE_COUNT]{}; // Ensures the present (vkQueuePresentKHR) waits until rendering to that image is done.
 
-    VkFence inFlightFences[MAX_FRAMES_IN_FLIGHT];
+    VkFence inFlightFences[MAX_FRAMES_IN_FLIGHT]{};
     std::vector<VkFence> imagesInFlight;
 
     Pathtracer::Config pathtracerConfig;
@@ -155,19 +157,101 @@ public:
     }
 
     void init(GLFWwindow* window) {
-        createInstance();
-        createWindowSurface(window);
-        createDevice();
+        initSucceeded = false;
+
+        if (!createInstance()) return;
+        if (!createWindowSurface(window)) return;
+        if (!createDevice()) return;
+
         createSwapchain(window);
         createCommandPool();
         createDescriptorPool();
         createComputeBackend();
         createGraphicsPipeline();
+
+        if (this->instance == VK_NULL_HANDLE ||
+            this->device == VK_NULL_HANDLE ||
+            this->swapChain == VK_NULL_HANDLE ||
+            this->graphicsPipeline == VK_NULL_HANDLE) {
+            std::cerr << "Renderer initialization failed and was aborted.\n";
+            return;
+        }
+
         initPathtracerState();
+        initSucceeded = true;
     }
 
 private:
-    void createInstance() {
+    bool checkInstanceExtensionSupport(const std::vector<const char*>& requiredExtensions) const {
+        uint32_t extensionCount = 0;
+        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
+
+        std::set<std::string> availableExtensionNames;
+        for (const auto& extension : availableExtensions)
+            availableExtensionNames.insert(extension.extensionName);
+
+        std::cout << "\n Required instance extensions:\n";
+        bool allAvailable = true;
+        for (const char* extension : requiredExtensions) {
+            const bool found = availableExtensionNames.find(extension) != availableExtensionNames.end();
+            std::cout << "  - " << extension << (found ? " [OK]" : " [MISSING]") << std::endl;
+            allAvailable &= found;
+        }
+
+        if (!allAvailable)
+            std::cerr << "ERROR: Not all required instance extensions are available.\n";
+        else
+            std::cout << " All required instance extensions are available.\n";
+
+        return allAvailable;
+    }
+
+    bool checkDeviceExtensionSupport(VkPhysicalDevice candidateDevice, std::vector<std::string>& missingExtensions) const {
+        uint32_t extensionCount = 0;
+        vkEnumerateDeviceExtensionProperties(candidateDevice, nullptr, &extensionCount, nullptr);
+
+        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+        vkEnumerateDeviceExtensionProperties(candidateDevice, nullptr, &extensionCount, availableExtensions.data());
+
+        std::set<std::string> requiredExtensions(this->deviceExtensions.begin(), this->deviceExtensions.end());
+        for (const auto& extension : availableExtensions)
+            requiredExtensions.erase(extension.extensionName);
+
+        missingExtensions.assign(requiredExtensions.begin(), requiredExtensions.end());
+        return missingExtensions.empty();
+    }
+
+    bool checkDeviceFeatureSupport(VkPhysicalDevice candidateDevice, std::vector<std::string>& missingFeatures) const {
+        VkPhysicalDeviceFeatures2 availableFeatures2{};
+        availableFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+
+        VkPhysicalDeviceDynamicRenderingFeatures availableDynamicRendering{};
+        availableDynamicRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+
+        VkPhysicalDeviceShaderAtomicInt64Features availableAtomic64{};
+        availableAtomic64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
+
+        availableFeatures2.pNext = &availableDynamicRendering;
+        availableDynamicRendering.pNext = &availableAtomic64;
+        vkGetPhysicalDeviceFeatures2(candidateDevice, &availableFeatures2);
+
+        missingFeatures.clear();
+        if (availableFeatures2.features.shaderInt64 != VK_TRUE)
+            missingFeatures.emplace_back("shaderInt64");
+        if (availableDynamicRendering.dynamicRendering != VK_TRUE)
+            missingFeatures.emplace_back("dynamicRendering");
+        if (availableAtomic64.shaderBufferInt64Atomics != VK_TRUE)
+            missingFeatures.emplace_back("shaderBufferInt64Atomics");
+        if (availableAtomic64.shaderSharedInt64Atomics != VK_TRUE)
+            missingFeatures.emplace_back("shaderSharedInt64Atomics");
+
+        return missingFeatures.empty();
+    }
+
+    bool createInstance() {
         std::cout << "\n Vulkan Header Version: " << VK_HEADER_VERSION << std::endl;
         std::cout << " Vulkan API Version: " << VK_API_VERSION_VARIANT(VK_HEADER_VERSION_COMPLETE)
             << "." << VK_API_VERSION_MAJOR(VK_HEADER_VERSION_COMPLETE)
@@ -190,6 +274,10 @@ private:
         const char** glfwExtensions;
 
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        if (!glfwExtensions || glfwExtensionCount == 0) {
+            std::cerr << "Failed to query required GLFW instance extensions.\n";
+            return false;
+        }
 
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
@@ -197,6 +285,15 @@ private:
         extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
         extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
         #endif
+
+    #ifdef DEBUG
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    #endif
+
+        if (!checkInstanceExtensionSupport(extensions)) {
+            std::cerr << "Aborting renderer initialization due to missing instance extensions.\n";
+            return false;
+        }
 
         instanceInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());;
         instanceInfo.ppEnabledExtensionNames = extensions.data();
@@ -226,7 +323,7 @@ private:
 
         if (vkCreateInstance(&instanceInfo, nullptr, &instance) != VK_SUCCESS) {
             std::cerr << "VkInstance Creation Error\n";
-            return;
+            return false;
         }
 
 #ifdef DEBUG
@@ -252,37 +349,41 @@ private:
         // Load the extension function
         auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
         if (func != nullptr) {
-            VkDebugUtilsMessengerEXT debugMessenger;
             if (func(instance, &debugCreateInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
                 std::cerr << "Failed to create Vulkan debug messenger!" << std::endl;
             }
         }
 #endif
+        return true;
     }
 
-    void createWindowSurface(GLFWwindow* window) {
+    bool createWindowSurface(GLFWwindow* window) {
         if (glfwCreateWindowSurface(this->instance, window, nullptr, &this->surface) != VK_SUCCESS) {
             std::cerr << "VkSurfaceKHR Creation Error\n";
-            return;
+            return false;
         }
+        return true;
     }
 
-    void createDevice() {
+    bool createDevice() {
         this->physicalDevice = VK_NULL_HANDLE;
 
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
-        if (!deviceCount) { std::cerr << "Failed to find GPUs with Vulkan support\n"; return; }
+        if (!deviceCount) {
+            std::cerr << "Failed to find GPUs with Vulkan support\n";
+            return false;
+        }
 
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-        physicalDevice = devices[0];
-        vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+        VkPhysicalDevice firstSupportedDevice = VK_NULL_HANDLE;
+        VkPhysicalDeviceProperties firstSupportedDeviceProperties{};
 
         std::cout << "\n Available Devices:\n";
-        VkPhysicalDeviceProperties deviceProperties;
-        VkPhysicalDeviceFeatures2 deviceFeatures2;
+        VkPhysicalDeviceProperties deviceProperties{};
+        VkPhysicalDeviceFeatures2 deviceFeatures2{};
         VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures{};
         dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
         VkPhysicalDeviceShaderAtomicInt64Features atomic64Feature{};
@@ -290,35 +391,41 @@ private:
         atomic64Feature.shaderBufferInt64Atomics = VK_TRUE;
         atomic64Feature.shaderSharedInt64Atomics = VK_TRUE;
 
-        for (const auto& device : devices) {
-            vkGetPhysicalDeviceProperties(device, &deviceProperties);
+        for (const auto& candidateDevice : devices) {
+            vkGetPhysicalDeviceProperties(candidateDevice, &deviceProperties);
 
-            deviceFeatures2 = {};
-            deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-            deviceFeatures2.pNext = &dynamicRenderingFeatures;
-            vkGetPhysicalDeviceFeatures2(device, &deviceFeatures2);
+            std::vector<std::string> missingExtensions;
+            const bool hasRequiredExtensions = checkDeviceExtensionSupport(candidateDevice, missingExtensions);
+
+            std::vector<std::string> missingFeatures;
+            const bool hasRequiredFeatures = checkDeviceFeatureSupport(candidateDevice, missingFeatures);
+
             std::cout << "\n - " << deviceProperties.deviceName;
             if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
                 std::cout << " (Discrete)";
-                physicalDevice = device;
-                physicalDeviceProperties = deviceProperties;
             }
 
-            if (dynamicRenderingFeatures.dynamicRendering) {
-                std::cout << " (Core Dyn. Rendering)";
+            if (hasRequiredExtensions)
+                std::cout << " (Extensions Available)";
+            else {
+                std::cout << " (Missing Extensions:";
+                for (size_t i = 0; i < missingExtensions.size(); ++i) {
+                    std::cout << " " << missingExtensions[i];
+                    if (i + 1 < missingExtensions.size()) std::cout << ",";
+                }
+                std::cout << ")";
             }
 
-            uint32_t extensionCount;
-            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-            std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-            std::set<std::string> requiredExtensions(this->deviceExtensions.begin(), this->deviceExtensions.end());
-            for (const auto& extension : availableExtensions) requiredExtensions.erase(extension.extensionName);
-
-            if (requiredExtensions.empty()) std::cout << " (Extensions Available)";
-            else std::cerr << "ERROR: EXTENSIONS REQUIRED NOT AVAILABLE - " << *requiredExtensions.begin();
+            if (hasRequiredFeatures)
+                std::cout << " (Features Available)";
+            else {
+                std::cout << " (Missing Features:";
+                for (size_t i = 0; i < missingFeatures.size(); ++i) {
+                    std::cout << " " << missingFeatures[i];
+                    if (i + 1 < missingFeatures.size()) std::cout << ",";
+                }
+                std::cout << ")";
+            }
 
             uint32_t apiVersion = deviceProperties.apiVersion;
             uint32_t major = VK_VERSION_MAJOR(apiVersion);
@@ -328,8 +435,36 @@ private:
             std::cout << " (" << major << "." << minor << "." << patch << ")";
 
             std::cout << std::endl;
+
+            if (!hasRequiredExtensions || !hasRequiredFeatures)
+                continue;
+
+            if (firstSupportedDevice == VK_NULL_HANDLE) {
+                firstSupportedDevice = candidateDevice;
+                firstSupportedDeviceProperties = deviceProperties;
+            }
+
+            if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+                this->physicalDevice = candidateDevice;
+                this->physicalDeviceProperties = deviceProperties;
+                break;
+            }
         }
         std::cout << std::endl;
+
+        if (this->physicalDevice == VK_NULL_HANDLE)
+            this->physicalDevice = firstSupportedDevice;
+        if (this->physicalDeviceProperties.deviceName[0] == '\0')
+            this->physicalDeviceProperties = firstSupportedDeviceProperties;
+
+        if (this->physicalDevice == VK_NULL_HANDLE) {
+            std::cerr << "ERROR: No physical device supports all required device extensions/features.\n";
+            std::cerr << "Aborting renderer initialization due to missing device extensions/features.\n";
+            return false;
+        }
+
+        std::cout << " Selected device: " << this->physicalDeviceProperties.deviceName << std::endl;
+        std::cout << " Required device extensions/features are available.\n";
 
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
@@ -337,6 +472,7 @@ private:
 
         std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+        bool hasUnifiedQueueFamily = false;
         for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
             if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 //graphicsQueueFamilyIndex = i;
@@ -354,8 +490,15 @@ private:
                 std::cout << " Queue family " << i << " supports window surface\n";
             }
             
-            if((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && presentSupport)
+            if((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && presentSupport) {
                 graphicsQueueFamilyIndex = computeQueueFamilyIndex = presentQueueFamilyIndex = i;
+                hasUnifiedQueueFamily = true;
+            }
+        }
+
+        if (!hasUnifiedQueueFamily) {
+            std::cerr << "Failed to find a queue family that supports graphics, compute and presentation.\n";
+            return false;
         }
 
 
@@ -393,8 +536,10 @@ private:
 
         if (vkCreateDevice(physicalDevice, &deviceInfo, nullptr, &this->device) != VK_SUCCESS) {
             std::cerr << "VkDevice Creation Error\n";
-            return;
+            return false;
         }
+
+        return true;
     }
 
     void createSwapchain(GLFWwindow* window) {
@@ -1000,63 +1145,110 @@ private:
 
 public:
     void shutdown() {
-        vkDeviceWaitIdle(device);
+        initSucceeded = false;
+
+        if (device != VK_NULL_HANDLE)
+            vkDeviceWaitIdle(device);
 
         computeBackend.reset();
         
-        // Synchronization objects
-        for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-            vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-            vkDestroyFence(device, inFlightFences[i], nullptr);
+        if (device != VK_NULL_HANDLE) {
+            // Synchronization objects
+            for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+                if (imageAvailableSemaphores[i] != VK_NULL_HANDLE)
+                    vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+                if (inFlightFences[i] != VK_NULL_HANDLE)
+                    vkDestroyFence(device, inFlightFences[i], nullptr);
+                imageAvailableSemaphores[i] = VK_NULL_HANDLE;
+                inFlightFences[i] = VK_NULL_HANDLE;
+            }
+
+            for (uint32_t i = 0; i < SWAPCHAIN_IMAGE_COUNT; ++i) {
+                if (renderFinishedSemaphores[i] != VK_NULL_HANDLE)
+                    vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+                renderFinishedSemaphores[i] = VK_NULL_HANDLE;
+            }
+
+            imagesInFlight.clear();
+
+            // Descriptor resources
+            if (descriptorPool != VK_NULL_HANDLE)
+                vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+            descriptorPool = VK_NULL_HANDLE;
+
+            if (descriptorSetLayout != VK_NULL_HANDLE)
+                vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+            descriptorSetLayout = VK_NULL_HANDLE;
+
+            // Pipelines & layouts
+            if (graphicsPipeline != VK_NULL_HANDLE)
+                vkDestroyPipeline(device, graphicsPipeline, nullptr);
+            graphicsPipeline = VK_NULL_HANDLE;
+
+            if (pipelineLayout != VK_NULL_HANDLE)
+                vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+            pipelineLayout = VK_NULL_HANDLE;
+
+            // Command pool (implicitly frees command buffers)
+            if (commandPool != VK_NULL_HANDLE)
+                vkDestroyCommandPool(device, commandPool, nullptr);
+            commandPool = VK_NULL_HANDLE;
+
+            if (fragImageSampler != VK_NULL_HANDLE)
+                vkDestroySampler(device, fragImageSampler, nullptr);
+            fragImageSampler = VK_NULL_HANDLE;
+
+            // Swapchain resources
+            for (VkImageView view : swapChainImageViews)
+                if (view != VK_NULL_HANDLE)
+                    vkDestroyImageView(device, view, nullptr);
+
+            swapChainImageViews.clear();
+            swapChainImages.clear();
+
+            if (swapChain != VK_NULL_HANDLE)
+                vkDestroySwapchainKHR(device, swapChain, nullptr);
+            swapChain = VK_NULL_HANDLE;
+
+            // Buffers
+            if (vertexBuffer.buffer != VK_NULL_HANDLE)
+                vkDestroyBuffer(device, vertexBuffer.buffer, nullptr);
+            if (vertexBuffer.memory != VK_NULL_HANDLE)
+                vkFreeMemory(device, vertexBuffer.memory, nullptr);
+            vertexBuffer.buffer = VK_NULL_HANDLE;
+            vertexBuffer.memory = VK_NULL_HANDLE;
+
+            // Device
+            vkDestroyDevice(device, nullptr);
+            device = VK_NULL_HANDLE;
         }
 
-        for (uint32_t i = 0; i < SWAPCHAIN_IMAGE_COUNT; ++i)
-            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+#ifdef DEBUG
+        if (instance != VK_NULL_HANDLE && debugMessenger != VK_NULL_HANDLE) {
+            auto destroyFunc = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+            if (destroyFunc != nullptr)
+                destroyFunc(instance, debugMessenger, nullptr);
+            debugMessenger = VK_NULL_HANDLE;
+        }
+#endif
 
-        imagesInFlight.clear();
+        // Instance resources
+        if (instance != VK_NULL_HANDLE && surface != VK_NULL_HANDLE)
+            vkDestroySurfaceKHR(instance, surface, nullptr);
+        surface = VK_NULL_HANDLE;
 
-        
-        // Descriptor resources
-        vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-
-        vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
-
-
-        
-        // Pipelines & layouts
-        vkDestroyPipeline(device, graphicsPipeline, nullptr);
-
-        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-
-        
-        // Command pool (implicitly frees command buffers)
-        vkDestroyCommandPool(device, commandPool, nullptr);
-
-        vkDestroySampler(device, fragImageSampler, nullptr);
-
-        
-        // Swapchain resources
-        for (VkImageView view : swapChainImageViews)
-            vkDestroyImageView(device, view, nullptr);
-
-        swapChainImageViews.clear();
-        swapChainImages.clear();
-
-        vkDestroySwapchainKHR(device, swapChain, nullptr);
-
-        
-        // Buffers
-        vertexBuffer.~Buffer();
-        
-        // Device / instance
-        vkDestroyDevice(device, nullptr);
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-        vkDestroyInstance(instance, nullptr);
+        if (instance != VK_NULL_HANDLE)
+            vkDestroyInstance(instance, nullptr);
+        instance = VK_NULL_HANDLE;
+        physicalDevice = VK_NULL_HANDLE;
     }
 
 
 
     void run(uint32_t& currentFrame) {
+        if (!initSucceeded)
+            return;
+
         //puts("=== START LOOP ===");
 
         // Wait for frame's fence (makes command buffer safe to reuse)
