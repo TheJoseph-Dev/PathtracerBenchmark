@@ -20,9 +20,12 @@ layout(binding = 0, rgba32f) writeonly uniform image2D outImage;
 
 layout(constant_id = 1) const bool USE_NEE = true;
 layout(constant_id = 2) const bool USE_MIS = true;
-layout(constant_id = 3) const bool USE_BVH = true;
-layout(constant_id = 4) const bool USE_BVH4 = false;
+layout(constant_id = 3) const int ACCELERATION_STRUCTURE_TYPE = 0;
 layout(constant_id = 5) const bool USE_STATS = true;
+
+const int AS_BVH = 0;
+const int AS_BVH4 = 1;
+const int AS_KD_TREE = 2;
 
 struct ComputeTile {
     uvec2 tileSize;
@@ -627,9 +630,18 @@ Hit world(Ray ray) {
     hit.t = MAX_DIST;
     //hit.d2 = MAX_DIST;
 
-    if(USE_BVH) TraversalBVH(ray, hit);
-    else if (USE_BVH4) TraversalBVH4(ray, hit);
-    else TraversalKdTree(ray, hit);
+    switch (ACCELERATION_STRUCTURE_TYPE) {
+    case AS_BVH:
+        TraversalBVH(ray, hit);
+        break;
+    case AS_BVH4:
+        TraversalBVH4(ray, hit);
+        break;
+    case AS_KD_TREE:
+    default:
+        TraversalKdTree(ray, hit);
+        break;
+    }
 
     EmissiveTraversalBF(ray, hit);
 

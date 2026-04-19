@@ -21,6 +21,10 @@ using namespace Kernel;
 #define MIN_TRACE_DIST 0.0001f
 #define NORMAL_OFFSET 0.0001f
 
+#define AS_BVH 0
+#define AS_BVH4 1
+#define AS_KD_TREE 2
+
 __device__ unsigned int pcg_hash(unsigned int& seed) {
     seed = seed * 747796405u + 2891336453u;
     unsigned int word = ((seed >> ((seed >> 28u) + 4u)) ^ seed) * 277803737u;
@@ -143,8 +147,7 @@ __device__ Hit world(
     const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
-    bool USE_BVH,
-    bool USE_BVH4,
+    int accelerationStructureType,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
     unsigned long long& statsTraversals
@@ -540,8 +543,7 @@ __device__ Hit world(
     const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
-    bool USE_BVH,
-    bool USE_BVH4,
+    int accelerationStructureType,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
     unsigned long long& statsTraversals
@@ -551,9 +553,18 @@ __device__ Hit world(
     hit.t = MAX_DIST;
     //hit.d2 = MAX_DIST;
 
-    if (USE_BVH) TraversalBVH(ray, hit, bvhNodes, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
-    else if (USE_BVH4) TraversalBVH4(ray, hit, bvh4Nodes, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
-    else TraversalKdTree(ray, hit, kdNodes, kdtreeIndices, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
+    switch (accelerationStructureType) {
+    case AS_BVH:
+        TraversalBVH(ray, hit, bvhNodes, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
+        break;
+    case AS_BVH4:
+        TraversalBVH4(ray, hit, bvh4Nodes, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
+        break;
+    case AS_KD_TREE:
+    default:
+        TraversalKdTree(ray, hit, kdNodes, kdtreeIndices, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
+        break;
+    }
 
     EmissiveTraversalBF(ray, hit, eTriangles, vertices, mats, lightCount);
 
@@ -695,8 +706,7 @@ __device__ LightSample sampleNEE(
     const unsigned int* __restrict__ kdtreeIndices,
     const Triangle* __restrict__ triangles,
     unsigned int triangleCount,
-    bool USE_BVH,
-    bool USE_BVH4,
+    int accelerationStructureType,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
     unsigned long long& statsTraversals
@@ -735,7 +745,7 @@ __device__ LightSample sampleNEE(
     // Shadow ray
     Ray shadow(hitPos + N * NORMAL_OFFSET, wi);
     Hit sh = world(shadow, bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangles, vertices, eTriangles, mats,
-                     triangleCount, lightCount, USE_BVH, USE_BVH4, statsRays, statsIsecs, statsTraversals);
+                     triangleCount, lightCount, accelerationStructureType, statsRays, statsIsecs, statsTraversals);
     if (sh.t < dist - 2.0f * NORMAL_OFFSET) return ls;
 
     ls.wi  = wi;
@@ -801,8 +811,7 @@ __device__ RenderData worldRender(
     const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
-    bool USE_BVH,
-    bool USE_BVH4,
+    int accelerationStructureType,
     unsigned int lightBounces,
     unsigned int& seed,
     unsigned long long& statsRays,
@@ -824,7 +833,7 @@ __device__ RenderData worldRender(
             triangles, vertices,
             eTriangles, mats,
             triangleCount, lightCount,
-            USE_BVH, USE_BVH4,
+            accelerationStructureType,
             statsRays, statsIsecs,
             statsTraversals
         );
@@ -882,7 +891,7 @@ __device__ RenderData worldRender(
             hitPoint, N, seed,
             eTriangles, vertices, mats, lightCount,
             bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangles, triangleCount,
-            USE_BVH, USE_BVH4, statsRays, statsIsecs, statsTraversals
+            accelerationStructureType, statsRays, statsIsecs, statsTraversals
         );
         bool didNEE = ls.pdf > 0.0f;
 
@@ -966,8 +975,7 @@ __global__ void pathtracerKernel(
     unsigned int triangleCount,
     unsigned int lightCount,
     unsigned int lightBounces,
-    bool USE_BVH,
-    bool USE_BVH4,
+    int accelerationStructureType,
     bool USE_STATS
 )
 {
@@ -1032,8 +1040,7 @@ __global__ void pathtracerKernel(
         eTriangles, mats,
         triangleCount,
         lightCount,
-        USE_BVH,
-        USE_BVH4,
+        accelerationStructureType,
         lightBounces,
         seed,
         statsRays,
@@ -1081,8 +1088,7 @@ void dispatchCUDAPathtracerKernel(
     unsigned int triangleCount,
     unsigned int lightCount,
     unsigned int lightBounces,
-    bool USE_BVH,
-    bool USE_BVH4,
+    int accelerationStructureType,
     bool USE_STATS
 )
 {
@@ -1109,8 +1115,7 @@ void dispatchCUDAPathtracerKernel(
         triangleCount,
         lightCount,
         lightBounces,
-        USE_BVH,
-        USE_BVH4,
+        accelerationStructureType,
         USE_STATS
     );
     

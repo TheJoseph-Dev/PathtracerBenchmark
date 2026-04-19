@@ -33,8 +33,7 @@ namespace Kernel {
         unsigned int triangleCount,
         unsigned int lightCount,
         unsigned int lightBounces,
-        bool USE_BVH,
-        bool USE_BVH4,
+        int accelerationStructureType,
         bool USE_STATS
     );
 };
@@ -360,12 +359,15 @@ namespace Pathtracer {
             sceneDeviceBuffers.reserve(10);
 
             sceneDeviceBuffers.push_back(nullptr);
-            std::visit([&](auto const& nodes) {
-                createDeviceMemory(&sceneDeviceBuffers.back(), (void*)nodes.data(), nodes.size() * sizeof(nodes[0]));
-             }, sceneData.tree);
+            if (sceneData.accelerationStructureType == Pathtracer::AccelerationStructureType::BVH)
+                createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.bvhNodes.data(), sceneData.bvhNodes.size() * sizeof(BVH::Node));
+            else if (sceneData.accelerationStructureType == Pathtracer::AccelerationStructureType::BVH4)
+                createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.bvh4Nodes.data(), sceneData.bvh4Nodes.size() * sizeof(BVH4::Node));
+            else
+                createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.kdNodes.data(), sceneData.kdNodes.size() * sizeof(KdTree::Node));
 
             sceneDeviceBuffers.push_back(nullptr);
-            if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::KD_TREE)
+            if (sceneData.accelerationStructureType == Pathtracer::AccelerationStructureType::KD_TREE)
                 createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.indices_kdtree.data(), sceneData.indices_kdtree.size() * sizeof(sceneData.indices_kdtree[0]));
 
             sceneDeviceBuffers.push_back(nullptr);
@@ -406,9 +408,25 @@ namespace Pathtracer {
                 printf("CUDA Wait error: %s\n", cudaGetErrorString(err));
 
             const uint32_t WIDTH = this->pathtracerConfig.GetResolution().x, HEIGHT = this->pathtracerConfig.GetResolution().y;
-            bool USE_BVH = pathtracerConfig.GetAccelerationStructureType() == AccelerationStructureType::BVH;
-            bool USE_BVH4 = pathtracerConfig.GetAccelerationStructureType() == AccelerationStructureType::BVH4;
+            const AccelerationStructureType asType = pathtracerConfig.GetAccelerationStructureType();
+            const int accelerationStructureType = static_cast<int>(asType);
             bool USE_STATS = pathtracerConfig.ShouldGetStatsAS();
+
+            Kernel::BVHNode* bvhNodes = nullptr;
+            Kernel::BVH4Node* bvh4Nodes = nullptr;
+            Kernel::KdNode* kdNodes = nullptr;
+            switch (asType) {
+            case AccelerationStructureType::BVH:
+                bvhNodes = (Kernel::BVHNode*)this->sceneDeviceBuffers[DeviceBufferIndex::BVH_NODES];
+                break;
+            case AccelerationStructureType::BVH4:
+                bvh4Nodes = (Kernel::BVH4Node*)this->sceneDeviceBuffers[DeviceBufferIndex::BVH_NODES];
+                break;
+            case AccelerationStructureType::KD_TREE:
+            default:
+                kdNodes = (Kernel::KdNode*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_NODES];
+                break;
+            }
 
             Kernel::ComputeTile ct = { .tileSize = uint2(dispatchCtx.tileSize.x, dispatchCtx.tileSize.y) };
 
@@ -424,9 +442,9 @@ namespace Pathtracer {
                     Kernel::dispatchCUDAPathtracerKernel(
                         this->cudaImages[dispatchCtx.currentFrame].surface,
                         (Kernel::vec4*)this->d_accImage,
-                        USE_BVH ? (Kernel::BVHNode*)this->sceneDeviceBuffers[DeviceBufferIndex::BVH_NODES] : nullptr,
-                        USE_BVH4 ? (Kernel::BVH4Node*)this->sceneDeviceBuffers[DeviceBufferIndex::BVH_NODES] : nullptr,
-                        (!USE_BVH && !USE_BVH4) ? (Kernel::KdNode*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_NODES] : nullptr,
+                        bvhNodes,
+                        bvh4Nodes,
+                        kdNodes,
                         (uint32_t*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_INDICES],
                         (Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLES],
                         (Kernel::Vertex*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTICES],
@@ -438,8 +456,7 @@ namespace Pathtracer {
                         triangleCount,
                         emissiveTriangleCount,
                         dispatchCtx.lightBounces,
-                        USE_BVH,
-                        USE_BVH4,
+                        accelerationStructureType,
                         USE_STATS
                     );
                     //nvtxRangePop();

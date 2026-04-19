@@ -260,21 +260,19 @@ namespace Pathtracer {
             Pathtracer::SpecializedConstants spec = {
                 .useNEE = VK_TRUE,
                 .useMIS = VK_TRUE,
-                .useBVH = this->activeTreeType == Pathtracer::AccelerationStructureType::BVH,
-                .useBVH4 = this->activeTreeType == Pathtracer::AccelerationStructureType::BVH4,
+                .accelerationStructureType = static_cast<uint32_t>(this->activeTreeType),
                 .useStats = this->pathtracerConfig.ShouldGetStatsAS()
             };
 
             VkSpecializationMapEntry entries[] = {
                 { 1, offsetof(Pathtracer::SpecializedConstants, useNEE), sizeof(VkBool32) },
                 { 2, offsetof(Pathtracer::SpecializedConstants, useMIS), sizeof(VkBool32) },
-                { 3, offsetof(Pathtracer::SpecializedConstants, useBVH), sizeof(VkBool32) },
-                { 4, offsetof(Pathtracer::SpecializedConstants, useBVH4), sizeof(VkBool32) },
+                { 3, offsetof(Pathtracer::SpecializedConstants, accelerationStructureType), sizeof(uint32_t) },
                 { 5, offsetof(Pathtracer::SpecializedConstants, useStats), sizeof(VkBool32) }
             };
 
             VkSpecializationInfo specInfo{
-                .mapEntryCount = 5,
+                .mapEntryCount = 4,
                 .pMapEntries = entries,
                 .dataSize = sizeof(Pathtracer::SpecializedConstants),
                 .pData = &spec
@@ -296,10 +294,7 @@ namespace Pathtracer {
         void init(const SceneData& sceneData) override {
             const uint32_t WIDTH = this->pathtracerConfig.GetResolution().x, HEIGHT = this->pathtracerConfig.GetResolution().y;
 
-            const bool isBVH = std::holds_alternative<std::vector<BVH::Node>>(sceneData.tree);
-            const bool isBVH4 = std::holds_alternative<std::vector<BVH4::Node>>(sceneData.tree);
-            this->activeTreeType = isBVH4 ? Pathtracer::AccelerationStructureType::BVH4
-                : (isBVH ? Pathtracer::AccelerationStructureType::BVH : Pathtracer::AccelerationStructureType::KD_TREE);
+            this->activeTreeType = sceneData.accelerationStructureType;
             
             createPathtracerImages();
             createDescriptorSetLayout();
@@ -325,11 +320,8 @@ namespace Pathtracer {
             Buffer stagingAcc = Buffer(this->vkCtx.physicalDevice, this->vkCtx.device, WIDTH * HEIGHT * sizeof(glm::vec4), nullptr, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             this->stagingBuffers.push_back(std::move(stagingAcc));
 
-            std::visit([&](auto const& nodes) {
-                SSBOs.emplace_back( createStorageBuffer(nodes.size() * sizeof(nodes[0]), nodes.data() ) );
-            }, sceneData.tree);
-
             if (this->activeTreeType == Pathtracer::AccelerationStructureType::BVH) {
+                SSBOs.emplace_back(createStorageBuffer(sceneData.bvhNodes.size() * sizeof(BVH::Node), sceneData.bvhNodes.data()));
                 createSSBO(SSBOs.back().buffer, SSBOBinding::BVH_NODES);
                 // Dummy
                 SSBOs.emplace_back(createStorageBuffer(4, nullptr));
@@ -342,6 +334,7 @@ namespace Pathtracer {
                 createSSBO(SSBOs.back().buffer, SSBOBinding::BVH4_NODES);
             }
             else if (this->activeTreeType == Pathtracer::AccelerationStructureType::BVH4) {
+                SSBOs.emplace_back(createStorageBuffer(sceneData.bvh4Nodes.size() * sizeof(BVH4::Node), sceneData.bvh4Nodes.data()));
                 SSBOs.emplace_back(createStorageBuffer(4, nullptr));
                 createSSBO(SSBOs.back().buffer, SSBOBinding::BVH_NODES);
 
@@ -351,9 +344,10 @@ namespace Pathtracer {
                 SSBOs.emplace_back(createStorageBuffer(4, nullptr));
                 createSSBO(SSBOs.back().buffer, SSBOBinding::KDTREE_INDICES);
 
-                createSSBO(SSBOs[0].buffer, SSBOBinding::BVH4_NODES);
+                createSSBO(SSBOs.front().buffer, SSBOBinding::BVH4_NODES);
             }
             else {
+                SSBOs.emplace_back(createStorageBuffer(sceneData.kdNodes.size() * sizeof(KdTree::Node), sceneData.kdNodes.data()));
                 createSSBO(SSBOs.back().buffer, SSBOBinding::KDTREE_NODES);
                 // Dummy
                 SSBOs.emplace_back(createStorageBuffer(4, nullptr));

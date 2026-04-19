@@ -80,7 +80,7 @@ namespace Kernel {
         unsigned int triangleCount;
         unsigned int lightCount;
         unsigned int lightBounces;
-        bool USE_BVH;
+        int accelerationStructureType;
         bool USE_STATS;
     };
     */

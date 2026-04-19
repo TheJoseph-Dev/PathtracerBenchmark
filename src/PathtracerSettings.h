@@ -26,8 +26,7 @@ namespace Pathtracer {
     struct SpecializedConstants {
         VkBool32 useNEE = VK_TRUE;
         VkBool32 useMIS = VK_TRUE;
-        VkBool32 useBVH = VK_TRUE;
-        VkBool32 useBVH4 = VK_FALSE;
+        uint32_t accelerationStructureType = 0;
         VkBool32 useStats = VK_TRUE;
     };
 

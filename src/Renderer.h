@@ -670,78 +670,59 @@ private:
         OBJLoader::MeshGeometry mergedMesh{ objVertices, triangles };
 
         std::vector<uint32_t> indices = {};
-        std::variant<std::vector<BVH::Node>, std::vector<BVH4::Node>, std::vector<KdTree::Node>> treeVariant;
+        std::vector<BVH::Node> bvhNodes;
+        std::vector<BVH4::Node> bvh4Nodes;
+        std::vector<KdTree::Node> kdNodes;
 
-        if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH4) {
-            BVH4 bvh4 = BVH4(mergedMesh);
+        auto measureBuildTime = [&](auto&& buildFn) {
             auto t0 = std::chrono::high_resolution_clock::now();
-            bvh4.Build();
+            buildFn();
             auto t1 = std::chrono::high_resolution_clock::now();
             pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
+        };
 
-            auto bvh4t = bvh4.GetTriangles();
-
-            // Reordering to match BVH leaf partitions (triIdx; triCount) in CUDA traversal
+        auto reorderTriangles = [&](const auto& reorderedTrianglesRef) {
             std::vector<OBJLoader::Triangle> reordered(triangles.size());
-            for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[bvh4t[i].oIdx];
+            for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[reorderedTrianglesRef[i].oIdx];
             triangles = std::move(reordered);
+        };
 
-            const std::vector<BVH4::Node>& tree = bvh4.GetTree();
-            treeVariant = tree;
-            pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
+        switch (this->pathtracerConfig.GetAccelerationStructureType()) {
+        case Pathtracer::AccelerationStructureType::BVH4: {
+            BVH4 bvh4(mergedMesh);
+            measureBuildTime([&]() { bvh4.Build(); });
+            reorderTriangles(bvh4.GetTriangles());
+            bvh4Nodes = bvh4.GetTree();
+            pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(bvh4Nodes.size() * sizeof(BVH4::Node));
+            break;
         }
-        else if (this->pathtracerConfig.GetAccelerationStructureType() == Pathtracer::AccelerationStructureType::BVH) {
-            BVH bvh = BVH(mergedMesh);
-            auto t0 = std::chrono::high_resolution_clock::now();
-            bvh.Build();
-            auto t1 = std::chrono::high_resolution_clock::now();
-            pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
-
-            auto bvht = bvh.GetTriangles();
-
-            // Reordering to match BVH partitions (triIdx; triCount) in the shader
-            std::vector<OBJLoader::Triangle> reordered(triangles.size());
-            for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[bvht[i].oIdx];
-            triangles = std::move(reordered);
-
-            const std::vector<BVH::Node>& tree = bvh.GetTree();
-            treeVariant = tree;
-            pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
+        case Pathtracer::AccelerationStructureType::BVH: {
+            BVH bvh(mergedMesh);
+            measureBuildTime([&]() { bvh.Build(); });
+            reorderTriangles(bvh.GetTriangles());
+            bvhNodes = bvh.GetTree();
+            pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(bvhNodes.size() * sizeof(BVH::Node));
+            break;
         }
-        else {
-            KdTree kdh = KdTree(mergedMesh);
-            auto t0 = std::chrono::high_resolution_clock::now();
-            kdh.Build();
-            auto t1 = std::chrono::high_resolution_clock::now();
-            pathtracerStatistics.accStructBuildTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0f;
-            //kdh.Print();
-
-            const std::vector<KdTree::Node>& tree = kdh.GetTree();
-            treeVariant = tree;
-            pathtracerStatistics.accStructMemoryUsage = tree.size() * sizeof(tree[0]);
-
-            /*
-            objVertices = kdh.GetVertices();
-            triangles = kdh.GetTriangles();
-            */
-
+        case Pathtracer::AccelerationStructureType::KD_TREE:
+        default: {
+            KdTree kdh(mergedMesh);
+            measureBuildTime([&]() { kdh.Build(); });
+            kdNodes = kdh.GetTree();
+            pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(kdNodes.size() * sizeof(KdTree::Node));
             indices = kdh.GetIndices();
-
-
-            /*
-            for (uint32_t idx = 0; idx < triangles.size(); idx++) {
-                printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.x].position.x, objVertices[triangles[idx].indices.x].position.y, objVertices[triangles[idx].indices.x].position.z);
-                printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.y].position.x, objVertices[triangles[idx].indices.y].position.y, objVertices[triangles[idx].indices.y].position.z);
-                printf("v %.2f %.2f %.2f\n", objVertices[triangles[idx].indices.z].position.x, objVertices[triangles[idx].indices.z].position.y, objVertices[triangles[idx].indices.z].position.z);
-            }
-            */
+            break;
+        }
         }
 
         Pathtracer::ComputeBackend::SceneData sceneData = {
+            .accelerationStructureType = this->pathtracerConfig.GetAccelerationStructureType(),
             .vertices = objVertices,
             .triangles = triangles,
             .lightTriangles = lightTris,
-            .tree = std::move(treeVariant),
+            .bvhNodes = bvhNodes,
+            .bvh4Nodes = bvh4Nodes,
+            .kdNodes = kdNodes,
             .indices_kdtree = indices,
             .materials = materials
         };

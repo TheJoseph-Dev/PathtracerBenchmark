@@ -10,7 +10,6 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <optional>
-#include <variant>
 #include <span>
 
 namespace Pathtracer {
@@ -40,10 +39,13 @@ namespace Pathtracer {
         };
 
         struct SceneData {
+            AccelerationStructureType accelerationStructureType;
             std::span<const OBJLoader::Vertex> vertices;
             std::span<const OBJLoader::Triangle> triangles;
             std::span<const OBJLoader::Triangle> lightTriangles;
-            std::variant<std::vector<BVH::Node>, std::vector<BVH4::Node>, std::vector<KdTree::Node>> tree;
+            std::span<const BVH::Node> bvhNodes;
+            std::span<const BVH4::Node> bvh4Nodes;
+            std::span<const KdTree::Node> kdNodes;
             std::span<const uint32_t> indices_kdtree;
             std::span<const OBJLoader::Material> materials;
         };
