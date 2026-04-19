@@ -57,6 +57,14 @@ namespace Pathtracer {
         //virtual void cleanup() = 0;
         virtual void sync(const SyncContext& syncCtx) const = 0;
 
+        // Default behavior: dispatch before graphics submit.
+        virtual void dispatchBeforeGraphicsSubmit(const DispatchConext& dispatchCtx) { dispatch(dispatchCtx); }
+        // Backends that need post-submit execution can override this.
+        virtual void dispatchAfterGraphicsSubmit(const DispatchConext&) {}
+
+        // Fragment shader sampling layout for pathtracer output images.
+        virtual VkImageLayout getFragmentSampledImageLayout() const { return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; }
+
         [[nodiscard]]
         virtual double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const = 0;
 

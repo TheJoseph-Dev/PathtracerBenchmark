@@ -754,20 +754,27 @@ private:
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
 
-    void dispatchCompute(VkCommandBuffer commandBuffer, int currentFrame) {
+    Pathtracer::ComputeBackend::DispatchConext createDispatchContext(VkCommandBuffer commandBuffer, int currentFrame) const {
         /*
         A timestamp query measures GPU time between two points in the command buffer
         It does not measure "this dispatch" unless you bracket it
         */
 
-        Pathtracer::ComputeBackend::DispatchConext dispatchCtx = {
+        return {
             .commandBuffer = commandBuffer,
             .currentFrame = (uint32_t)currentFrame,
             .textureIndex = (uint32_t)textureIndex,
             .tileSize = this->pathtracerConfig.GetTileSize(),
             .lightBounces = this->pathtracerConfig.GetLightBounces()
         };
-        this->computeBackend->dispatch(dispatchCtx);
+    }
+
+    void dispatchComputeBeforeGraphicsSubmit(VkCommandBuffer commandBuffer, int currentFrame) {
+        this->computeBackend->dispatchBeforeGraphicsSubmit(createDispatchContext(commandBuffer, currentFrame));
+    }
+
+    void dispatchComputeAfterGraphicsSubmit(int currentFrame) {
+        this->computeBackend->dispatchAfterGraphicsSubmit(createDispatchContext(VK_NULL_HANDLE, currentFrame));
     }
 
     void createCommandPool() {
@@ -904,7 +911,7 @@ private:
         create2DLinearImageSampler();
         for (int i = 0; i < PING_PONG_FRAMES; i++)
             // Fragment shader reads current frame image
-            Vulkan::updateCombinedImageSamplerDescriptorSet(device, fragDescriptorSet[i], 0, fragImageSampler, this->computeBackend->getPathtracerImageView(i), pathtracerConfig.GetComputeBackendType() == Pathtracer::CUDA_T ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            Vulkan::updateCombinedImageSamplerDescriptorSet(device, fragDescriptorSet[i], 0, fragImageSampler, this->computeBackend->getPathtracerImageView(i), this->computeBackend->getFragmentSampledImageLayout());
 
 
         // Dynamic State
@@ -1333,8 +1340,7 @@ public:
         swapchainImageLayouts[imageIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         this->computeBackend->updateFrameContext(&pathtracerState, sizeof(pathtracerState));
-        if(this->pathtracerConfig.GetComputeBackendType() == Pathtracer::SPIRV_T)
-            dispatchCompute(this->commandBuffers[currentFrame], currentFrame);
+        dispatchComputeBeforeGraphicsSubmit(this->commandBuffers[currentFrame], currentFrame);
 
         VkRenderingAttachmentInfo colorAttachment{};
         colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -1434,9 +1440,7 @@ public:
             return;
         }
 
-        // Dispatching here due to sync problems
-        if (this->pathtracerConfig.GetComputeBackendType() == Pathtracer::CUDA_T)
-            dispatchCompute(VK_NULL_HANDLE, currentFrame);
+        dispatchComputeAfterGraphicsSubmit(currentFrame);
 
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

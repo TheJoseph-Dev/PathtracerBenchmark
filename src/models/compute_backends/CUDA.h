@@ -513,6 +513,16 @@ namespace Pathtracer {
                 printf("CUDA Signal error: %s\n", cudaGetErrorString(e));
 		};
 
+        void dispatchBeforeGraphicsSubmit(const DispatchConext&) override {}
+
+        void dispatchAfterGraphicsSubmit(const DispatchConext& dispatchCtx) override {
+            dispatch(dispatchCtx);
+        }
+
+        VkImageLayout getFragmentSampledImageLayout() const override {
+            return VK_IMAGE_LAYOUT_GENERAL;
+        }
+
 		void updateFrameContext(const FrameContext* newData, uint64_t size) const override {
             cudaMemcpy(this->d_frameContext, newData, size, cudaMemcpyHostToDevice);
 		};
