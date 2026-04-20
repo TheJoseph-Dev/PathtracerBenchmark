@@ -32,7 +32,7 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 
 🟩 **SAH-KdTree**
 
-🟨 **CUDA**
+🟩 **CUDA**
 
 ### Benchmarks
 🟩 **Samples Per Pixel (SPP) benchmark**
@@ -67,9 +67,9 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 
 🟩 SAH
 
-⬜ SoA
+🟨 SoA
 
-⬜ Large BVHs
+🟩 Large BVHs
 
 ⬜ van Emde Boas layout
 
