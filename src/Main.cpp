@@ -79,6 +79,29 @@ static Pathtracer::Config warmupConfig() {
     return pathtracerConfig;
 }
 
+static Pathtracer::Config qaConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype, Pathtracer::ComputeBackendType computeBackendType, uint32_t spp = 64, float rmseThreshold = 0.016f) {
+    using namespace Pathtracer;
+    Benchmark benchmarkInfo = {};
+    benchmarkInfo.btype = BenchmarkType::IMGREF;
+    benchmarkInfo.spp = spp;
+    benchmarkInfo.useSPPLadder = false;
+    benchmarkInfo.rmseThreshold = rmseThreshold;
+
+    Config pathtracerConfig(
+        acctype,
+        computeBackendType,
+        scene,
+        Resolution::R1024x1024,
+        8,
+        benchmarkInfo,
+        glm::uvec2(256, 256),
+        false,
+        false,
+        false
+    );
+    return pathtracerConfig;
+}
+
 int main() {
 
     {
@@ -90,6 +113,12 @@ int main() {
     {
         using namespace Pathtracer;
         App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
+        pathtracer.run();
+    }
+
+    {
+        using namespace Pathtracer;
+        App pathtracer(qaConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
         pathtracer.run();
     }
 

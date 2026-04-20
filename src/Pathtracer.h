@@ -174,7 +174,11 @@ namespace Pathtracer {
             stats.fps = currentSPP / stats.elapsedTotalTime;
             stats.avgKernelTime /= currentSPP;
 
-            if (!this->config.ShouldSaveStatistics()) return;
+            if (!this->config.ShouldSaveStatistics()) {
+                if (binfo.btype == IMGREF && !binfo.useSPPLadder)
+                    this->SaveStatistics(stats, binfo);
+                return;
+            }
             std::streambuf* stdoutbuf = std::cout.rdbuf();
             std::ofstream filebuf(RESOURCE("outputs\\stats.txt"), std::ios::app);
             std::cout.rdbuf(filebuf.rdbuf());
@@ -186,6 +190,14 @@ namespace Pathtracer {
         }
 
         void imgrefBenchmark() {
+            Pathtracer::Benchmark binfo = config.GetBenchmarkInfo();
+
+            if (!binfo.useSPPLadder) {
+                if (binfo.spp == 0) config.SetSPP(1);
+                sppBenchmark();
+                return;
+            }
+
             //const uint32_t sppLadder[] = { 1, 4, 16, 64, 256, 1024, 4096 };
             uint32_t spp = 1;
             for (int i = 0; i < 7; i++) {
@@ -212,9 +224,16 @@ namespace Pathtracer {
                 << "\n Acc. Structure Build Time: " << (stats.accStructBuildTime < 1e-3 ? "< 1 ms" : std::to_string(stats.accStructBuildTime)) << " s\n"
                 << "\n Acc. Structure Memory: " << stats.accStructMemoryUsage << " bytes (Nodes only)\n\n";
 
-            if (binfo.btype == IMGREF)
+            if (binfo.btype == IMGREF) {
                 std::cout << "\n RMSE: " << stats.rmse
                           << "\n PSNR: " << stats.psnr << "\n\n";
+
+                if (!binfo.useSPPLadder && binfo.rmseThreshold >= 0.0f) {
+                    const bool qaPass = stats.rmse <= binfo.rmseThreshold;
+                    std::cout << " QA RMSE Threshold: " << binfo.rmseThreshold
+                              << "\n QA Result: " << (qaPass ? "PASS" : "FAIL") << "\n\n";
+                }
+            }
         }
     };
 }

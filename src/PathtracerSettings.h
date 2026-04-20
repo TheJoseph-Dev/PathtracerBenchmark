@@ -33,7 +33,8 @@ namespace Pathtracer {
     /*
         NONE: Pathtracer runs indefinitely
         SPP: Pathtracer runs for a fixed number of frames/spp (samples per pixel). This yields runtime and tree build and traversal statistics
-        IMGREF: Pathtracer runs with ladder of spp (1,4,16,64,256,...) for 2 images using different techniques and store the RMSE and PSNR
+        IMGREF: Pathtracer compares rendered output against a fixed scene reference image.
+                By default it runs the SPP ladder (1,4,16,64,...) but it can also run a single SPP pass for QA.
     */
     enum BenchmarkType {
         NONE = 0,
@@ -43,8 +44,10 @@ namespace Pathtracer {
 
 
     struct Benchmark {
-        BenchmarkType btype;
-        uint32_t spp;
+        BenchmarkType btype = BenchmarkType::NONE;
+        uint32_t spp = 0;
+        bool useSPPLadder = true;
+        float rmseThreshold = -1.0f;
     };
 
     enum AccelerationStructureType {

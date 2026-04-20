@@ -4237,3 +4237,34 @@
 
  Acc. Structure Memory: 336 bytes (Nodes only)
 
+[Config]
+ Date/Time: 2026-04-20 02:28:25
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: cornell_box
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342800921
+ TRAVERSALS: 1819752600
+ ISECS: 5645381709
+
+ RAYS/s: 6.48875e+07
+ NODES/RAY: 5.30848
+ ISECS/RAY: 16.4684
+
+ Total Elapsed Time: 5.283 s
+
+ FPS: 12.1143 spp/s
+
+ Avg. Kernel Time: 79.2513 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
