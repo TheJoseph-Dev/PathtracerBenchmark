@@ -37,7 +37,8 @@ static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::Accel
         benchmarkInfo,
         glm::uvec2(256, 256),
         true,
-        true
+        true,
+        false
     );
     return pathtracerConfig;
 }

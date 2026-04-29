@@ -84,6 +84,16 @@ namespace Pathtracer {
             return (arch && *arch) ? std::string("Windows CPU (") + arch + ")" : "Unknown CPU";
         }
 
+        static std::string CsvEscape(const std::string& value) {
+            std::string escaped;
+            escaped.reserve(value.size());
+            for (char ch : value) {
+                if (ch == '"') escaped += "\"\"";
+                else escaped += ch;
+            }
+            return "\"" + escaped + "\"";
+        }
+
         void SaveMarkdownBenchmark(const Pathtracer::Statistics& stats, const Pathtracer::Benchmark& binfo) const {
             std::ofstream md(RESOURCE("outputs\\benchmark-" + std::format("{:%Y%m%d%H%M%S}", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now())) + ".md"), std::ios::trunc);
             if (!md.is_open()) return;
@@ -146,6 +156,64 @@ namespace Pathtracer {
             }
         }
 
+        void SaveCsvBenchmark(const Pathtracer::Statistics& stats, const Pathtracer::Benchmark& binfo) const {
+            std::ofstream csv(RESOURCE("outputs\\benchmark.csv"), std::ios::app);
+            if (!csv.is_open()) return;
+
+            if (csv.tellp() == 0) {
+                csv << "DateTime,CPU,GPU,BenchmarkType,Scene,ComputeBackend,AccelerationStructure,Resolution,TileSize,SPP,LightBounces,"
+                       "Triangles,Rays,Traversals,Intersections,RaysPerSecond,NodesPerRay,IntersectionsPerRay,TotalElapsedSeconds,FPS,"
+                       "AvgKernelMs,AccStructBuildSeconds,AccStructMemoryBytes,RMSE,PSNR,QARmseThreshold,QAResult\n";
+            }
+
+            const glm::uvec2 resolution = this->config.GetResolution();
+            const glm::uvec2 tileSize = this->config.GetTileSize();
+            const double raysPerSecond = stats.elapsedTotalTime > 0.0f
+                ? static_cast<double>(stats.treeStats.rays) / stats.elapsedTotalTime
+                : 0.0;
+            const double nodesPerRay = stats.treeStats.rays > 0
+                ? static_cast<double>(stats.treeStats.traversals) / stats.treeStats.rays
+                : 0.0;
+            const double intersectionsPerRay = stats.treeStats.rays > 0
+                ? static_cast<double>(stats.treeStats.isecs) / stats.treeStats.rays
+                : 0.0;
+
+            const bool isImgRef = binfo.btype == Pathtracer::IMGREF;
+            const bool qaApplicable = isImgRef && !binfo.useSPPLadder && binfo.rmseThreshold >= 0.0f;
+            const std::string rmseText = isImgRef ? std::to_string(stats.rmse) : "";
+            const std::string psnrText = isImgRef ? std::to_string(stats.psnr) : "";
+            const std::string qaThresholdText = qaApplicable ? std::to_string(binfo.rmseThreshold) : "";
+            const std::string qaResultText = qaApplicable ? (stats.rmse <= binfo.rmseThreshold ? "PASS" : "FAIL") : "";
+
+            csv << CsvEscape(GetCurrentDateTime()) << ','
+                << CsvEscape(GetCPUName()) << ','
+                << CsvEscape(this->vulkanRenderer->GetGPUName()) << ','
+                << CsvEscape(GetBenchmarkTypeName(binfo.btype)) << ','
+                << CsvEscape(this->config.GetScene()) << ','
+                << CsvEscape(GetComputeBackendName(this->config.GetComputeBackendType())) << ','
+                << CsvEscape(GetAccelerationStructureName(this->config.GetAccelerationStructureType())) << ','
+                << CsvEscape(std::to_string(resolution.x) + "x" + std::to_string(resolution.y)) << ','
+                << CsvEscape(std::to_string(tileSize.x) + "x" + std::to_string(tileSize.y)) << ','
+                << binfo.spp << ','
+                << this->config.GetLightBounces() << ','
+                << stats.sceneTriangles << ','
+                << stats.treeStats.rays << ','
+                << stats.treeStats.traversals << ','
+                << stats.treeStats.isecs << ','
+                << raysPerSecond << ','
+                << nodesPerRay << ','
+                << intersectionsPerRay << ','
+                << stats.elapsedTotalTime << ','
+                << stats.fps << ','
+                << stats.avgKernelTime << ','
+                << stats.accStructBuildTime << ','
+                << stats.accStructMemoryUsage << ','
+                << rmseText << ','
+                << psnrText << ','
+                << qaThresholdText << ','
+                << (qaResultText.empty() ? "" : CsvEscape(qaResultText)) << '\n';
+        }
+
         void initWindow() {
             glfwInit();
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -187,6 +255,7 @@ namespace Pathtracer {
             std::cout.rdbuf(stdoutbuf);
             this->SaveStatistics(stats, binfo);
             this->SaveMarkdownBenchmark(stats, binfo);
+            this->SaveCsvBenchmark(stats, binfo);
         }
 
         void imgrefBenchmark() {
