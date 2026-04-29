@@ -1,7 +1,7 @@
 #ifndef ACCSTRUCT_H
 #define ACCSTRUCT_H
 #include <glm/glm.hpp>
-#include "models/io/OBJLoader.h"
+#include "include/io/OBJLoader.h"
 
 class AccelerationStructure {
 public:

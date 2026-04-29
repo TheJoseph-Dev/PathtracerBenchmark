@@ -2,6 +2,8 @@
 **/build/
 **/out/
 *.blend1
+/debug
+*.venv
 *.exp
 *.lib
 src/resources/outputs/*.md

@@ -12,20 +12,20 @@
 #include <optional>
 #include <chrono>
 #include <glm/glm.hpp>
-#include "models/io/OBJLoader.h"
-#include "models/io/EXR.h"
-#include "models/io/PPM.h"
-#include "models/acceleration_structures/BVH.h"
-#include "models/acceleration_structures/BVH4.h"
-#include "models/acceleration_structures/KdTreeBinned.h"
-#include "models/acceleration_structures/KdTree.h"
-#include "models/vulkan/Buffer.h"
-#include "models/vulkan/Shader.h"
-#include "models/vulkan/Vulkan.h"
+#include "include/io/OBJLoader.h"
+#include "include/io/EXR.h"
+#include "include/io/PPM.h"
+#include "include/acceleration_structures/BVH.h"
+#include "include/acceleration_structures/BVH4.h"
+#include "include/acceleration_structures/KdTreeBinned.h"
+#include "include/acceleration_structures/KdTree.h"
+#include "include/vulkan/Buffer.h"
+#include "include/vulkan/Shader.h"
+#include "include/vulkan/Vulkan.h"
 #include "PathtracerSettings.h"
-#include "models/compute_backends/SPIRV.h"
+#include "include/compute_backends/SPIRV.h"
 #ifdef HAS_CUDA
-#include "models/compute_backends/CUDA.h"
+#include "include/compute_backends/CUDA.h"
 #endif
 
 #ifdef DEBUG

@@ -2,7 +2,7 @@
 #define SPIRV_BACKEND_H
 
 #include "ComputeBackend.h"
-#include "models/vulkan/Shader.h"
+#include "include/vulkan/Shader.h"
 
 namespace Pathtracer {
 	class SPIRV final : public ComputeBackend {

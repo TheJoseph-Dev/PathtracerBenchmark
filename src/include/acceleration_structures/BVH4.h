@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 #include <glm/glm.hpp>
-#include "models/io/OBJLoader.h"
+#include "include/io/OBJLoader.h"
 #include "AccelerationStructure.h"
 
 class BVH4 final : public AccelerationStructure {

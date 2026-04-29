@@ -2,11 +2,11 @@
 #define COMPUTE_BACKEND_H
 
 #include "PathtracerSettings.h"
-#include "models/vulkan/Buffer.h"
-#include "models/acceleration_structures/BVH.h"
-#include "models/acceleration_structures/BVH4.h"
-#include "models/acceleration_structures/KdTree.h"
-#include "models/Helper.h"
+#include "include/vulkan/Buffer.h"
+#include "include/acceleration_structures/BVH.h"
+#include "include/acceleration_structures/BVH4.h"
+#include "include/acceleration_structures/KdTree.h"
+#include "include/Helper.h"
 #include <vector>
 #include <glm/glm.hpp>
 #include <optional>
