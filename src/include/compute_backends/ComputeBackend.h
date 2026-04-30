@@ -58,31 +58,22 @@ namespace Pathtracer {
         virtual void sync(const SyncContext& syncCtx) const = 0;
 
         // Default behavior: dispatch before graphics submit.
-        virtual void dispatchBeforeGraphicsSubmit(const DispatchConext& dispatchCtx) { dispatch(dispatchCtx); }
+        virtual void dispatchBeforeGraphicsSubmit(const DispatchConext& dispatchCtx);
         // Backends that need post-submit execution can override this.
-        virtual void dispatchAfterGraphicsSubmit(const DispatchConext&) {}
+        virtual void dispatchAfterGraphicsSubmit(const DispatchConext&);
 
         // Fragment shader sampling layout for pathtracer output images.
-        virtual VkImageLayout getFragmentSampledImageLayout() const { return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; }
+        virtual VkImageLayout getFragmentSampledImageLayout() const;
 
         [[nodiscard]]
         virtual double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const = 0;
 
-        ComputeBackend(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfig) : vkCtx(vkCtx), pathtracerConfig(pathtracerConfig) {
-        
-        }
+        ComputeBackend(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfig);
 
-        virtual ~ComputeBackend() {
-            for (uint32_t i = 0; i < PATHTRACER_IMG_COUNT; ++i) {
-                vkDestroyImageView(vkCtx.device, pathtracerImageViews[i], nullptr);
-                vkDestroyImage(vkCtx.device, pathtracerImages[i], nullptr);
-                vkFreeMemory(vkCtx.device, pathtracerImagesMemory[i], nullptr);
-            }
-            vkDestroySampler(this->vkCtx.device, this->pathtracerImageSampler, nullptr);
-        };
+        virtual ~ComputeBackend();
         virtual TreeStatistics getBackendStatistics() = 0;
         virtual void getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) = 0;
-        inline VkImageView getPathtracerImageView(uint32_t index) const { return this->pathtracerImageViews[index]; }
+        VkImageView getPathtracerImageView(uint32_t index) const;
     
     protected:
         VulkanContext vkCtx;
