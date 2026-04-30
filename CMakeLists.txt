@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Vulkan REQUIRED)
 option(ENABLE_CUDA "Enable CUDA backend" ON)
+option(BUILD_TESTS "Build unit tests" ON)
 message(STATUS "ENABLE_CUDA = ${ENABLE_CUDA}")
 
 if(ENABLE_CUDA)
@@ -16,6 +17,17 @@ if(ENABLE_CUDA)
 endif()
 
 add_subdirectory(vendor/glfw)
+
+if(BUILD_TESTS)
+    include(FetchContent)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.5.4
+    )
+    FetchContent_MakeAvailable(Catch2)
+    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+endif()
 
 include_directories(
     vendor/glfw/include
@@ -85,3 +97,16 @@ add_custom_target(CompileShaders ALL
     VERBATIM
 )
 add_dependencies(PathtracerBenchmark CompileShaders)
+if(BUILD_TESTS)
+    enable_testing()
+    file(GLOB_RECURSE TEST_SOURCES "tests/*.cpp" "tests/*/*.cpp" "tests/*/*/*.cpp")
+    if(TEST_SOURCES)
+        add_executable(PathtracerTests ${TEST_SOURCES})
+        target_link_libraries(PathtracerTests PRIVATE Catch2::Catch2WithMain)
+        target_include_directories(PathtracerTests PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/tests)
+
+        include(CTest)
+        include(Catch)
+        catch_discover_tests(PathtracerTests)
+    endif()
+endif()
