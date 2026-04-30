@@ -57,7 +57,7 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 - Vulkan (SPIR-V)
 - CUDA
 
-🟨 **Benchmark automation** 
+🟩 **Benchmark automation** 
 - Many benchmarks at single run
 - Automatic resume files, infos and outputs
 
@@ -78,8 +78,6 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 ⬜ Wavefront Pathtracing
 
 ⬜ Metropolis Light Transport
-
-⬜ NeRF
 
 ⬜ ReSTIR
 
