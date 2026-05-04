@@ -975,6 +975,8 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
 void main()
 {
+    uint lid = gl_LocalInvocationID.x;
+    if (lid >= pc.ct.tileSize.x/2) return;
     iResolution = pathtracerState.iResolution;
     iTime = pathtracerState.iTime;
     iFrame = pathtracerState.iFrame;

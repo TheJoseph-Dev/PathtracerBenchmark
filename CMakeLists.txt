@@ -60,3 +60,28 @@ if(CUDAToolkit_FOUND AND ENABLE_CUDA)
     target_link_libraries(PathtracerBenchmark CUDA::cudart)
     target_include_directories(PathtracerBenchmark PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 endif()
+
+# ============================================================
+# Compile shaders into resources/shaders
+# ============================================================
+find_program(GLSLC glslc)
+if(NOT GLSLC)
+    message(FATAL_ERROR "glslc not found. Please install the Vulkan SDK.")
+endif()
+
+set(SHADER_SOURCE_DIR "${CMAKE_SOURCE_DIR}/src/resources/shaders")
+
+# Compile shaders on every build so Visual Studio never reuses stale SPIR-V
+set(PATHTRACER_SPV "${SHADER_SOURCE_DIR}/pathtracer.spv")
+set(VERT_SPV "${SHADER_SOURCE_DIR}/vert.spv")
+set(FRAG_SPV "${SHADER_SOURCE_DIR}/frag.spv")
+
+add_custom_target(CompileShaders ALL
+    COMMAND ${GLSLC} -o "${PATHTRACER_SPV}" "${SHADER_SOURCE_DIR}/pathtracer.comp"
+    COMMAND ${GLSLC} -o "${VERT_SPV}" "${SHADER_SOURCE_DIR}/quad.vert"
+    COMMAND ${GLSLC} -o "${FRAG_SPV}" "${SHADER_SOURCE_DIR}/quad.frag"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Compiling shaders"
+    VERBATIM
+)
+add_dependencies(PathtracerBenchmark CompileShaders)

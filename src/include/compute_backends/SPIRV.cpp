@@ -22,6 +22,23 @@ SPIRV::~SPIRV() {
 	stagingBuffers.clear();
 }
 
+uint32_t SPIRV::getOptimalLocalSize() const {
+	// Calculate local_size_x as half of tile size X, clamped to valid range
+	uint32_t tileX = static_cast<uint32_t>(pathtracerConfig.GetTileSize().x);
+	uint32_t localSize = tileX / 2;
+	
+	// Clamp to available variants: 32, 64, 128, 256
+	/*
+	if (localSize < 32) localSize = 32;
+	else if (localSize < 64) localSize = 64;
+	else if (localSize < 128) localSize = 128;
+	else if (localSize < 256) localSize = 256;
+	else localSize = 256;  // Cap at max
+	*/
+	
+	return localSize;
+}
+
 void SPIRV::updateFrameContext(const FrameContext* newData, uint64_t size) const {
 	void* data;
 	vkMapMemory(vkCtx.device, this->UBO.memory, 0, size, 0, &data);
@@ -234,7 +251,11 @@ void SPIRV::createComputePipeline() {
 	};
 
 	// Compute pipeline
-	Shader pathtracerComputeShader = Shader("shaders\\pathtracer.spv", Shader::Type::COMPUTE, this->vkCtx.device);
+	// Load correct pathtracer shader variant based on optimal local size
+	uint32_t optimalLocalSize = getOptimalLocalSize();
+	//std::string pathtracerShaderPath = "shaders\\pathtracer_" + std::to_string(optimalLocalSize) + ".spv";
+	std::string pathtracerShaderPath = "shaders\\pathtracer.spv";
+	Shader pathtracerComputeShader = Shader(pathtracerShaderPath, Shader::Type::COMPUTE, this->vkCtx.device);
 	VkComputePipelineCreateInfo computePipelineInfo{};
 	computePipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	computePipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -393,7 +414,7 @@ void SPIRV::dispatch(const DispatchConext& dispatchCtx) {
 		for (uint32_t tileX = 0; tileX < WIDTH; tileX += TILE_X) {
 			pathtracerPC.ct.tileOffset = { tileX, tileY };
 			vkCmdPushConstants(dispatchCtx.commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::PushConstants), &pathtracerPC);
-			vkCmdDispatch(dispatchCtx.commandBuffer, (TILE_X + Pathtracer::local_size_x - 1) / Pathtracer::local_size_x, (TILE_Y + Pathtracer::local_size_y - 1) / Pathtracer::local_size_y, 1);
+			vkCmdDispatch(dispatchCtx.commandBuffer, (TILE_X + (TILE_X>>1) - 1) / (TILE_X>>1), (TILE_Y + Pathtracer::local_size_y - 1) / Pathtracer::local_size_y, 1);
 		}
 	}
 

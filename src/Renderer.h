@@ -890,8 +890,8 @@ private:
         _getcwd(buffer, FILENAME_MAX);
         std::cout << "Current working directory: " << buffer << std::endl;
 
-        // Shaders
-        system(RESOURCE("shaders\\runtime_compile.bat"));
+        // Shaders - no longer need batch file, CMake handles compilation
+        // system(RESOURCE("shaders\\runtime_compile.bat"));
 
         Shader vertexShader = Shader("shaders\\vert.spv", Shader::Type::VERTEX, this->device);
         Shader fragmentShader = Shader("shaders\\frag.spv", Shader::Type::FRAGMENT, this->device);

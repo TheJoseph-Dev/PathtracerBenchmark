@@ -67,6 +67,7 @@ namespace Pathtracer {
         void createSSBO(const VkBuffer& buffer, uint32_t binding);
         void createDescriptorSetLayout();
         void createComputePipeline();
+        uint32_t getOptimalLocalSize() const;
 
         void init(const SceneData& sceneData) override;
         void dispatch(const DispatchConext& dispatchCtx) override;
