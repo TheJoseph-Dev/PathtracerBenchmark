@@ -1,30 +1,91 @@
 #include "OBJLoader.h"
 
 #include <fstream> // file stream
-#include <sstream> // string stream
-#include <ostream>
+#include <cstdlib>
+#include <cctype>
+#include <string>
 
-//#include "Source/Utils.h"
-
-std::vector<std::string> split(std::string s, const std::string& separator) {
-	std::vector<std::string> splittedString = std::vector<std::string>();
-	while (s.find(separator) != std::string::npos) {
-		std::string token = s.substr(0, s.find(separator));
-		splittedString.emplace_back(token);
-		s.erase(0, s.find(separator) + separator.length());
+namespace {
+	inline const char* SkipSpaces(const char* p) {
+		while (*p == ' ' || *p == '\t' || *p == '\r') ++p;
+		return p;
 	}
 
-	splittedString.emplace_back(s);
+	inline const char* SkipToken(const char* p) {
+		while (*p && *p != ' ' && *p != '\t' && *p != '\r') ++p;
+		return p;
+	}
 
-	return splittedString;
+	inline bool ParseFloat(const char*& p, float& out) {
+		p = SkipSpaces(p);
+		if (!*p) return false;
+		char* end = nullptr;
+		out = std::strtof(p, &end);
+		if (end == p) return false;
+		p = end;
+		return true;
+	}
+
+	inline bool ParseIndexTriplet(const char*& p, int& posIndex, int& texIndex, int& normIndex) {
+		p = SkipSpaces(p);
+		if (!*p) return false;
+		char* end = nullptr;
+		long v = std::strtol(p, &end, 10);
+		if (end == p) return false;
+		posIndex = static_cast<int>(v);
+		p = end;
+		if (*p != '/') return false;
+		++p;
+		long t = std::strtol(p, &end, 10);
+		if (end == p) return false;
+		texIndex = static_cast<int>(t);
+		p = end;
+		if (*p != '/') return false;
+		++p;
+		long n = std::strtol(p, &end, 10);
+		if (end == p) return false;
+		normIndex = static_cast<int>(n);
+		p = end;
+		return true;
+	}
 }
 
 OBJLoader::OBJLoader(const char* filepath) {
-	
-	std::ifstream stream = std::ifstream(filepath);
 	std::cout << filepath << "\n\n";
 
+	std::size_t positionCount = 0;
+	std::size_t texCoordCount = 0;
+	std::size_t normalCount = 0;
+	std::size_t faceCount = 0;
+	{
+		std::ifstream countStream = std::ifstream(filepath);
+		if (countStream) {
+			std::string countLine;
+			while (std::getline(countStream, countLine)) {
+				if (countLine.size() < 2) continue;
+				if (countLine[0] == 'v') {
+					if (countLine[1] == ' ') ++positionCount;
+					else if (countLine[1] == 't') ++texCoordCount;
+					else if (countLine[1] == 'n') ++normalCount;
+				}
+				else if (countLine[0] == 'f' && countLine[1] == ' ') {
+					++faceCount;
+				}
+			}
+		}
+	}
+
+	std::ifstream stream = std::ifstream(filepath);
 	if (!stream) { std::cerr << "ERROR: OBJLoader got a NULL directory\n"; return; }
+
+	if (positionCount) positions.reserve(positionCount);
+	if (texCoordCount) textureCoords.reserve(texCoordCount);
+	if (normalCount) normals.reserve(normalCount);
+	if (faceCount) {
+		objVertices.reserve(faceCount * 3);
+		matIndices.reserve(faceCount);
+		triangles.reserve(faceCount);
+	}
 
 	std::string line;
 
@@ -36,7 +97,7 @@ OBJLoader::OBJLoader(const char* filepath) {
 	
 	// Load Materials
 	if(matStream)
-		while (getline(matStream, line)) {
+		while (std::getline(matStream, line)) {
 			if (line.rfind("newmtl", 0) == 0) {
 				this->matIdxMap[line.substr(7)] = this->mats.size();
 				this->mats.emplace_back();
@@ -56,26 +117,17 @@ OBJLoader::OBJLoader(const char* filepath) {
 
 	while (getline(stream, line)) {
 		if (line.rfind("usemtl", 0) == 0) { this->currentMaterialIndex = this->matIdxMap[line.substr(7)]; continue; }
-		if (line.rfind("v ",  0) == 0)  { this->positions.emplace_back(LoadVectorData(line)); continue; }
-		if (line.rfind("vt", 0) == 0) { this->textureCoords.emplace_back(LoadVectorData(line)); continue; }
-		if (line.rfind("vn", 0) == 0) { this->normals.emplace_back(LoadVectorData(line)); continue; }
+		if (line.size() >= 2 && line[0] == 'v') {
+			if (line[1] == ' ') { this->positions.emplace_back(LoadVectorData(line)); continue; }
+			if (line[1] == 't') { this->textureCoords.emplace_back(LoadVectorData(line)); continue; }
+			if (line[1] == 'n') { this->normals.emplace_back(LoadVectorData(line)); continue; }
+		}
 
-		if (line.rfind("f", 0) == 0) {
-			auto face = LoadFace(line);
-			objVertices.insert(objVertices.end(), face.begin(), face.end());
+		if (line.size() >= 2 && line[0] == 'f' && line[1] == ' ') {
 			this->matIndices.emplace_back(this->currentMaterialIndex);
+			AppendFaceVertices(line);
 			continue;
 		}
-	}
-
-	this->triangles.reserve(objVertices.size()/3);
-	for (int i = 0; i < objVertices.size(); i += 3) {
-		glm::uvec4 indices = {i, i+1, i+2, this->matIndices[i/3] };
-		glm::vec3 v0 = objVertices[i].position;
-		glm::vec3 v1 = objVertices[i + 1].position;
-		glm::vec3 v2 = objVertices[i + 2].position;
-		float area = 0.5f * glm::length(glm::cross(v1 - v0, v2 - v0));
-		this->triangles.push_back({ indices, { area, 0,0,0 }});
 	}
 	//CreateVertexArray(objVertices);
 	//CreateSSBuffer(objVertices);
@@ -83,49 +135,50 @@ OBJLoader::OBJLoader(const char* filepath) {
 
 // v, vt, vn
 glm::vec4 OBJLoader::LoadVectorData(const std::string& data) {
-	const std::string separator = " ";
-	glm::vec4 vData = glm::vec4(0);
-	auto values = split(data, separator);
-	values.erase(values.begin());
-	
-	vData.x = stof(values.at(0));
-	vData.y = stof(values.at(1));
-	if (values.size() > 2) vData.z = stof(values.at(2));
+	glm::vec4 vData = glm::vec4(0.0f);
+	const char* p = data.c_str();
+	p = SkipToken(p);
+
+	float x = 0.0f;
+	float y = 0.0f;
+	float z = 0.0f;
+	if (!ParseFloat(p, x)) return vData;
+	vData.x = x;
+	if (ParseFloat(p, y)) vData.y = y;
+	if (ParseFloat(p, z)) vData.z = z;
 
 	return vData;
 }
 
 // f
-std::vector<OBJLoader::Vertex> OBJLoader::LoadFace(const std::string& face) {
-	std::vector<Vertex> vertices;
+void OBJLoader::AppendFaceVertices(const std::string& face) {
+	const char* p = face.c_str();
+	p = SkipToken(p);
 
-	// f 1/2/3 4/5/6 7/8/9 => (1/2/3), (4/5/6), (7/8/9),
-	const std::string separator = " ";
-	auto triangle = split(face, separator);
+	while (true) {
+		int posIndex = 0;
+		int texCoordIndex = 0;
+		int normIndex = 0;
+		if (!ParseIndexTriplet(p, posIndex, texCoordIndex, normIndex)) break;
 
-	triangle.erase(triangle.begin());
-
-	for (std::string vIndicies : triangle) {
-		//this->triangles.push_back(stoi(split(vIndicies, "/")[0])-1);
-		vertices.emplace_back(CreateVertex(vIndicies));
+		objVertices.emplace_back(CreateVertex(posIndex - 1, texCoordIndex - 1, normIndex - 1));
+		if ((objVertices.size() % 3) == 0) {
+			const size_t i = objVertices.size() - 3;
+			const size_t triIndex = (objVertices.size() / 3) - 1;
+			glm::uvec4 indices = { static_cast<uint32_t>(i), static_cast<uint32_t>(i + 1), static_cast<uint32_t>(i + 2), this->matIndices[triIndex] };
+			glm::vec3 v0 = objVertices[i].position;
+			glm::vec3 v1 = objVertices[i + 1].position;
+			glm::vec3 v2 = objVertices[i + 2].position;
+			float area = 0.5f * glm::length(glm::cross(v1 - v0, v2 - v0));
+			this->triangles.push_back({ indices, { area, 0,0,0 }});
+		}
 	}
-
-	return vertices;
 }
 
 // indicies
-OBJLoader::Vertex OBJLoader::CreateVertex(const std::string& indicies) {
+OBJLoader::Vertex OBJLoader::CreateVertex(int posIndex, int texCoordIndex, int normIndex) {
 	Vertex vertex = Vertex();
 
-	// (1/2/3)
-	std::string separator = "/";
-	auto vertexIndicies = split(indicies, separator);
-
-	int posIndex = stoi(vertexIndicies.at(0)) - 1;
-	int texCoordIndex = stoi(vertexIndicies.at(1)) - 1;
-	int normIndex = stoi(vertexIndicies.at(2)) - 1;
-
-	
 	vertex.position = this->positions.at(posIndex);
 	vertex.textureCoord = this->textureCoords.at(texCoordIndex);
 	vertex.normal = this->normals.at(normIndex);

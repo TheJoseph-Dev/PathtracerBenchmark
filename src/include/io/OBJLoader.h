@@ -6,6 +6,7 @@
 #include <array>
 #include <unordered_map>
 #include <numeric>
+#include <utility>
 
 
 #include "glm/glm.hpp"
@@ -70,8 +71,8 @@ private:
 	uint32_t currentMaterialIndex = 0;
 	std::vector<uint32_t> matIndices;
 	glm::vec4 LoadVectorData(const std::string& data);
-	std::vector<Vertex> LoadFace(const std::string& face);
-	Vertex CreateVertex(const std::string& indicies);
+	void AppendFaceVertices(const std::string& face);
+	Vertex CreateVertex(int posIndex, int texCoordIndex, int normIndex);
 	void CreateVertexArray(const std::vector<Vertex>& loadedVertices);
 	void CreateSSBuffer(const std::vector<Vertex>& loadedVertices);
 
@@ -80,10 +81,15 @@ public:
 
 	VertexData GetVertices() const { return vData; }
 
-	std::vector<glm::vec4> GetPositions() const { return positions; }
-	std::vector<Triangle> GetTriangles() const { return this->triangles; }
-	std::vector<Material> GetMaterials() const { return this->mats; }
-	std::vector<Vertex> GetObjVertices() const { return this->objVertices; }
+	const std::vector<glm::vec4>& GetPositions() const { return positions; }
+	const std::vector<Triangle>& GetTriangles() const { return this->triangles; }
+	const std::vector<Material>& GetMaterials() const { return this->mats; }
+	const std::vector<Vertex>& GetObjVertices() const { return this->objVertices; }
+
+	std::vector<glm::vec4> TakePositions() { return std::move(positions); }
+	std::vector<Triangle> TakeTriangles() { return std::move(triangles); }
+	std::vector<Material> TakeMaterials() { return std::move(mats); }
+	std::vector<Vertex> TakeObjVertices() { return std::move(objVertices); }
 
 	MeshGeometry GetMeshGeometry() const {
 		//std::vector<glm::uvec3> triIdxs(triangles.size());
