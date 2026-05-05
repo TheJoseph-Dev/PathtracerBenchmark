@@ -151,11 +151,17 @@ layout(std430, binding = 11) buffer Statistics {
     uint64_t rays; // Rays cast (primary + secondary) | Overall work done; basic throughput metric
     uint64_t isecs; // Primitive intersections | Measures geometry testing cost; can identify heavy hits
     uint64_t traversals; // Nodes visited | AS Efficiency; algorithm-level performance
+    uint64_t primaryRays;
+    uint64_t secondaryRays;
+    uint64_t shadowRays;
 } statistics;
 
 uint64_t statsRays = 0ul;
 uint64_t statsIsecs = 0ul;
 uint64_t statsTraversals = 0ul;
+uint64_t statsPrimaryRays = 0ul;
+uint64_t statsSecondaryRays = 0ul;
+uint64_t statsShadowRays = 0ul;
 
 /*
 #define ATOMIC_INC_U64(counter) do { \
@@ -753,6 +759,7 @@ LightSample sampleNEE(vec3 hitPos, vec3 N) {
     shadow.origin = hitPos + N * NORMAL_OFFSET;
     shadow.dir = wi;
 
+    statsShadowRays++;
     Hit sh = world(shadow);
     if (sh.t < dist - 2.0*NORMAL_OFFSET) return ls;
 
@@ -879,6 +886,8 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
     float prevPdfBSDF = 1.0;
     for(int i = 0; i < pc.lightBounces; i++) {
+        if (i == 0) statsPrimaryRays++;
+        else statsSecondaryRays++;
         hit = world(ray);
         if(hit.t >= MAX_DIST) { 
             radiance += throughput * skyColor(uv).rgb; 
@@ -975,8 +984,8 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
 void main()
 {
-    uint lid = gl_LocalInvocationID.x;
-    if (lid >= pc.ct.tileSize.x/2) return;
+    //uint lid = gl_LocalInvocationID.x;
+    //if (lid >= pc.ct.tileSize.x/2) return;
     iResolution = pathtracerState.iResolution;
     iTime = pathtracerState.iTime;
     iFrame = pathtracerState.iFrame;
@@ -1028,6 +1037,9 @@ void main()
         atomicAdd(statistics.rays, statsRays);
         atomicAdd(statistics.traversals, statsTraversals);
         atomicAdd(statistics.isecs, statsIsecs);
+        atomicAdd(statistics.primaryRays, statsPrimaryRays);
+        atomicAdd(statistics.secondaryRays, statsSecondaryRays);
+        atomicAdd(statistics.shadowRays, statsShadowRays);
     }
 
     finalColor = mix(lastFrame, finalRender.rgb, 1.0 / float(iFrame + 1));

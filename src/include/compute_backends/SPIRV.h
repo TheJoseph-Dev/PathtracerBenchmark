@@ -73,7 +73,7 @@ namespace Pathtracer {
         void dispatch(const DispatchConext& dispatchCtx) override;
         void sync(const SyncContext& syncCtx) const override;
         double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const override;
-        Pathtracer::TreeStatistics getBackendStatistics() override;
+        Pathtracer::GPUStatistics getBackendStatistics() override;
         void getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) override;
 	};
 };

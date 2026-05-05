@@ -74,7 +74,7 @@ namespace Pathtracer {
 		Kernel::vec4* d_accImage = nullptr;
         std::vector<void*> sceneDeviceBuffers;
         Pathtracer::FrameContext* d_frameContext = nullptr;
-        Pathtracer::TreeStatistics* d_treeStats = nullptr;
+        Pathtracer::GPUStatistics* d_gpuStats = nullptr;
         //PushConstants::ComputeTile* d_computeTile = nullptr;
 
         uint32_t triangleCount = 0;
@@ -102,7 +102,7 @@ namespace Pathtracer {
 		void updateFrameContext(const FrameContext* newData, uint64_t size) const override;
         void sync(const SyncContext& syncCtx) const override;
         double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const override;
-		TreeStatistics getBackendStatistics() override;
+		GPUStatistics getBackendStatistics() override;
 		void getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) override;
 	};
 }

@@ -16,7 +16,7 @@ CUDA::CUDA(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfi
 
 CUDA::~CUDA() {
 	if (d_accImage) cudaFree(d_accImage);
-	if (d_treeStats) cudaFree(d_treeStats);
+	if (d_gpuStats) cudaFree(d_gpuStats);
 	if (d_frameContext) cudaFree(d_frameContext);
 	for (void* bptr : sceneDeviceBuffers) if (bptr) cudaFree(bptr);
 	for (uint32_t i = 0; i < PING_PONG_FRAMES; i++) {
@@ -309,8 +309,8 @@ void CUDA::init(const SceneData& sceneData) {
 	createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.materials.data(), sceneData.materials.size() * sizeof(sceneData.materials[0]));
 
 	cudaMalloc(&d_frameContext, sizeof(Pathtracer::FrameContext));
-	cudaMalloc(&d_treeStats, sizeof(Pathtracer::TreeStatistics));
-	cudaMemset(d_treeStats, 0, sizeof(Pathtracer::TreeStatistics));
+	cudaMalloc(&d_gpuStats, sizeof(Pathtracer::GPUStatistics));
+	cudaMemset(d_gpuStats, 0, sizeof(Pathtracer::GPUStatistics));
 	cudaMalloc(&d_accImage, WIDTH*HEIGHT*sizeof(Kernel::vec4));
 
 	for (uint32_t i = 0; i < PING_PONG_FRAMES; i++) {
@@ -373,7 +373,7 @@ void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 				(Kernel::Vertex*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTICES],
 				(Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::EMISSIVES],
 				(Kernel::Material*)this->sceneDeviceBuffers[DeviceBufferIndex::MATERIALS],
-				(Kernel::Statistics*)this->d_treeStats,
+				(Kernel::Statistics*)this->d_gpuStats,
 				ct,
 				(Kernel::PathtracerState*)this->d_frameContext,
 				triangleCount,
@@ -464,10 +464,10 @@ double CUDA::queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) c
 	return ms;
 }
 
-TreeStatistics CUDA::getBackendStatistics() { 
-	TreeStatistics ts;
+GPUStatistics CUDA::getBackendStatistics() { 
+	GPUStatistics ts;
 	cudaDeviceSynchronize();
-	cudaMemcpy(&ts, this->d_treeStats, sizeof(Pathtracer::TreeStatistics), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&ts, this->d_gpuStats, sizeof(Pathtracer::GPUStatistics), cudaMemcpyDeviceToHost);
 	return ts;
 }
 

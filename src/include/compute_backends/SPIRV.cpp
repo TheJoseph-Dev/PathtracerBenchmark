@@ -252,7 +252,7 @@ void SPIRV::createComputePipeline() {
 
 	// Compute pipeline
 	// Load correct pathtracer shader variant based on optimal local size
-	uint32_t optimalLocalSize = getOptimalLocalSize();
+	//uint32_t optimalLocalSize = getOptimalLocalSize();
 	//std::string pathtracerShaderPath = "shaders\\pathtracer_" + std::to_string(optimalLocalSize) + ".spv";
 	std::string pathtracerShaderPath = "shaders\\pathtracer.spv";
 	Shader pathtracerComputeShader = Shader(pathtracerShaderPath, Shader::Type::COMPUTE, this->vkCtx.device);
@@ -348,7 +348,7 @@ void SPIRV::init(const SceneData& sceneData) {
 	SSBOs.emplace_back(createStorageBuffer(sceneData.materials.size() * sizeof(sceneData.materials[0]), sceneData.materials.data()));
 	createSSBO(SSBOs.back().buffer, SSBOBinding::MATERIALS); // Materials
 
-	SSBOs.emplace_back(createStorageBuffer(sizeof(Pathtracer::TreeStatistics), nullptr, true));
+	SSBOs.emplace_back(createStorageBuffer(sizeof(Pathtracer::GPUStatistics), nullptr, true));
 	createSSBO(SSBOs.back().buffer, SSBOBinding::STATISTICS); // Statistics
     
 	createComputePipeline();
@@ -448,7 +448,7 @@ double SPIRV::queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) 
 	return gpuTimeNs / 1e6;
 }
 
-Pathtracer::TreeStatistics SPIRV::getBackendStatistics() {
+Pathtracer::GPUStatistics SPIRV::getBackendStatistics() {
 	const uint32_t STAGING_STATS = 1;
     
 	const Buffer& statsSSBO = this->SSBOs.back();
@@ -457,7 +457,7 @@ Pathtracer::TreeStatistics SPIRV::getBackendStatistics() {
 	VkBufferCopy statsCopy{};
 	statsCopy.srcOffset = 0;
 	statsCopy.dstOffset = 0;
-	statsCopy.size = sizeof(Pathtracer::TreeStatistics);
+	statsCopy.size = sizeof(Pathtracer::GPUStatistics);
 
 	VkCommandBuffer cmdbf = beginSingleTimeCommands();
 	vkCmdCopyBuffer(cmdbf, statsSSBO.buffer, stagingStats.buffer, 1, &statsCopy);
@@ -471,8 +471,8 @@ Pathtracer::TreeStatistics SPIRV::getBackendStatistics() {
 	vkQueueWaitIdle(this->vkCtx.graphicsQueue);
 
 	void* mappedStats = nullptr;
-	vkMapMemory(this->vkCtx.device, stagingStats.memory, 0, sizeof(Pathtracer::TreeStatistics), 0, &mappedStats);
-	Pathtracer::TreeStatistics gpuTreeStats = *reinterpret_cast<Pathtracer::TreeStatistics*>(mappedStats);
+	vkMapMemory(this->vkCtx.device, stagingStats.memory, 0, sizeof(Pathtracer::GPUStatistics), 0, &mappedStats);
+	Pathtracer::GPUStatistics gpuTreeStats = *reinterpret_cast<Pathtracer::GPUStatistics*>(mappedStats);
 	vkUnmapMemory(this->vkCtx.device, stagingStats.memory);
 
 	return gpuTreeStats;

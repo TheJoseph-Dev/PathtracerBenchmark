@@ -110,6 +110,9 @@ namespace Kernel {
         unsigned long long rays;
         unsigned long long isecs;
         unsigned long long traversals;
+        unsigned long long primaryRays;
+        unsigned long long secondaryRays;
+        unsigned long long shadowRays;
     };
 }
 

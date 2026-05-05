@@ -709,7 +709,8 @@ __device__ LightSample sampleNEE(
     int accelerationStructureType,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
-    unsigned long long& statsTraversals
+    unsigned long long& statsTraversals,
+    unsigned long long& statsShadowRays
 ) {
     LightSample ls;
     ls.pdf = -1e-5f;
@@ -744,6 +745,7 @@ __device__ LightSample sampleNEE(
 
     // Shadow ray
     Ray shadow(hitPos + N * NORMAL_OFFSET, wi);
+    statsShadowRays++;
     Hit sh = world(shadow, bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangles, vertices, eTriangles, mats,
                      triangleCount, lightCount, accelerationStructureType, statsRays, statsIsecs, statsTraversals);
     if (sh.t < dist - 2.0f * NORMAL_OFFSET) return ls;
@@ -816,7 +818,10 @@ __device__ RenderData worldRender(
     unsigned int& seed,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
-    unsigned long long& statsTraversals
+    unsigned long long& statsTraversals,
+    unsigned long long& statsPrimaryRays,
+    unsigned long long& statsSecondaryRays,
+    unsigned long long& statsShadowRays
 )
 {
     Hit hit;
@@ -826,6 +831,8 @@ __device__ RenderData worldRender(
     float prevPdfBSDF = 1.0f;
 
     for (unsigned int i = 0; i < lightBounces; i++) {
+        if (i == 0) statsPrimaryRays++;
+        else statsSecondaryRays++;
         hit = world(
             ray,
             bvhNodes, bvh4Nodes, kdNodes,
@@ -891,7 +898,7 @@ __device__ RenderData worldRender(
             hitPoint, N, seed,
             eTriangles, vertices, mats, lightCount,
             bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangles, triangleCount,
-            accelerationStructureType, statsRays, statsIsecs, statsTraversals
+            accelerationStructureType, statsRays, statsIsecs, statsTraversals, statsShadowRays
         );
         bool didNEE = ls.pdf > 0.0f;
 
@@ -1030,6 +1037,9 @@ __global__ void pathtracerKernel(
     unsigned long long statsRays        = 0;
     unsigned long long statsIsecs       = 0;
     unsigned long long statsTraversals  = 0;
+    unsigned long long statsPrimaryRays = 0;
+    unsigned long long statsSecondaryRays = 0;
+    unsigned long long statsShadowRays  = 0;
     
     RenderData render = worldRender(
         uv,
@@ -1045,7 +1055,10 @@ __global__ void pathtracerKernel(
         seed,
         statsRays,
         statsIsecs,
-        statsTraversals
+        statsTraversals,
+        statsPrimaryRays,
+        statsSecondaryRays,
+        statsShadowRays
     );
     
     
@@ -1059,6 +1072,9 @@ __global__ void pathtracerKernel(
         atomicAdd(&statistics->rays,        statsRays);
         atomicAdd(&statistics->isecs,       statsIsecs);
         atomicAdd(&statistics->traversals,  statsTraversals);
+        atomicAdd(&statistics->primaryRays, statsPrimaryRays);
+        atomicAdd(&statistics->secondaryRays, statsSecondaryRays);
+        atomicAdd(&statistics->shadowRays,  statsShadowRays);
     }
 
     // Temporal mix: average of all accumulated samples

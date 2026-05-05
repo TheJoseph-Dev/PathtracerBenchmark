@@ -800,23 +800,27 @@ private:
     void initComputeBackend() {
         std::string sceneFilepath = RESOURCE("scenes\\") + this->pathtracerConfig.GetScene();
         OBJLoader objloader((sceneFilepath + ".obj").c_str());
-        OBJLoader::MeshGeometry mergedMesh{ objloader.TakeObjVertices(), objloader.TakeTriangles() };
+        std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
+        std::vector<OBJLoader::Vertex> objVertices = objloader.GetObjVertices();
 
-        pathtracerStatistics.sceneTriangles = mergedMesh.triangles.size();
+        pathtracerStatistics.sceneTriangles = triangles.size();
 
         // Load light geometry
         OBJLoader lightLoader((sceneFilepath + "-light.obj").c_str());
-        std::vector<OBJLoader::Triangle> lightTris = lightLoader.TakeTriangles();
-        std::vector<OBJLoader::Vertex> lightVerts = lightLoader.TakeObjVertices();
+        std::vector<OBJLoader::Triangle> lightTris = lightLoader.GetTriangles();
+        std::vector<OBJLoader::Vertex> lightVerts = lightLoader.GetObjVertices();
 
         OBJLoader::Material lightMat = { glm::vec4(0.0f), 0.0f, 1.0f, 0.0f, 0.0f, glm::vec3(1.0f), 32.0f };
-        std::vector<OBJLoader::Material> materials = objloader.TakeMaterials();
+        std::vector<OBJLoader::Material> materials = objloader.GetMaterials();
         materials.emplace_back(lightMat);
 
         // Merge light vertices
-        uint32_t vertexOffset = static_cast<uint32_t>(mergedMesh.vertices.size());
-        mergedMesh.vertices.insert(mergedMesh.vertices.end(), lightVerts.begin(), lightVerts.end());
+        uint32_t vertexOffset = objVertices.size();
+        objVertices.insert(objVertices.end(), lightVerts.begin(), lightVerts.end());
         for (auto& lt : lightTris) lt.indices = glm::uvec4(lt.indices.x + vertexOffset, lt.indices.y + vertexOffset, lt.indices.z + vertexOffset, materials.size() - 1);
+
+        // Create SSBOs
+        OBJLoader::MeshGeometry mergedMesh{ objVertices, triangles };
 
         std::vector<uint32_t> indices = {};
         std::vector<BVH::Node> bvhNodes;
@@ -831,9 +835,9 @@ private:
         };
 
         auto reorderTriangles = [&](const auto& reorderedTrianglesRef) {
-            std::vector<OBJLoader::Triangle> reordered(mergedMesh.triangles.size());
-            for (size_t i = 0; i < mergedMesh.triangles.size(); i++) reordered[i] = mergedMesh.triangles[reorderedTrianglesRef[i].oIdx];
-            mergedMesh.triangles = std::move(reordered);
+            std::vector<OBJLoader::Triangle> reordered(triangles.size());
+            for (size_t i = 0; i < triangles.size(); i++) reordered[i] = triangles[reorderedTrianglesRef[i].oIdx];
+            triangles = std::move(reordered);
         };
 
         switch (this->pathtracerConfig.GetAccelerationStructureType()) {
@@ -866,8 +870,8 @@ private:
 
         Pathtracer::ComputeBackend::SceneData sceneData = {
             .accelerationStructureType = this->pathtracerConfig.GetAccelerationStructureType(),
-            .vertices = mergedMesh.vertices,
-            .triangles = mergedMesh.triangles,
+            .vertices = objVertices,
+            .triangles = triangles,
             .lightTriangles = lightTris,
             .bvhNodes = bvhNodes,
             .bvh4Nodes = bvh4Nodes,

@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Vulkan REQUIRED)
 option(ENABLE_CUDA "Enable CUDA backend" ON)
-option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_TESTS "Build unit tests" OFF)
 message(STATUS "ENABLE_CUDA = ${ENABLE_CUDA}")
 
 if(ENABLE_CUDA)

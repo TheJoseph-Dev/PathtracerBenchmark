@@ -22,7 +22,7 @@ static Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     return pathtracerConfig;
 }
 
-static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype, Pathtracer::ComputeBackendType computeBackendType, glm::vec2 tileSize = glm::uvec2(256, 256)) {
+static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype, Pathtracer::ComputeBackendType computeBackendType, glm::uvec2 tileSize = glm::uvec2(256, 256)) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
@@ -159,7 +159,7 @@ void test() {
 
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::DRAGON, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::vec2(64, 64)));
+        App pathtracer(debugConfig(Scene::DRAGON, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
         pathtracer.run();
     }
 

@@ -222,7 +222,7 @@ namespace Pathtracer {
     };
 
     /*
-    struct GPUTreeStatistics {
+    struct GPUGPUStatistics {
         struct uint64gpu_t { uint32_t lo, hi; };
         uint64gpu_t rays;
         uint64gpu_t isecs;
@@ -230,15 +230,18 @@ namespace Pathtracer {
     };
     */
 
-    struct TreeStatistics {
+    struct GPUStatistics {
         uint64_t rays;
         uint64_t isecs;
         uint64_t traversals;
+        uint64_t primaryRays;
+        uint64_t secondaryRays;
+        uint64_t shadowRays;
     };
 
 
     struct Statistics {
-        TreeStatistics treeStats;
+        GPUStatistics treeStats;
         float elapsedTotalTime = 0.0f;
         float fps = 0.0f; // time/spp
         float avgKernelTime = 0.0f;

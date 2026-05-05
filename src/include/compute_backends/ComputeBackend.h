@@ -71,7 +71,7 @@ namespace Pathtracer {
         ComputeBackend(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfig);
 
         virtual ~ComputeBackend();
-        virtual TreeStatistics getBackendStatistics() = 0;
+        virtual GPUStatistics getBackendStatistics() = 0;
         virtual void getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) = 0;
         VkImageView getPathtracerImageView(uint32_t index) const;
     

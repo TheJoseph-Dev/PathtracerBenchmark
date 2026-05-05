@@ -119,6 +119,9 @@ namespace Pathtracer {
             md << "\n## Statistics\n\n";
             md << "- **Triangles:** " << stats.sceneTriangles << "\n";
             md << "- **Rays:** " << stats.treeStats.rays << "\n";
+            md << "- **Primary Rays:** " << stats.treeStats.primaryRays << "\n";
+            md << "- **Secondary Rays:** " << stats.treeStats.secondaryRays << "\n";
+            md << "- **Shadow Rays:** " << stats.treeStats.shadowRays << "\n";
             md << "- **Traversals:** " << stats.treeStats.traversals << "\n";
             md << "- **Intersections:** " << stats.treeStats.isecs << "\n";
             md << "- **Rays/s:** " << (double)stats.treeStats.rays / stats.elapsedTotalTime << "\n";
@@ -162,7 +165,7 @@ namespace Pathtracer {
 
             if (csv.tellp() == 0) {
                 csv << "DateTime,CPU,GPU,BenchmarkType,Scene,ComputeBackend,AccelerationStructure,Resolution,TileSize,SPP,LightBounces,"
-                       "Triangles,Rays,Traversals,Intersections,RaysPerSecond,NodesPerRay,IntersectionsPerRay,TotalElapsedSeconds,FPS,"
+                      "Triangles,Rays,PrimaryRays,SecondaryRays,ShadowRays,Traversals,Intersections,RaysPerSecond,NodesPerRay,IntersectionsPerRay,TotalElapsedSeconds,FPS,"
                        "AvgKernelMs,AccStructBuildSeconds,AccStructMemoryBytes,RMSE,PSNR,QARmseThreshold,QAResult\n";
             }
 
@@ -198,6 +201,9 @@ namespace Pathtracer {
                 << this->config.GetLightBounces() << ','
                 << stats.sceneTriangles << ','
                 << stats.treeStats.rays << ','
+                << stats.treeStats.primaryRays << ','
+                << stats.treeStats.secondaryRays << ','
+                << stats.treeStats.shadowRays << ','
                 << stats.treeStats.traversals << ','
                 << stats.treeStats.isecs << ','
                 << raysPerSecond << ','
@@ -281,6 +287,9 @@ namespace Pathtracer {
 
             std::cout << "[STATS]\n TRIANGLES: " << stats.sceneTriangles
                 << "\n RAYS: " << stats.treeStats.rays
+                << "\n PRIMARY RAYS: " << stats.treeStats.primaryRays
+                << "\n SECONDARY RAYS: " << stats.treeStats.secondaryRays
+                << "\n SHADOW RAYS: " << stats.treeStats.shadowRays
                 << "\n TRAVERSALS: " << stats.treeStats.traversals
                 << "\n ISECS: " << stats.treeStats.isecs << "\n"
                 << "\n RAYS/s: " << (double)stats.treeStats.rays / stats.elapsedTotalTime
