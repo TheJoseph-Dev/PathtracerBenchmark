@@ -50,8 +50,10 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdT
 - Rays/s
 - Isec/s
 
-⬜ **Pathtracer Benchmark**
+🟩 **Pathtracer Benchmark**
 - Primary Rays
+- Secondary Rays
+- Shadow Rays
 
 🟩 **APIs Benchmark**
 - Vulkan (SPIR-V)
