@@ -4268,3 +4268,37 @@
 
  Acc. Structure Memory: 336 bytes (Nodes only)
 
+[Config]
+ Date/Time: 2026-05-06 16:41:51
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: dragon-cbx
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 871316
+ RAYS: 354796358
+ PRIMARY RAYS: 67108864
+ SECONDARY RAYS: 153436432
+ SHADOW RAYS: 134251062
+ TRAVERSALS: 9630073313
+ ISECS: 7068144291
+
+ RAYS/s: 2.17899e+06
+ NODES/RAY: 27.1425
+ ISECS/RAY: 19.9217
+
+ Total Elapsed Time: 162.826 s
+
+ FPS: 0.393058 spp/s
+
+ Avg. Kernel Time: 2493.08 ms
+
+ Acc. Structure Build Time: 16.952000 s
+
+ Acc. Structure Memory: 14823216 bytes (Nodes only)
+

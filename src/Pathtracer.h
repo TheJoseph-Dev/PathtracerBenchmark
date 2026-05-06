@@ -231,17 +231,22 @@ namespace Pathtracer {
             vulkanRenderer.emplace(config);
             vulkanRenderer->init(window);
 
-            uint32_t currentFrame = 0, currentSPP = 0;
+            uint32_t currentFrame = 0;
+            uint32_t frameCounter = 0;
             Pathtracer::Benchmark binfo = config.GetBenchmarkInfo();
+            const uint32_t sppStride = Pathtracer::pixel_sample_stride ? Pathtracer::pixel_sample_stride : 1u;
             auto t0 = std::chrono::high_resolution_clock::now();
-            while (!glfwWindowShouldClose(window) && (!binfo.btype || currentSPP < binfo.spp)) {
-                currentSPP++;
+            while (!glfwWindowShouldClose(window) && (!binfo.btype || (frameCounter / sppStride) < binfo.spp)) {
                 vulkanRenderer->run(currentFrame);
                 glfwPollEvents();
+                frameCounter++;
             }
             vulkanRenderer->wait();
             auto t1 = std::chrono::high_resolution_clock::now();
 
+            uint32_t currentSPP = frameCounter / sppStride;
+            if (currentSPP == 0)
+                currentSPP = 1;
             Pathtracer::Statistics stats = vulkanRenderer->GetStatistics();
             long long totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
             stats.elapsedTotalTime = totalTime / 1000.0f;

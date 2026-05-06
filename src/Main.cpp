@@ -36,9 +36,9 @@ static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::Accel
         4,
         benchmarkInfo,
         tileSize,
+        false,
         true,
-        true,
-        false
+        true
     );
     return pathtracerConfig;
 }
@@ -159,7 +159,7 @@ void test() {
 
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::DRAGON, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
+        App pathtracer(debugConfig(Scene::DRAGON, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
 

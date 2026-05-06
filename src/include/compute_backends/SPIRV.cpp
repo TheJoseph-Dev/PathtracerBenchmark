@@ -414,7 +414,7 @@ void SPIRV::dispatch(const DispatchConext& dispatchCtx) {
 		for (uint32_t tileX = 0; tileX < WIDTH; tileX += TILE_X) {
 			pathtracerPC.ct.tileOffset = { tileX, tileY };
 			vkCmdPushConstants(dispatchCtx.commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::PushConstants), &pathtracerPC);
-			vkCmdDispatch(dispatchCtx.commandBuffer, (TILE_X + (TILE_X>>1) - 1) / (TILE_X>>1), (TILE_Y + Pathtracer::local_size_y - 1) / Pathtracer::local_size_y, 1);
+			vkCmdDispatch(dispatchCtx.commandBuffer, (TILE_X + (Pathtracer::local_size_x) - 1) / (Pathtracer::local_size_x), (TILE_Y + Pathtracer::local_size_y - 1) / Pathtracer::local_size_y, 1);
 		}
 	}
 

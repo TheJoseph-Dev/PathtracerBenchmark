@@ -10,8 +10,10 @@
 
 namespace Pathtracer {
 
-    constexpr uint32_t local_size_x = 128;
+    constexpr uint32_t local_size_x = 64;
     constexpr uint32_t local_size_y = 1;
+    //constexpr uint32_t stats_sample_interval = 16; // Keep in sync with shaders/kernels
+    constexpr uint32_t pixel_sample_stride = 2; // Keep in sync with shaders/kernels
 
     struct PushConstants {
         struct ComputeTile {

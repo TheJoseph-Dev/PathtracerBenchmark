@@ -7,8 +7,11 @@
 #extension GL_NV_shader_atomic_int64 : enable
 #endif
 
-layout(local_size_x = 128, local_size_y = 1) in;
+layout(local_size_x = 64, local_size_y = 1) in;
 layout(binding = 0, rgba32f) writeonly uniform image2D outImage;
+
+// Keep in sync with Pathtracer::pixel_sample_stride
+#define PIXEL_SAMPLE_STRIDE 2u
 
 /*
 | USE_MIS | USE_NEE | Outcome
@@ -54,6 +57,7 @@ layout(binding = 1) uniform PathtracerUBO {
 vec2 iResolution;
 float iTime;
 int iFrame;
+uint iSampleFrame;
 vec3 cameraPos;
 vec3 cameraRot;
 //uint accumulate = 1;
@@ -676,7 +680,7 @@ vec4 skyColor(vec2 uv) {
 
 uint seed = 0u;
 uint hash(uint x) { x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16; return x; }
-void genSeed() { uint idx = uint(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * iResolution.x) + uint(iFrame) * 16777619u; seed = hash(idx) | 1u; }
+void genSeed() { uint idx = uint(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * iResolution.x) + iSampleFrame * 16777619u; seed = hash(idx) | 1u; }
 
 /*void updateSeed() {
     seed += 0x9E3779B9u;
@@ -997,6 +1001,15 @@ void main()
     if (pixel.x >= iResolution.x || pixel.y >= iResolution.y)
         return;
 
+    iSampleFrame = uint(iFrame) / PIXEL_SAMPLE_STRIDE;
+    bool doPixel = (((pixel.x ^ pixel.y ^ uint(iFrame)) & 1u) == 0u);
+    vec3 lastFrame = texelFetch(lastFrameTex, ivec2(pixel), 0).rgb;
+    if (iFrame == 0) lastFrame = vec3(0.0);
+    if (!doPixel) {
+        imageStore(outImage, ivec2(pixel), vec4(lastFrame, 1.0));
+        return;
+    }
+
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = vec2(pixel)/iResolution.xy * 2.0 - 1.0;
     float aspect = iResolution.x / iResolution.y;
@@ -1025,11 +1038,10 @@ void main()
     Ray ray = Ray(ro, rd);
     
     vec4 finalRender = worldRender(uv, ray).color;
-    vec3 lastFrame = texelFetch(lastFrameTex, ivec2(pixel), 0).rgb;
     vec3 finalColor = finalRender.rgb;
     
     vec4 lastSum = imageLoad(accImage, ivec2(pixel));
-    if(iFrame == 0) lastSum = vec4(0.0);
+    if(iSampleFrame == 0u) lastSum = vec4(0.0);
     vec4 newSum = lastSum + vec4(finalRender.rgb, 0.0);
     imageStore(accImage, ivec2(pixel), newSum);
 
@@ -1042,6 +1054,6 @@ void main()
         atomicAdd(statistics.shadowRays, statsShadowRays);
     }
 
-    finalColor = mix(lastFrame, finalRender.rgb, 1.0 / float(iFrame + 1));
+    finalColor = mix(lastFrame, finalRender.rgb, 1.0 / float(iSampleFrame + 1u));
     imageStore(outImage, ivec2(pixel), vec4(finalColor, 1.0));
 }

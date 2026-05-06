@@ -25,6 +25,9 @@ using namespace Kernel;
 #define AS_BVH4 1
 #define AS_KD_TREE 2
 
+// Keep in sync with Pathtracer::pixel_sample_stride
+#define PIXEL_SAMPLE_STRIDE 2u
+
 __device__ unsigned int pcg_hash(unsigned int& seed) {
     seed = seed * 747796405u + 2891336453u;
     unsigned int word = ((seed >> ((seed >> 28u) + 4u)) ^ seed) * 277803737u;
@@ -998,8 +1001,18 @@ __global__ void pathtracerKernel(
     unsigned int width  = (unsigned int)state->iResolution.x;
     unsigned int height = (unsigned int)state->iResolution.y;
     unsigned int idx    = py * width + px;
+    unsigned int sampleFrame = ((unsigned int)state->iFrame) / PIXEL_SAMPLE_STRIDE;
+    bool doPixel = (((px ^ py ^ (unsigned int)state->iFrame) & 1u) == 0u);
+    if (!doPixel) {
+        vec4 sum = (sampleFrame == 0u) ? vec4(0.0f) : accImage[idx];
+        float t = 1.0f / float(sampleFrame + 1u);
+        vec3 finalColor(sum.x * t, sum.y * t, sum.z * t);
+        float4 out = make_float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
+        surf2Dwrite(out, outImage, px * sizeof(float4), py);
+        return;
+    }
 
-    unsigned int seed = hash(px + py * width + (unsigned int)state->iFrame * 16777619u) | 1u;
+    unsigned int seed = hash(px + py * width + sampleFrame * 16777619u) | 1u;
 
     float aspect = state->iResolution.x / state->iResolution.y;
 
@@ -1064,7 +1077,7 @@ __global__ void pathtracerKernel(
     
     // Frame accumulation
     vec4 lastSum = accImage[idx];
-    if (state->iFrame == 0) lastSum = vec4(0.0f);
+    if (sampleFrame == 0u) lastSum = vec4(0.0f);
     vec4 newSum = lastSum + vec4(render.color.x, render.color.y, render.color.z, 0.0f);
     accImage[idx] = newSum;
     
@@ -1078,7 +1091,7 @@ __global__ void pathtracerKernel(
     }
 
     // Temporal mix: average of all accumulated samples
-    float t = 1.0f / float(state->iFrame + 1);
+    float t = 1.0f / float(sampleFrame + 1u);
     vec3 finalColor(newSum.x * t, newSum.y * t, newSum.z * t);
     float4 out = make_float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
 
