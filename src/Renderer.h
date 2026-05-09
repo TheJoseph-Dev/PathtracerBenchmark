@@ -1508,11 +1508,18 @@ public:
             uint32_t w, h;
             EXR::Load(filepath, groundTruth, w, h);
             double smse = 0.0;
-            for (size_t i = 0; i < pixels.size(); i++)
+            double peak = 0.0;
+            for (size_t i = 0; i < pixels.size(); i++) {
                 smse += mse(pixels[i], groundTruth[i]);
+
+                peak = std::max(peak, (double)groundTruth[i].r);
+                peak = std::max(peak, (double)groundTruth[i].g);
+                peak = std::max(peak, (double)groundTruth[i].b);
+            }
             smse /= pixels.size();
             stats.rmse = sqrt(smse);
-            stats.psnr = 10.0 * log10(1.0 / smse);
+            if (smse > 0.0) stats.psnr = 10.0 * log10((peak * peak) / smse);
+            else stats.psnr = std::numeric_limits<double>::infinity();
         }
         
         if (this->pathtracerConfig.ShouldSaveImage()) {

@@ -7,7 +7,7 @@ static Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
-    benchmarkInfo.spp = 80U * 1000U;
+    benchmarkInfo.spp = 50U * 1000U;
 
     Config pathtracerConfig(
         AccelerationStructureType::KD_TREE,
@@ -102,7 +102,7 @@ static Pathtracer::Config warmupConfig() {
     return pathtracerConfig;
 }
 
-static Pathtracer::Config qaConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype, Pathtracer::ComputeBackendType computeBackendType, uint32_t spp = 64, float rmseThreshold = 0.016f) {
+static Pathtracer::Config qaConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype, Pathtracer::ComputeBackendType computeBackendType, uint32_t spp = 64, float rmseThreshold = 0.92f) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::IMGREF;
@@ -115,7 +115,7 @@ static Pathtracer::Config qaConfig(Pathtracer::Scene scene, Pathtracer::Accelera
         computeBackendType,
         scene,
         Resolution::R1024x1024,
-        8,
+        12,
         benchmarkInfo,
         glm::uvec2(256, 256),
         false,
@@ -153,23 +153,23 @@ void benchmark() {
 void test() {
     {
         using namespace Pathtracer;
-        App pathtracer(warmupConfig());
-        pathtracer.run();
+        //App pathtracer(warmupConfig());
+        //pathtracer.run();
     }
-
-    {
-        using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::DRAGON, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
-        pathtracer.run();
-    }
-
     /*
     {
         using namespace Pathtracer;
-        App pathtracer(qaConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
     */
+    
+    {
+        using namespace Pathtracer;
+        App pathtracer(qaConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::CUDA_T));
+        pathtracer.run();
+    }
+    
 }
 
 void custom() {

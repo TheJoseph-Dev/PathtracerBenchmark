@@ -1125,7 +1125,7 @@ void dispatchCUDAPathtracerKernel(
     blockX = std::max(blockX, 32U);  // Ensure minimum of 32 threads
     blockX = std::min(blockX, 1024U); // Cap at 1024 threads per block
     
-    dim3 block(blockX, 1);
+    dim3 block(64, 1);
     dim3 grid(
         ((unsigned int)ct.tileSize.x + block.x - 1) / block.x,
         ((unsigned int)ct.tileSize.y + block.y - 1) / block.y
