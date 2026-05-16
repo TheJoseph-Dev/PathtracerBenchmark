@@ -13,9 +13,9 @@ namespace Kernel {
         float x;
         float y;
 
-        __device__ inline vec2() : x(0.0f), y(0.0f) {};
-        __device__ inline vec2(float v) : x(v), y(v) {};
-        __device__ inline vec2(float x, float y) : x(x), y(y) {};
+        vec2() = default;
+        __host__ __device__ inline vec2(float v) : x(v), y(v) {};
+        __host__ __device__ inline vec2(float x, float y) : x(x), y(y) {};
 
         __device__ inline
             vec2 operator+(const vec2& other) const {
@@ -58,9 +58,9 @@ namespace Kernel {
         float y;
         float z;
 
-        __device__ inline vec3() : x(0.0f), y(0.0f), z(0.0f) {};
-        __device__ inline vec3(float v) : x(v), y(v), z(v) {};
-        __device__ inline vec3(float x, float y, float z) : x(x), y(y), z(z) {};
+        vec3() = default;
+        __host__ __device__ inline vec3(float v) : x(v), y(v), z(v) {};
+        __host__ __device__ inline vec3(float x, float y, float z) : x(x), y(y), z(z) {};
 
         __device__ inline
             vec3 operator+(const vec3& other) const {
@@ -104,10 +104,10 @@ namespace Kernel {
         float z;
         float w;
 
-        __device__ inline vec4() : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {};
-        __device__ inline vec4(float v) : x(v), y(v), z(v), w(v) {};
-        __device__ inline vec4(const vec3& v3, float w = 0.0f) : x(v3.x), y(v3.y), z(v3.z), w(w) {};
-        __device__ inline vec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {};
+        vec4() = default;
+        __host__ __device__ inline vec4(float v) : x(v), y(v), z(v), w(v) {};
+        __host__ __device__ inline vec4(const vec3& v3, float w = 0.0f) : x(v3.x), y(v3.y), z(v3.z), w(w) {};
+        __host__ __device__ inline vec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {};
 
         __device__ inline
             vec4 operator+(const vec4& other) const {

@@ -17,13 +17,16 @@ namespace Pathtracer {
             BVH_NODES = 3,
             KDTREE_NODES = 4,
             KDTREE_INDICES = 5,
-            TRIANGLES = 6,
-            VERTICES = 7,
-            EMISSIVES = 8,
-            MATERIALS = 9,
-
+            TRIANGLE_INDICES = 6,
+            TRIANGLE_AREAS = 7,
+            VERTEX_POSITIONS = 8,
+            VERTEX_UVS = 9,
+            VERTEX_NORMALS = 10,
             STATISTICS = 11,
-            BVH4_NODES = 12
+            BVH4_NODES = 12,
+            EMISSIVE_INDICES = 13,
+            EMISSIVE_AREAS = 14,
+            MATERIALS = 15
         };
         std::vector<Buffer> SSBOs; // pathtracerSSBOs
         std::vector<Buffer> stagingBuffers;
@@ -33,23 +36,26 @@ namespace Pathtracer {
         static constexpr VkDescriptorSetLayoutBinding computeBindings[] = {
             { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }, // accImage
             { SSBOBinding::BVH_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::KDTREE_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::KDTREE_INDICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::TRIANGLES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::VERTICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::EMISSIVES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { SSBOBinding::MATERIALS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-            { 10, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::TRIANGLE_INDICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::TRIANGLE_AREAS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::VERTEX_POSITIONS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::VERTEX_UVS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::VERTEX_NORMALS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::STATISTICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
             { SSBOBinding::BVH4_NODES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::EMISSIVE_INDICES, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::EMISSIVE_AREAS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+            { SSBOBinding::MATERIALS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
         };
         static constexpr uint32_t bindingCount = sizeof(computeBindings) / sizeof(computeBindings[0]);
 
     public:
 
-        static constexpr uint32_t SSBOsCount = 9;
+        static constexpr uint32_t SSBOsCount = 13;
 
         SPIRV(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfig);
         ~SPIRV() override;

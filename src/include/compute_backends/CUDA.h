@@ -23,9 +23,13 @@ namespace Kernel {
         Kernel::BVH4Node* d_bvh4Nodes,
         Kernel::KdNode* d_kdNodes,
         unsigned int* d_kdtreeIndices,
-        Kernel::Triangle* d_triangles,
-        Kernel::Vertex* d_vertices,
-        Kernel::Triangle* d_eTriangles,
+        uint4* d_triangleIndices,
+        Kernel::vec4* d_triangleAreas,
+        Kernel::vec4* d_vertexPositions,
+        Kernel::vec4* d_vertexUVs,
+        Kernel::vec4* d_vertexNormals,
+        uint4* d_emissiveIndices,
+        Kernel::vec4* d_emissiveAreas,
         Kernel::Material* d_mats,
         Kernel::Statistics* d_statistics,
         Kernel::ComputeTile ct,
@@ -65,10 +69,14 @@ namespace Pathtracer {
             BVH_NODES = 0,
             KDTREE_NODES = 0,
             KDTREE_INDICES = 1,
-            TRIANGLES = 2,
-            VERTICES = 3,
-            EMISSIVES = 4,
-            MATERIALS = 5
+            TRIANGLE_INDICES = 2,
+            TRIANGLE_AREAS = 3,
+            VERTEX_POSITIONS = 4,
+            VERTEX_UVS = 5,
+            VERTEX_NORMALS = 6,
+            EMISSIVE_INDICES = 7,
+            EMISSIVE_AREAS = 8,
+            MATERIALS = 9
         };
 
 		Kernel::vec4* d_accImage = nullptr;

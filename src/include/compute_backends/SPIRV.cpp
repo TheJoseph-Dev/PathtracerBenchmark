@@ -1,5 +1,6 @@
 #include "SPIRV.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstring>
 #include <stdexcept>
@@ -173,6 +174,12 @@ void SPIRV::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size
 
 Buffer SPIRV::createStorageBuffer(VkDeviceSize size, const void* initialData, bool keepStaging) {
 	Buffer staging = Buffer(this->vkCtx.physicalDevice, this->vkCtx.device, size, initialData, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT); // = createStagingBuffer(size, initialData);
+	if (!initialData) {
+		void* data;
+		vkMapMemory(vkCtx.device, staging.memory, 0, size, 0, &data);
+		std::memset(data, 0, static_cast<size_t>(size));
+		vkUnmapMemory(vkCtx.device, staging.memory);
+	}
 
 	// Create device-local GPU buffer
 	Buffer gpuBuffer = Buffer(this->vkCtx.physicalDevice, this->vkCtx.device, size, nullptr, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -286,10 +293,7 @@ void SPIRV::init(const SceneData& sceneData) {
 		Vulkan::updateStorageImageDescriptorSet(vkCtx.device, computeDescriptorSet[i], 0, pathtracerImageViews[i], VK_IMAGE_LAYOUT_GENERAL);
 
 		// Acc image
-		Vulkan::updateStorageImageDescriptorSet(vkCtx.device, computeDescriptorSet[i], 10, pathtracerImageViews[PATHTRACER_IMG_COUNT - 1], VK_IMAGE_LAYOUT_GENERAL);
-
-		// Input sampler for compute (previous frame texture)
-		Vulkan::updateCombinedImageSamplerDescriptorSet(vkCtx.device, computeDescriptorSet[i], 2, pathtracerImageSampler, pathtracerImageViews[1 - i]);
+		Vulkan::updateStorageImageDescriptorSet(vkCtx.device, computeDescriptorSet[i], 2, pathtracerImageViews[PATHTRACER_IMG_COUNT - 1], VK_IMAGE_LAYOUT_GENERAL);
 	}
 
 	// Acc image staging buffer
@@ -336,16 +340,58 @@ void SPIRV::init(const SceneData& sceneData) {
 		createSSBO(SSBOs.back().buffer, SSBOBinding::BVH4_NODES);
 	}
 
-	SSBOs.emplace_back(createStorageBuffer(sceneData.triangles.size() * sizeof(sceneData.triangles[0]), sceneData.triangles.data()));
-	createSSBO(SSBOs.back().buffer, SSBOBinding::TRIANGLES); // Triangles
+	std::vector<glm::uvec4> triangleIndices;
+	std::vector<glm::vec4> triangleAreas;
+	triangleIndices.reserve(sceneData.triangles.size());
+	triangleAreas.reserve(sceneData.triangles.size());
+	for (const auto& tri : sceneData.triangles) {
+		triangleIndices.push_back(tri.indices);
+		triangleAreas.push_back(tri.area);
+	}
 
-	SSBOs.emplace_back(createStorageBuffer(sceneData.vertices.size() * sizeof(sceneData.vertices[0]), sceneData.vertices.data()));
-	createSSBO(SSBOs.back().buffer, SSBOBinding::VERTICES); // Vertices
+	std::vector<glm::vec4> vertexPositions;
+	std::vector<glm::vec4> vertexUVs;
+	std::vector<glm::vec4> vertexNormals;
+	vertexPositions.reserve(sceneData.vertices.size());
+	vertexUVs.reserve(sceneData.vertices.size());
+	vertexNormals.reserve(sceneData.vertices.size());
+	for (const auto& v : sceneData.vertices) {
+		vertexPositions.push_back(v.position);
+		vertexUVs.push_back(v.textureCoord);
+		vertexNormals.push_back(v.normal);
+	}
 
-	SSBOs.emplace_back(createStorageBuffer(sceneData.lightTriangles.size() * sizeof(sceneData.lightTriangles[0]), sceneData.lightTriangles.data()));
-	createSSBO(SSBOs.back().buffer, SSBOBinding::EMISSIVES); // Emissives/Light
+	std::vector<glm::uvec4> emissiveIndices;
+	std::vector<glm::vec4> emissiveAreas;
+	emissiveIndices.reserve(sceneData.lightTriangles.size());
+	emissiveAreas.reserve(sceneData.lightTriangles.size());
+	for (const auto& tri : sceneData.lightTriangles) {
+		emissiveIndices.push_back(tri.indices);
+		emissiveAreas.push_back(tri.area);
+	}
 
-	SSBOs.emplace_back(createStorageBuffer(sceneData.materials.size() * sizeof(sceneData.materials[0]), sceneData.materials.data()));
+	SSBOs.emplace_back(createStorageBuffer(std::max<size_t>(triangleIndices.size() * sizeof(glm::uvec4), sizeof(glm::uvec4)), triangleIndices.empty() ? nullptr : triangleIndices.data()));
+	createSSBO(SSBOs.back().buffer, SSBOBinding::TRIANGLE_INDICES);
+
+	SSBOs.emplace_back(createStorageBuffer(std::max<size_t>(triangleAreas.size() * sizeof(glm::vec4), sizeof(glm::vec4)), triangleAreas.empty() ? nullptr : triangleAreas.data()));
+	createSSBO(SSBOs.back().buffer, SSBOBinding::TRIANGLE_AREAS);
+
+	SSBOs.emplace_back(createStorageBuffer(std::max<size_t>(vertexPositions.size() * sizeof(glm::vec4), sizeof(glm::vec4)), vertexPositions.empty() ? nullptr : vertexPositions.data()));
+	createSSBO(SSBOs.back().buffer, SSBOBinding::VERTEX_POSITIONS);
+
+	SSBOs.emplace_back(createStorageBuffer(std::max<size_t>(vertexUVs.size() * sizeof(glm::vec4), sizeof(glm::vec4)), vertexUVs.empty() ? nullptr : vertexUVs.data()));
+	createSSBO(SSBOs.back().buffer, SSBOBinding::VERTEX_UVS);
+
+	SSBOs.emplace_back(createStorageBuffer(std::max<size_t>(vertexNormals.size() * sizeof(glm::vec4), sizeof(glm::vec4)), vertexNormals.empty() ? nullptr : vertexNormals.data()));
+	createSSBO(SSBOs.back().buffer, SSBOBinding::VERTEX_NORMALS);
+
+	SSBOs.emplace_back(createStorageBuffer(std::max<size_t>(emissiveIndices.size() * sizeof(glm::uvec4), sizeof(glm::uvec4)), emissiveIndices.empty() ? nullptr : emissiveIndices.data()));
+	createSSBO(SSBOs.back().buffer, SSBOBinding::EMISSIVE_INDICES);
+
+	SSBOs.emplace_back(createStorageBuffer(std::max<size_t>(emissiveAreas.size() * sizeof(glm::vec4), sizeof(glm::vec4)), emissiveAreas.empty() ? nullptr : emissiveAreas.data()));
+	createSSBO(SSBOs.back().buffer, SSBOBinding::EMISSIVE_AREAS);
+
+	SSBOs.emplace_back(createStorageBuffer(std::max<size_t>(sceneData.materials.size() * sizeof(sceneData.materials[0]), sizeof(sceneData.materials[0])), sceneData.materials.empty() ? nullptr : sceneData.materials.data()));
 	createSSBO(SSBOs.back().buffer, SSBOBinding::MATERIALS); // Materials
 
 	SSBOs.emplace_back(createStorageBuffer(sizeof(Pathtracer::GPUStatistics), nullptr, true));
@@ -403,18 +449,20 @@ void SPIRV::dispatch(const DispatchConext& dispatchCtx) {
 	vkCmdWriteTimestamp(dispatchCtx.commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[dispatchCtx.currentFrame % PING_PONG_FRAMES], 0);
 
 	Pathtracer::PushConstants pathtracerPC{};
-	pathtracerPC.ct.tileSize = dispatchCtx.tileSize;
 	pathtracerPC.lightBounces = dispatchCtx.lightBounces;
 
 	// Dispatch compute
 	// Tiling to avoid TDR
-	const uint32_t TILE_Y = this->pathtracerConfig.GetTileSize().y;
-	const uint32_t TILE_X = this->pathtracerConfig.GetTileSize().x;
+	const uint32_t TILE_Y = dispatchCtx.tileSize.y;
+	const uint32_t TILE_X = dispatchCtx.tileSize.x;
 	for (uint32_t tileY = 0; tileY < HEIGHT; tileY += TILE_Y) {
 		for (uint32_t tileX = 0; tileX < WIDTH; tileX += TILE_X) {
+			const uint32_t tileWidth = std::min(TILE_X, WIDTH - tileX);
+			const uint32_t tileHeight = std::min(TILE_Y, HEIGHT - tileY);
+			pathtracerPC.ct.tileSize = { tileWidth, tileHeight };
 			pathtracerPC.ct.tileOffset = { tileX, tileY };
 			vkCmdPushConstants(dispatchCtx.commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(Pathtracer::PushConstants), &pathtracerPC);
-			vkCmdDispatch(dispatchCtx.commandBuffer, (TILE_X + (Pathtracer::local_size_x) - 1) / (Pathtracer::local_size_x), (TILE_Y + Pathtracer::local_size_y - 1) / Pathtracer::local_size_y, 1);
+			vkCmdDispatch(dispatchCtx.commandBuffer, (tileWidth + Pathtracer::local_size_x - 1) / Pathtracer::local_size_x, (tileHeight + Pathtracer::local_size_y - 1) / Pathtracer::local_size_y, 1);
 		}
 	}
 

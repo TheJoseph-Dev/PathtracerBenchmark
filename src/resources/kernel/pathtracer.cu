@@ -144,9 +144,13 @@ __device__ Hit world(
     const BVH4Node* __restrict__ bvh4Nodes,
     const KdNode* __restrict__ kdNodes,
     const unsigned int* __restrict__ kdtreeIndices,
-    const Triangle* __restrict__ triangles,
-    const Vertex* __restrict__ vertices,
-    const Triangle* __restrict__ eTriangles,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ triangleAreas,
+    const vec4* __restrict__ vertexPositions,
+    const vec4* __restrict__ vertexUVs,
+    const vec4* __restrict__ vertexNormals,
+    const uint4* __restrict__ emissiveIndices,
+    const vec4* __restrict__ emissiveAreas,
     const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
@@ -161,8 +165,8 @@ __device__ void TraversalBVH(
     const Ray& ray,
     Hit& hit,
     const BVHNode* __restrict__ bvhNodes,
-    const Triangle* __restrict__ triangles,
-    const Vertex* __restrict__ vertices,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ vertexPositions,
     const Material* __restrict__ mats,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
@@ -191,22 +195,22 @@ __device__ void TraversalBVH(
             {
                 statsIsecs++;
 
-                Triangle tri = triangles[n.triIdx + i];
+                uint4 triIndices = triangleIndices[n.triIdx + i];
 
                 vec3 v0 = vec3(
-                    vertices[tri.indices.x].position.x,
-                    vertices[tri.indices.x].position.y,
-                    vertices[tri.indices.x].position.z
+                    vertexPositions[triIndices.x].x,
+                    vertexPositions[triIndices.x].y,
+                    vertexPositions[triIndices.x].z
                 );
                 vec3 v1 = vec3(
-                    vertices[tri.indices.y].position.x,
-                    vertices[tri.indices.y].position.y,
-                    vertices[tri.indices.y].position.z
+                    vertexPositions[triIndices.y].x,
+                    vertexPositions[triIndices.y].y,
+                    vertexPositions[triIndices.y].z
                 );
                 vec3 v2 = vec3(
-                    vertices[tri.indices.z].position.x,
-                    vertices[tri.indices.z].position.y,
-                    vertices[tri.indices.z].position.z
+                    vertexPositions[triIndices.z].x,
+                    vertexPositions[triIndices.z].y,
+                    vertexPositions[triIndices.z].z
                 );
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
@@ -290,8 +294,8 @@ __device__ void TraversalBVH4(
     const Ray& ray,
     Hit& hit,
     const BVH4Node* __restrict__ bvh4Nodes,
-    const Triangle* __restrict__ triangles,
-    const Vertex* __restrict__ vertices,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ vertexPositions,
     const Material* __restrict__ mats,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
@@ -318,22 +322,22 @@ __device__ void TraversalBVH4(
             for (unsigned int i = 0; i < n.triCount; ++i) {
                 statsIsecs++;
 
-                Triangle tri = triangles[n.triIdx + i];
+                uint4 triIndices = triangleIndices[n.triIdx + i];
 
                 vec3 v0 = vec3(
-                    vertices[tri.indices.x].position.x,
-                    vertices[tri.indices.x].position.y,
-                    vertices[tri.indices.x].position.z
+                    vertexPositions[triIndices.x].x,
+                    vertexPositions[triIndices.x].y,
+                    vertexPositions[triIndices.x].z
                 );
                 vec3 v1 = vec3(
-                    vertices[tri.indices.y].position.x,
-                    vertices[tri.indices.y].position.y,
-                    vertices[tri.indices.y].position.z
+                    vertexPositions[triIndices.y].x,
+                    vertexPositions[triIndices.y].y,
+                    vertexPositions[triIndices.y].z
                 );
                 vec3 v2 = vec3(
-                    vertices[tri.indices.z].position.x,
-                    vertices[tri.indices.z].position.y,
-                    vertices[tri.indices.z].position.z
+                    vertexPositions[triIndices.z].x,
+                    vertexPositions[triIndices.z].y,
+                    vertexPositions[triIndices.z].z
                 );
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
@@ -401,8 +405,8 @@ __device__ void TraversalKdTree(
     Hit& hit,
     const KdNode* __restrict__ kdNodes,
     const unsigned int* __restrict__ kdtreeIndices,
-    const Triangle* __restrict__ triangles,
-    const Vertex* __restrict__ vertices,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ vertexPositions,
     const Material* __restrict__ mats,
     unsigned long long& statsRays,
     unsigned long long& statsIsecs,
@@ -431,22 +435,22 @@ __device__ void TraversalKdTree(
             for (unsigned int i = 0; i < n.triCount; ++i) {
                 statsIsecs++;
 
-                Triangle tri = triangles[kdtreeIndices[n.triIdx + i]];
+                uint4 triIndices = triangleIndices[kdtreeIndices[n.triIdx + i]];
 
                 vec3 v0 = vec3(
-                    vertices[tri.indices.x].position.x,
-                    vertices[tri.indices.x].position.y,
-                    vertices[tri.indices.x].position.z
+                    vertexPositions[triIndices.x].x,
+                    vertexPositions[triIndices.x].y,
+                    vertexPositions[triIndices.x].z
                 );
                 vec3 v1 = vec3(
-                    vertices[tri.indices.y].position.x,
-                    vertices[tri.indices.y].position.y,
-                    vertices[tri.indices.y].position.z
+                    vertexPositions[triIndices.y].x,
+                    vertexPositions[triIndices.y].y,
+                    vertexPositions[triIndices.y].z
                 );
                 vec3 v2 = vec3(
-                    vertices[tri.indices.z].position.x,
-                    vertices[tri.indices.z].position.y,
-                    vertices[tri.indices.z].position.z
+                    vertexPositions[triIndices.z].x,
+                    vertexPositions[triIndices.z].y,
+                    vertexPositions[triIndices.z].z
                 );
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
@@ -486,30 +490,30 @@ __device__ void TraversalKdTree(
 __device__ void EmissiveTraversalBF(
     const Ray& ray,
     Hit& hit,
-    const Triangle* __restrict__ eTriangles,
-    const Vertex* __restrict__ vertices,
+    const uint4* __restrict__ emissiveIndices,
+    const vec4* __restrict__ vertexPositions,
     const Material* __restrict__ mats,
     unsigned int lightCount
 )
 {
     for (unsigned int tIdx = 0; tIdx < lightCount; ++tIdx) {
-        Triangle tri = eTriangles[tIdx];
+        uint4 triIndices = emissiveIndices[tIdx];
 
-        vec3 v0 = vec3(vertices[tri.indices.x].position.x,
-                       vertices[tri.indices.x].position.y,
-                       vertices[tri.indices.x].position.z);
-        vec3 v1 = vec3(vertices[tri.indices.y].position.x,
-                       vertices[tri.indices.y].position.y,
-                       vertices[tri.indices.y].position.z);
-        vec3 v2 = vec3(vertices[tri.indices.z].position.x,
-                       vertices[tri.indices.z].position.y,
-                       vertices[tri.indices.z].position.z);
+        vec3 v0 = vec3(vertexPositions[triIndices.x].x,
+                       vertexPositions[triIndices.x].y,
+                       vertexPositions[triIndices.x].z);
+        vec3 v1 = vec3(vertexPositions[triIndices.y].x,
+                       vertexPositions[triIndices.y].y,
+                       vertexPositions[triIndices.y].z);
+        vec3 v2 = vec3(vertexPositions[triIndices.z].x,
+                       vertexPositions[triIndices.z].y,
+                       vertexPositions[triIndices.z].z);
 
         vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
 
         if (miss(isec.x)) continue;
 
-        if (isec.x < hit.t) {
+        if (isec.x <= hit.t) {
             //vec3 Ng = normalize(cross(v1 - v0, v2 - v0));
 
             hit.t = isec.x;
@@ -540,9 +544,13 @@ __device__ Hit world(
     const BVH4Node* __restrict__ bvh4Nodes,
     const KdNode* __restrict__ kdNodes,
     const unsigned int* __restrict__ kdtreeIndices,
-    const Triangle* __restrict__ triangles,
-    const Vertex* __restrict__ vertices,
-    const Triangle* __restrict__ eTriangles,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ triangleAreas,
+    const vec4* __restrict__ vertexPositions,
+    const vec4* __restrict__ vertexUVs,
+    const vec4* __restrict__ vertexNormals,
+    const uint4* __restrict__ emissiveIndices,
+    const vec4* __restrict__ emissiveAreas,
     const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
@@ -558,18 +566,18 @@ __device__ Hit world(
 
     switch (accelerationStructureType) {
     case AS_BVH:
-        TraversalBVH(ray, hit, bvhNodes, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
+        TraversalBVH(ray, hit, bvhNodes, triangleIndices, vertexPositions, mats, statsRays, statsIsecs, statsTraversals);
         break;
     case AS_BVH4:
-        TraversalBVH4(ray, hit, bvh4Nodes, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
+        TraversalBVH4(ray, hit, bvh4Nodes, triangleIndices, vertexPositions, mats, statsRays, statsIsecs, statsTraversals);
         break;
     case AS_KD_TREE:
     default:
-        TraversalKdTree(ray, hit, kdNodes, kdtreeIndices, triangles, vertices, mats, statsRays, statsIsecs, statsTraversals);
+        TraversalKdTree(ray, hit, kdNodes, kdtreeIndices, triangleIndices, vertexPositions, mats, statsRays, statsIsecs, statsTraversals);
         break;
     }
 
-    EmissiveTraversalBF(ray, hit, eTriangles, vertices, mats, lightCount);
+    EmissiveTraversalBF(ray, hit, emissiveIndices, vertexPositions, mats, lightCount);
 
     return hit;
 }
@@ -669,19 +677,22 @@ __device__ float computeLightPdf(
     const vec3& curPos,
     const vec3& prevPos,
     unsigned int triIdx,
-    const Triangle* __restrict__ eTriangles,
-    const Vertex* __restrict__ vertices,
+    const uint4* __restrict__ emissiveIndices,
+    const vec4* __restrict__ emissiveAreas,
+    const vec4* __restrict__ vertexPositions,
     unsigned int lightCount
 ) {
-    Triangle tri = eTriangles[triIdx];
+    if (triIdx >= lightCount) return 0.0f;
 
-    vec3 v0(vertices[tri.indices.x].position.x, vertices[tri.indices.x].position.y, vertices[tri.indices.x].position.z);
-    vec3 v1(vertices[tri.indices.y].position.x, vertices[tri.indices.y].position.y, vertices[tri.indices.y].position.z);
-    vec3 v2(vertices[tri.indices.z].position.x, vertices[tri.indices.z].position.y, vertices[tri.indices.z].position.z);
+    uint4 triIndices = emissiveIndices[triIdx];
+
+    vec3 v0(vertexPositions[triIndices.x].x, vertexPositions[triIndices.x].y, vertexPositions[triIndices.x].z);
+    vec3 v1(vertexPositions[triIndices.y].x, vertexPositions[triIndices.y].y, vertexPositions[triIndices.y].z);
+    vec3 v2(vertexPositions[triIndices.z].x, vertexPositions[triIndices.z].y, vertexPositions[triIndices.z].z);
 
     vec3 lightNormal = normalize(cross(v1 - v0, v2 - v0));
 
-    float area = tri.area.x;
+    float area = emissiveAreas[triIdx].x;
 
     vec3 toLight = curPos - prevPos;
     float dist2 = dot(toLight, toLight);
@@ -699,15 +710,19 @@ __device__ LightSample sampleNEE(
     const vec3& hitPos,
     const vec3& N,
     unsigned int& seed,
-    const Triangle* __restrict__ eTriangles,
-    const Vertex* __restrict__ vertices,
+    const uint4* __restrict__ emissiveIndices,
+    const vec4* __restrict__ emissiveAreas,
+    const vec4* __restrict__ vertexPositions,
     const Material* __restrict__ mats,
     unsigned int lightCount,
     const BVHNode* __restrict__ bvhNodes,
     const BVH4Node* __restrict__ bvh4Nodes,
     const KdNode* __restrict__ kdNodes,
     const unsigned int* __restrict__ kdtreeIndices,
-    const Triangle* __restrict__ triangles,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ triangleAreas,
+    const vec4* __restrict__ vertexUVs,
+    const vec4* __restrict__ vertexNormals,
     unsigned int triangleCount,
     int accelerationStructureType,
     unsigned long long& statsRays,
@@ -724,11 +739,11 @@ __device__ LightSample sampleNEE(
 
     // Uniform triangle sampling
     unsigned int lidx = min((unsigned int)(RandomFloat01(seed) * float(lightCount)), lightCount - 1u);
-    Triangle tri = eTriangles[lidx];
+    uint4 triIndices = emissiveIndices[lidx];
 
-    vec3 v0(vertices[tri.indices.x].position.x, vertices[tri.indices.x].position.y, vertices[tri.indices.x].position.z);
-    vec3 v1(vertices[tri.indices.y].position.x, vertices[tri.indices.y].position.y, vertices[tri.indices.y].position.z);
-    vec3 v2(vertices[tri.indices.z].position.x, vertices[tri.indices.z].position.y, vertices[tri.indices.z].position.z);
+    vec3 v0(vertexPositions[triIndices.x].x, vertexPositions[triIndices.x].y, vertexPositions[triIndices.x].z);
+    vec3 v1(vertexPositions[triIndices.y].x, vertexPositions[triIndices.y].y, vertexPositions[triIndices.y].z);
+    vec3 v2(vertexPositions[triIndices.z].x, vertexPositions[triIndices.z].y, vertexPositions[triIndices.z].z);
 
     float u = RandomFloat01(seed);
     float v = RandomFloat01(seed);
@@ -749,14 +764,14 @@ __device__ LightSample sampleNEE(
     // Shadow ray
     Ray shadow(hitPos + N * NORMAL_OFFSET, wi);
     statsShadowRays++;
-    Hit sh = world(shadow, bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangles, vertices, eTriangles, mats,
+    Hit sh = world(shadow, bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangleIndices, triangleAreas, vertexPositions, vertexUVs, vertexNormals, emissiveIndices, emissiveAreas, mats,
                      triangleCount, lightCount, accelerationStructureType, statsRays, statsIsecs, statsTraversals);
     if (sh.t < dist - 2.0f * NORMAL_OFFSET) return ls;
 
     ls.wi  = wi;
-    ls.pdf = computeLightPdf(lightPos, hitPos, lidx, eTriangles, vertices, lightCount);
+    ls.pdf = computeLightPdf(lightPos, hitPos, lidx, emissiveIndices, emissiveAreas, vertexPositions, lightCount);
 
-    Material lmat = mats[tri.indices.w];
+    Material lmat = mats[triIndices.w];
     ls.Le = lmat.emissiveColor * lmat.emissivePower;
 
     return ls;
@@ -810,9 +825,13 @@ __device__ RenderData worldRender(
     const BVH4Node* __restrict__ bvh4Nodes,
     const KdNode* __restrict__ kdNodes,
     const unsigned int* __restrict__ kdtreeIndices,
-    const Triangle* __restrict__ triangles,
-    const Vertex* __restrict__ vertices,
-    const Triangle* __restrict__ eTriangles,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ triangleAreas,
+    const vec4* __restrict__ vertexPositions,
+    const vec4* __restrict__ vertexUVs,
+    const vec4* __restrict__ vertexNormals,
+    const uint4* __restrict__ emissiveIndices,
+    const vec4* __restrict__ emissiveAreas,
     const Material* __restrict__ mats,
     unsigned int triangleCount,
     unsigned int lightCount,
@@ -840,8 +859,8 @@ __device__ RenderData worldRender(
             ray,
             bvhNodes, bvh4Nodes, kdNodes,
             kdtreeIndices,
-            triangles, vertices,
-            eTriangles, mats,
+            triangleIndices, triangleAreas, vertexPositions, vertexUVs, vertexNormals,
+            emissiveIndices, emissiveAreas, mats,
             triangleCount, lightCount,
             accelerationStructureType,
             statsRays, statsIsecs,
@@ -856,32 +875,32 @@ __device__ RenderData worldRender(
         vec3 hitPoint = ray.origin + ray.dir * hit.t;
         bool isLightHit = (hit.triIdx&(1<<30)) != 0;
         int triIdx = hit.triIdx&(~(1<<30));
-        Triangle tri = !isLightHit ? triangles[triIdx] : eTriangles[triIdx];
+        uint4 triIndices = !isLightHit ? triangleIndices[triIdx] : emissiveIndices[triIdx];
 
         vec3 v0 = vec3(
-            vertices[tri.indices.x].position.x,
-            vertices[tri.indices.x].position.y,
-            vertices[tri.indices.x].position.z
+            vertexPositions[triIndices.x].x,
+            vertexPositions[triIndices.x].y,
+            vertexPositions[triIndices.x].z
         );
         vec3 v1 = vec3(
-            vertices[tri.indices.y].position.x,
-            vertices[tri.indices.y].position.y,
-            vertices[tri.indices.y].position.z
+            vertexPositions[triIndices.y].x,
+            vertexPositions[triIndices.y].y,
+            vertexPositions[triIndices.y].z
         );
         vec3 v2 = vec3(
-            vertices[tri.indices.z].position.x,
-            vertices[tri.indices.z].position.y,
-            vertices[tri.indices.z].position.z
+            vertexPositions[triIndices.z].x,
+            vertexPositions[triIndices.z].y,
+            vertexPositions[triIndices.z].z
         );
 
         vec3 N = normalize(cross(v1-v0,v2-v0));
-        Material mat = mats[tri.indices.w];
+        Material mat = mats[triIndices.w];
 
-        // Emission � apply MIS weight when not the primary hit
+        // Emission  apply MIS weight when not the primary hit
         if (mat.emissivePower > 0.0f) {
             vec3 Le = mat.emissiveColor * mat.emissivePower;
             if (i > 0) {
-                float pdfLight = computeLightPdf(hitPoint, ray.origin, triIdx, eTriangles, vertices, lightCount);
+                float pdfLight = computeLightPdf(hitPoint, ray.origin, triIdx, emissiveIndices, emissiveAreas, vertexPositions, lightCount);
                 float w = MISWeight(prevPdfBSDF, pdfLight);
                 radiance = radiance + throughput * Le * w;
             } else radiance = radiance + throughput * Le;
@@ -899,8 +918,8 @@ __device__ RenderData worldRender(
         // Next Event Estimation (NEE)
         LightSample ls = sampleNEE(
             hitPoint, N, seed,
-            eTriangles, vertices, mats, lightCount,
-            bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangles, triangleCount,
+            emissiveIndices, emissiveAreas, vertexPositions, mats, lightCount,
+            bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangleIndices, triangleAreas, vertexUVs, vertexNormals, triangleCount,
             accelerationStructureType, statsRays, statsIsecs, statsTraversals, statsShadowRays
         );
         bool didNEE = ls.pdf > 0.0f;
@@ -965,6 +984,8 @@ __device__ RenderData worldRender(
     return rd;
 }
 
+__constant__ PathtracerState c_state;
+
 __global__ void pathtracerKernel(
     cudaSurfaceObject_t outImage,
     vec4* __restrict__ accImage,
@@ -973,15 +994,18 @@ __global__ void pathtracerKernel(
     const BVH4Node* __restrict__ bvh4Nodes,
     const KdNode* __restrict__ kdNodes,
     const unsigned int* __restrict__ kdtreeIndices,
-    const Triangle* __restrict__ triangles,
-    const Vertex* __restrict__ vertices,
-    const Triangle* __restrict__ eTriangles,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ triangleAreas,
+    const vec4* __restrict__ vertexPositions,
+    const vec4* __restrict__ vertexUVs,
+    const vec4* __restrict__ vertexNormals,
+    const uint4* __restrict__ emissiveIndices,
+    const vec4* __restrict__ emissiveAreas,
     const Material* __restrict__ mats,
 
     Statistics* __restrict__ statistics,
 
     ComputeTile ct,
-    const PathtracerState* __restrict__ state,
     unsigned int triangleCount,
     unsigned int lightCount,
     unsigned int lightBounces,
@@ -989,32 +1013,43 @@ __global__ void pathtracerKernel(
     bool USE_STATS
 )
 {
-    unsigned int gx = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int gy = blockIdx.y * blockDim.y + threadIdx.y;
-    unsigned int px = ct.tileOffset.x + gx;
-    unsigned int py = ct.tileOffset.y + gy;
+    unsigned int width  = (unsigned int)c_state.iResolution.x;
+    unsigned int height = (unsigned int)c_state.iResolution.y;
+    unsigned int totalPixels = ct.tileSize.x * ct.tileSize.y;
 
-    if (px >= (unsigned int)state->iResolution.x || py >= (unsigned int)state->iResolution.y)
-        return;
-    
+    unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int stride = blockDim.x * gridDim.x;
 
-    unsigned int width  = (unsigned int)state->iResolution.x;
-    unsigned int height = (unsigned int)state->iResolution.y;
-    unsigned int idx    = py * width + px;
-    unsigned int sampleFrame = ((unsigned int)state->iFrame) / PIXEL_SAMPLE_STRIDE;
-    bool doPixel = (((px ^ py ^ (unsigned int)state->iFrame) & 1u) == 0u);
-    if (!doPixel) {
-        vec4 sum = (sampleFrame == 0u) ? vec4(0.0f) : accImage[idx];
-        float t = 1.0f / float(sampleFrame + 1u);
-        vec3 finalColor(sum.x * t, sum.y * t, sum.z * t);
-        float4 out = make_float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
-        surf2Dwrite(out, outImage, px * sizeof(float4), py);
-        return;
-    }
+    for (unsigned int i = tid; i < totalPixels; i += stride) {
+        unsigned int gx = i % ct.tileSize.x;
+        unsigned int gy = i / ct.tileSize.x;
+        unsigned int px = ct.tileOffset.x + gx;
+        unsigned int py = ct.tileOffset.y + gy;
+
+        if (px >= (unsigned int)c_state.iResolution.x || py >= (unsigned int)c_state.iResolution.y)
+        continue;
+
+        unsigned int idx    = py * width + px;
+        unsigned int sampleFrame = ((unsigned int)c_state.iFrame) / PIXEL_SAMPLE_STRIDE;
+        bool doPixel = (((px ^ py ^ (unsigned int)c_state.iFrame) & 1u) == 0u);
+        unsigned int pixelParity = (px ^ py) & 1u;
+        unsigned int frameParity = ((unsigned int)c_state.iFrame) & 1u;
+        unsigned int pixelSampleCount = sampleFrame + ((pixelParity == 0u || frameParity == 1u) ? 1u : 0u);
+        if (!doPixel) {
+            vec4 sum = (pixelSampleCount == 0u) ? vec4(0.0f) : accImage[idx];
+            vec3 finalColor(0.0f);
+            if (pixelSampleCount > 0u) {
+                float t = 1.0f / float(pixelSampleCount);
+                finalColor = vec3(sum.x * t, sum.y * t, sum.z * t);
+            }
+            float4 out = make_float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
+            surf2Dwrite(out, outImage, px * sizeof(float4), py);
+            continue;
+        }
 
     unsigned int seed = hash(px + py * width + sampleFrame * 16777619u) | 1u;
 
-    float aspect = state->iResolution.x / state->iResolution.y;
+    float aspect = c_state.iResolution.x / c_state.iResolution.y;
 
     vec2 uv;
     uv.x = (float(px) / float(width))  * 2.0f - 1.0f;
@@ -1034,8 +1069,8 @@ __global__ void pathtracerKernel(
     jitteredUV.x *= aspect;
     jitteredUV.x = -jitteredUV.x;
 
-    vec3 ro(state->camera.cameraPos.x, state->camera.cameraPos.y, state->camera.cameraPos.z);
-    vec3 cameraRot(state->camera.cameraRot.x, state->camera.cameraRot.y, state->camera.cameraRot.z);
+    vec3 ro(c_state.camera.cameraPos.x, c_state.camera.cameraPos.y, c_state.camera.cameraPos.z);
+    vec3 cameraRot(c_state.camera.cameraRot.x, c_state.camera.cameraRot.y, c_state.camera.cameraRot.z);
 
     vec3 rd(jitteredUV.x, jitteredUV.y, 1.0f);
     rd = normalize(rd);
@@ -1059,8 +1094,8 @@ __global__ void pathtracerKernel(
         ray,
         bvhNodes, bvh4Nodes, kdNodes,
         kdtreeIndices,
-        triangles, vertices,
-        eTriangles, mats,
+        triangleIndices, triangleAreas, vertexPositions, vertexUVs, vertexNormals,
+        emissiveIndices, emissiveAreas, mats,
         triangleCount,
         lightCount,
         accelerationStructureType,
@@ -1090,12 +1125,13 @@ __global__ void pathtracerKernel(
         atomicAdd(&statistics->shadowRays,  statsShadowRays);
     }
 
-    // Temporal mix: average of all accumulated samples
-    float t = 1.0f / float(sampleFrame + 1u);
-    vec3 finalColor(newSum.x * t, newSum.y * t, newSum.z * t);
-    float4 out = make_float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
+        // Temporal mix: average of all accumulated samples
+        float t = 1.0f / float(pixelSampleCount);
+        vec3 finalColor(newSum.x * t, newSum.y * t, newSum.z * t);
+        float4 out = make_float4(finalColor.x, finalColor.y, finalColor.z, 1.0f);
 
-    surf2Dwrite(out, outImage, px * sizeof(float4), py);
+        surf2Dwrite(out, outImage, px * sizeof(float4), py);
+    }
 }
 
 
@@ -1107,9 +1143,13 @@ void dispatchCUDAPathtracerKernel(
     const BVH4Node* __restrict__ d_bvh4Nodes,
     const KdNode* __restrict__ d_kdNodes,
     const unsigned int* __restrict__ d_kdtreeIndices,
-    const Triangle* __restrict__ d_triangles,
-    const Vertex* __restrict__ d_vertices,
-    const Triangle* __restrict__ d_eTriangles,
+    const uint4* __restrict__ d_triangleIndices,
+    const vec4* __restrict__ d_triangleAreas,
+    const vec4* __restrict__ d_vertexPositions,
+    const vec4* __restrict__ d_vertexUVs,
+    const vec4* __restrict__ d_vertexNormals,
+    const uint4* __restrict__ d_emissiveIndices,
+    const vec4* __restrict__ d_emissiveAreas,
     const Material* __restrict__ d_mats,
     Statistics* __restrict__ d_statistics,
     ComputeTile ct,
@@ -1121,16 +1161,14 @@ void dispatchCUDAPathtracerKernel(
     bool USE_STATS
 )
 {
-    unsigned int blockX = (unsigned int)ct.tileSize.x >> 1;
-    blockX = std::max(blockX, 32U);  // Ensure minimum of 32 threads
-    blockX = std::min(blockX, 1024U); // Cap at 1024 threads per block
-    
-    dim3 block(64, 1);
-    dim3 grid(
-        ((unsigned int)ct.tileSize.x + block.x - 1) / block.x,
-        ((unsigned int)ct.tileSize.y + block.y - 1) / block.y
-    );
-    
+    dim3 block(256);
+    dim3 grid(512); // Fallback grid size for persistent threads. Wait, let's use a decent heuristic:
+    // typically a few hundred blocks are enough to saturate the GPU.
+    // 512 blocks of 256 threads = 131,072 threads.
+    grid.x = 512;
+
+    cudaMemcpyToSymbol(c_state, state, sizeof(PathtracerState), 0, cudaMemcpyDeviceToDevice);
+
     pathtracerKernel<<<grid, block>>>(
         d_outImage,
         d_accImage,
@@ -1138,13 +1176,16 @@ void dispatchCUDAPathtracerKernel(
         d_bvh4Nodes,
         d_kdNodes,
         d_kdtreeIndices,
-        d_triangles,
-        d_vertices,
-        d_eTriangles,
+        d_triangleIndices,
+        d_triangleAreas,
+        d_vertexPositions,
+        d_vertexUVs,
+        d_vertexNormals,
+        d_emissiveIndices,
+        d_emissiveAreas,
         d_mats,
         d_statistics,
         ct,
-        state,
         triangleCount,
         lightCount,
         lightBounces,

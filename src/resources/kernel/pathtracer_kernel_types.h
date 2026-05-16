@@ -21,16 +21,7 @@ namespace Kernel {
         Camera camera;
     };
 
-    struct alignas(16) Vertex {
-        vec4 position;
-        vec4 uv;
-        vec4 normal;
-    };
 
-    struct alignas(16) Triangle {
-        uint4 indices;   // xyz = vertex indices, w = material index
-        vec4  area;
-    };
 
     struct alignas(16) BVHNode {
         int left;

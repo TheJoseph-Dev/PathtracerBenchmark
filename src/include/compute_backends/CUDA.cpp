@@ -6,6 +6,13 @@
 #include <cstring>
 #include <stdexcept>
 
+static_assert(sizeof(Pathtracer::FrameContext) == sizeof(Kernel::PathtracerState));
+static_assert(sizeof(Pathtracer::GPUStatistics) == sizeof(Kernel::Statistics));
+static_assert(sizeof(OBJLoader::Material) == sizeof(Kernel::Material));
+static_assert(sizeof(BVH::Node) == sizeof(Kernel::BVHNode));
+static_assert(sizeof(BVH4::Node) == sizeof(Kernel::BVH4Node));
+static_assert(sizeof(KdTree::Node) == sizeof(Kernel::KdNode));
+
 namespace Pathtracer {
 
 CUDA::CUDA(const VulkanContext& vkCtx, const Pathtracer::Config& pathtracerConfig) : ComputeBackend(vkCtx, pathtracerConfig) {
@@ -273,7 +280,7 @@ void CUDA::createDeviceMemory(void** dst, const void* src, size_t size) {
 	}
 	CUDA_CHECK(cudaMalloc(dst, size));
 	if (src) CUDA_CHECK(cudaMemcpy(*dst, src, size, cudaMemcpyHostToDevice));
-	//else CUDA_CHECK(cudaMemset(*dst, 0, size));
+	else CUDA_CHECK(cudaMemset(*dst, 0, size));
 }
 
 void CUDA::init(const SceneData& sceneData) {
@@ -294,28 +301,100 @@ void CUDA::init(const SceneData& sceneData) {
 	if (sceneData.accelerationStructureType == Pathtracer::AccelerationStructureType::KD_TREE)
 		createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.indices_kdtree.data(), sceneData.indices_kdtree.size() * sizeof(sceneData.indices_kdtree[0]));
 
-	sceneDeviceBuffers.push_back(nullptr);
-	createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.triangles.data(), sceneData.triangles.size() * sizeof(sceneData.triangles[0]));
+	std::vector<glm::uvec4> triangleIndices;
+	std::vector<glm::vec4> triangleAreas;
+	triangleIndices.reserve(sceneData.triangles.size());
+	triangleAreas.reserve(sceneData.triangles.size());
+	for (const auto& tri : sceneData.triangles) {
+		triangleIndices.push_back(tri.indices);
+		triangleAreas.push_back(tri.area);
+	}
+
+	std::vector<glm::vec4> vertexPositions;
+	std::vector<glm::vec4> vertexUVs;
+	std::vector<glm::vec4> vertexNormals;
+	vertexPositions.reserve(sceneData.vertices.size());
+	vertexUVs.reserve(sceneData.vertices.size());
+	vertexNormals.reserve(sceneData.vertices.size());
+	for (const auto& v : sceneData.vertices) {
+		vertexPositions.push_back(v.position);
+		vertexUVs.push_back(v.textureCoord);
+		vertexNormals.push_back(v.normal);
+	}
+
+	std::vector<glm::uvec4> emissiveIndices;
+	std::vector<glm::vec4> emissiveAreas;
+	emissiveIndices.reserve(sceneData.lightTriangles.size());
+	emissiveAreas.reserve(sceneData.lightTriangles.size());
+	for (const auto& tri : sceneData.lightTriangles) {
+		emissiveIndices.push_back(tri.indices);
+		emissiveAreas.push_back(tri.area);
+	}
+
 	this->triangleCount = sceneData.triangles.size();
-
-	sceneDeviceBuffers.push_back(nullptr);
-	createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.vertices.data(), sceneData.vertices.size() * sizeof(sceneData.vertices[0]));
-    
-	sceneDeviceBuffers.push_back(nullptr);
-	createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.lightTriangles.data(), sceneData.lightTriangles.size() * sizeof(sceneData.lightTriangles[0]));
 	this->emissiveTriangleCount = sceneData.lightTriangles.size();
-    
-	sceneDeviceBuffers.push_back(nullptr);
-	createDeviceMemory(&sceneDeviceBuffers.back(), (void*)sceneData.materials.data(), sceneData.materials.size() * sizeof(sceneData.materials[0]));
 
-	cudaMalloc(&d_frameContext, sizeof(Pathtracer::FrameContext));
-	cudaMalloc(&d_gpuStats, sizeof(Pathtracer::GPUStatistics));
-	cudaMemset(d_gpuStats, 0, sizeof(Pathtracer::GPUStatistics));
-	cudaMalloc(&d_accImage, WIDTH*HEIGHT*sizeof(Kernel::vec4));
+	sceneDeviceBuffers.push_back(nullptr);
+	createDeviceMemory(
+		&sceneDeviceBuffers.back(),
+		triangleIndices.empty() ? nullptr : triangleIndices.data(),
+		std::max<size_t>(triangleIndices.size() * sizeof(glm::uvec4), sizeof(glm::uvec4))
+	);
+	sceneDeviceBuffers.push_back(nullptr);
+	createDeviceMemory(
+		&sceneDeviceBuffers.back(),
+		triangleAreas.empty() ? nullptr : triangleAreas.data(),
+		std::max<size_t>(triangleAreas.size() * sizeof(glm::vec4), sizeof(glm::vec4))
+	);
+
+	sceneDeviceBuffers.push_back(nullptr);
+	createDeviceMemory(
+		&sceneDeviceBuffers.back(),
+		vertexPositions.empty() ? nullptr : vertexPositions.data(),
+		std::max<size_t>(vertexPositions.size() * sizeof(glm::vec4), sizeof(glm::vec4))
+	);
+	sceneDeviceBuffers.push_back(nullptr);
+	createDeviceMemory(
+		&sceneDeviceBuffers.back(),
+		vertexUVs.empty() ? nullptr : vertexUVs.data(),
+		std::max<size_t>(vertexUVs.size() * sizeof(glm::vec4), sizeof(glm::vec4))
+	);
+	sceneDeviceBuffers.push_back(nullptr);
+	createDeviceMemory(
+		&sceneDeviceBuffers.back(),
+		vertexNormals.empty() ? nullptr : vertexNormals.data(),
+		std::max<size_t>(vertexNormals.size() * sizeof(glm::vec4), sizeof(glm::vec4))
+	);
+
+	sceneDeviceBuffers.push_back(nullptr);
+	createDeviceMemory(
+		&sceneDeviceBuffers.back(),
+		emissiveIndices.empty() ? nullptr : emissiveIndices.data(),
+		std::max<size_t>(emissiveIndices.size() * sizeof(glm::uvec4), sizeof(glm::uvec4))
+	);
+	sceneDeviceBuffers.push_back(nullptr);
+	createDeviceMemory(
+		&sceneDeviceBuffers.back(),
+		emissiveAreas.empty() ? nullptr : emissiveAreas.data(),
+		std::max<size_t>(emissiveAreas.size() * sizeof(glm::vec4), sizeof(glm::vec4))
+	);
+
+	sceneDeviceBuffers.push_back(nullptr);
+	createDeviceMemory(
+		&sceneDeviceBuffers.back(),
+		sceneData.materials.empty() ? nullptr : sceneData.materials.data(),
+		std::max<size_t>(sceneData.materials.size() * sizeof(sceneData.materials[0]), sizeof(sceneData.materials[0]))
+	);
+
+	CUDA_CHECK(cudaMalloc(&d_frameContext, sizeof(Pathtracer::FrameContext)));
+	CUDA_CHECK(cudaMalloc(&d_gpuStats, sizeof(Pathtracer::GPUStatistics)));
+	CUDA_CHECK(cudaMemset(d_gpuStats, 0, sizeof(Pathtracer::GPUStatistics)));
+	CUDA_CHECK(cudaMalloc(&d_accImage, WIDTH * HEIGHT * sizeof(Kernel::vec4)));
+	CUDA_CHECK(cudaMemset(d_accImage, 0, WIDTH * HEIGHT * sizeof(Kernel::vec4)));
 
 	for (uint32_t i = 0; i < PING_PONG_FRAMES; i++) {
-		cudaEventCreate(&startEvents[i]);
-		cudaEventCreate(&stopEvents[i]);
+		CUDA_CHECK(cudaEventCreate(&startEvents[i]));
+		CUDA_CHECK(cudaEventCreate(&stopEvents[i]));
 
 		cudaExternalSemaphoreSignalParams signalParams{};
 		CUDA_CHECK(cudaSignalExternalSemaphoresAsync(
@@ -326,9 +405,7 @@ void CUDA::init(const SceneData& sceneData) {
 
 void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 	cudaExternalSemaphoreWaitParams waitParams{};
-	cudaError_t err = cudaWaitExternalSemaphoresAsync(&this->cudaImages[dispatchCtx.currentFrame].cudaSignalSemaphore, &waitParams, 1, this->computeStream);
-	if (err != cudaSuccess)
-		printf("CUDA Wait error: %s\n", cudaGetErrorString(err));
+	CUDA_CHECK(cudaWaitExternalSemaphoresAsync(&this->cudaImages[dispatchCtx.currentFrame].cudaSignalSemaphore, &waitParams, 1, this->computeStream));
 
 	const uint32_t WIDTH = this->pathtracerConfig.GetResolution().x, HEIGHT = this->pathtracerConfig.GetResolution().y;
 	const AccelerationStructureType asType = pathtracerConfig.GetAccelerationStructureType();
@@ -356,7 +433,7 @@ void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 		.tileOffset = uint2(0, 0)
 	};
 
-	cudaEventRecord(this->startEvents[dispatchCtx.currentFrame], this->computeStream);
+	CUDA_CHECK(cudaEventRecord(this->startEvents[dispatchCtx.currentFrame], this->computeStream));
 
 	Kernel::dispatchCUDAPathtracerKernel(
 		this->cudaImages[dispatchCtx.currentFrame].surface,
@@ -365,9 +442,13 @@ void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 		bvh4Nodes,
 		kdNodes,
 		(uint32_t*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_INDICES],
-		(Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLES],
-		(Kernel::Vertex*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTICES],
-		(Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::EMISSIVES],
+		(uint4*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLE_INDICES],
+		(Kernel::vec4*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLE_AREAS],
+		(Kernel::vec4*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTEX_POSITIONS],
+		(Kernel::vec4*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTEX_UVS],
+		(Kernel::vec4*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTEX_NORMALS],
+		(uint4*)this->sceneDeviceBuffers[DeviceBufferIndex::EMISSIVE_INDICES],
+		(Kernel::vec4*)this->sceneDeviceBuffers[DeviceBufferIndex::EMISSIVE_AREAS],
 		(Kernel::Material*)this->sceneDeviceBuffers[DeviceBufferIndex::MATERIALS],
 		(Kernel::Statistics*)this->d_gpuStats,
 		ct,
@@ -379,8 +460,9 @@ void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 		USE_STATS
 	);
 
-	cudaDeviceSynchronize();
-	cudaEventRecord(this->stopEvents[dispatchCtx.currentFrame], this->computeStream);
+	CUDA_CHECK(cudaGetLastError());
+	CUDA_CHECK(cudaDeviceSynchronize());
+	CUDA_CHECK(cudaEventRecord(this->stopEvents[dispatchCtx.currentFrame], this->computeStream));
 	/*
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -413,9 +495,7 @@ void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 	);
 	*/
 	cudaExternalSemaphoreSignalParams signalParams{};
-	cudaError_t e = cudaSignalExternalSemaphoresAsync(&this->cudaImages[dispatchCtx.currentFrame].cudaWaitSemaphore, &signalParams, 1, this->computeStream);
-	if (e != cudaSuccess)
-		printf("CUDA Signal error: %s\n", cudaGetErrorString(e));
+	CUDA_CHECK(cudaSignalExternalSemaphoresAsync(&this->cudaImages[dispatchCtx.currentFrame].cudaWaitSemaphore, &signalParams, 1, this->computeStream));
 }
 
 void CUDA::dispatchBeforeGraphicsSubmit(const DispatchConext&) {}
@@ -429,7 +509,7 @@ VkImageLayout CUDA::getFragmentSampledImageLayout() const {
 }
 
 void CUDA::updateFrameContext(const FrameContext* newData, uint64_t size) const {
-	cudaMemcpy(this->d_frameContext, newData, size, cudaMemcpyHostToDevice);
+	CUDA_CHECK(cudaMemcpy(this->d_frameContext, newData, size, cudaMemcpyHostToDevice));
 }
 
 void CUDA::sync(const SyncContext& syncCtx) const {
@@ -439,25 +519,25 @@ void CUDA::sync(const SyncContext& syncCtx) const {
 }
 
 double CUDA::queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const {
-	cudaDeviceSynchronize();
-	cudaEventSynchronize(stopEvents[frameIdx]);
+	CUDA_CHECK(cudaDeviceSynchronize());
+	CUDA_CHECK(cudaEventSynchronize(stopEvents[frameIdx]));
 	float ms;
-	cudaEventElapsedTime(&ms, startEvents[frameIdx], stopEvents[frameIdx]);
+	CUDA_CHECK(cudaEventElapsedTime(&ms, startEvents[frameIdx], stopEvents[frameIdx]));
 	return ms;
 }
 
 GPUStatistics CUDA::getBackendStatistics() { 
 	GPUStatistics ts;
-	cudaDeviceSynchronize();
-	cudaMemcpy(&ts, this->d_gpuStats, sizeof(Pathtracer::GPUStatistics), cudaMemcpyDeviceToHost);
+	CUDA_CHECK(cudaDeviceSynchronize());
+	CUDA_CHECK(cudaMemcpy(&ts, this->d_gpuStats, sizeof(Pathtracer::GPUStatistics), cudaMemcpyDeviceToHost));
 	return ts;
 }
 
 void CUDA::getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) {
 	const uint32_t WIDTH = this->pathtracerConfig.GetResolution().x, HEIGHT = this->pathtracerConfig.GetResolution().y;
 	pixels.resize(WIDTH * HEIGHT);
-	cudaDeviceSynchronize();
-	cudaMemcpy(pixels.data(), d_accImage, WIDTH * HEIGHT * sizeof(glm::vec4), cudaMemcpyDeviceToHost);
+	CUDA_CHECK(cudaDeviceSynchronize());
+	CUDA_CHECK(cudaMemcpy(pixels.data(), d_accImage, WIDTH * HEIGHT * sizeof(glm::vec4), cudaMemcpyDeviceToHost));
 }
 
 } // namespace Pathtracer

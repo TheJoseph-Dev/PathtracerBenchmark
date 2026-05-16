@@ -62,13 +62,7 @@ vec3 cameraPos;
 vec3 cameraRot;
 //uint accumulate = 1;
 
-layout(binding = 2) uniform sampler2D lastFrameTex;
 
-struct Vertex {
-	vec4 position;
-    vec4 uv;
-    vec4 normal;
-};
 
 
 struct ObjectInfo {
@@ -109,19 +103,16 @@ struct KdNode {
     int pad1;
 };
 
-struct Triangle {
-    uvec4 indices;
-    vec4 area;
-};
+
 
 layout(std430, binding = 3) readonly buffer BVHNodes { BVHNode bvhNodes[]; };
 layout(std430, binding = 4) readonly buffer KdTreeNodes { KdNode kdNodes[]; };
 layout(std430, binding = 5) readonly buffer KdTreeIndices { uint kdtreeIndices[]; };
-layout(std430, binding = 12) readonly buffer BVH4Nodes { BVH4Node bvh4Nodes[]; };
-
-layout(std430, binding = 6) readonly buffer Triangles { Triangle triangles[]; };
-layout(std430, binding = 7) readonly buffer MeshData { Vertex vertices[]; };
-layout(std430, binding = 8) readonly buffer EmissiveGeometry { Triangle eTriangles[]; };
+layout(std430, binding = 6) readonly buffer TriangleIndices { uvec4 triangleIndices[]; };
+layout(std430, binding = 7) readonly buffer TriangleAreas { vec4 triangleAreas[]; };
+layout(std430, binding = 8) readonly buffer VertexPositions { vec4 vertexPositions[]; };
+layout(std430, binding = 9) readonly buffer VertexUVs { vec4 vertexUVs[]; };
+layout(std430, binding = 10) readonly buffer VertexNormals { vec4 vertexNormals[]; };
 
 struct Material {
     vec4 albedo;
@@ -147,10 +138,10 @@ Material rLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(1.0, 0.2, 0.1), 2
 Material gLight = Material(vec4(0.0), 0.0, 1.0, 0.0, 0.0, vec3(0.2, 0.9, 0.8), 1.0);
     
 // Material[] mats = Material[] ( m1, m2, tranM, wRefM, pRefM, wlm, lm, rLight, gLight, bLight );
-layout(std430, binding = 9) readonly buffer Materials { Material mats[]; };
+layout(std430, binding = 15) readonly buffer Materials { Material mats[]; };
 
 // Benchmark
-layout(binding = 10, rgba32f) uniform image2D accImage;
+layout(binding = 2, rgba32f) uniform image2D accImage;
 layout(std430, binding = 11) buffer Statistics {
     uint64_t rays; // Rays cast (primary + secondary) | Overall work done; basic throughput metric
     uint64_t isecs; // Primitive intersections | Measures geometry testing cost; can identify heavy hits
@@ -159,13 +150,16 @@ layout(std430, binding = 11) buffer Statistics {
     uint64_t secondaryRays;
     uint64_t shadowRays;
 } statistics;
+layout(std430, binding = 12) readonly buffer BVH4Nodes { BVH4Node bvh4Nodes[]; };
+layout(std430, binding = 13) readonly buffer EmissiveIndices { uvec4 emissiveIndices[]; };
+layout(std430, binding = 14) readonly buffer EmissiveAreas { vec4 emissiveAreas[]; };
 
-uint64_t statsRays = 0ul;
-uint64_t statsIsecs = 0ul;
-uint64_t statsTraversals = 0ul;
-uint64_t statsPrimaryRays = 0ul;
-uint64_t statsSecondaryRays = 0ul;
-uint64_t statsShadowRays = 0ul;
+uint statsRays = 0u;
+uint statsIsecs = 0u;
+uint statsTraversals = 0u;
+uint statsPrimaryRays = 0u;
+uint statsSecondaryRays = 0u;
+uint statsShadowRays = 0u;
 
 /*
 #define ATOMIC_INC_U64(counter) do { \
@@ -388,7 +382,7 @@ IsecInfo RayAABBIsec(Ray ray, vec3 bbMin, vec3 bbMax, vec3 invDir) {
 */
 void TraversalBVH(Ray ray, inout Hit hit) {
     //if(USE_STATS) atomicAdd(statistics.rays, 1ul);
-    statsRays++;
+    if (USE_STATS) statsRays++;
     vec3 invDir = 1.0 / ray.dir;
     int stack[MAX_TRAVERSAL_DEPTH];
     int stkptr = 0;
@@ -396,7 +390,7 @@ void TraversalBVH(Ray ray, inout Hit hit) {
 
     while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH) {
         //if(USE_STATS) atomicAdd(statistics.traversals, 1ul);
-        statsTraversals++;
+        if (USE_STATS) statsTraversals++;
         int nodeIdx = stack[--stkptr];
         BVHNode n = bvhNodes[nodeIdx];
 
@@ -412,12 +406,12 @@ void TraversalBVH(Ray ray, inout Hit hit) {
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
                 //if(USE_STATS) atomicAdd(statistics.isecs, 1ul);
-                statsIsecs++;
-                Triangle tri = triangles[n.triIdx + i];
+                if (USE_STATS) statsIsecs++;
+                uvec4 triIndices = triangleIndices[n.triIdx + i];
 
-                vec3 v0 = vertices[tri.indices.x].position.xyz;
-                vec3 v1 = vertices[tri.indices.y].position.xyz;
-                vec3 v2 = vertices[tri.indices.z].position.xyz;
+                vec3 v0 = vertexPositions[triIndices.x].xyz;
+                vec3 v1 = vertexPositions[triIndices.y].xyz;
+                vec3 v2 = vertexPositions[triIndices.z].xyz;
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
                 if (miss(isec.x)) continue;
@@ -462,26 +456,26 @@ void TraversalBVH(Ray ray, inout Hit hit) {
 }
 
 void TraversalBVH4(Ray ray, inout Hit hit) {
-    statsRays++;
+    if (USE_STATS) statsRays++;
     vec3 invDir = 1.0 / ray.dir;
     int stack[MAX_TRAVERSAL_DEPTH];
     int stkptr = 0;
     stack[stkptr++] = 0;
 
     while (stkptr > 0) {
-        statsTraversals++;
+        if (USE_STATS) statsTraversals++;
         int nodeIdx = stack[--stkptr];
         BVH4Node n = bvh4Nodes[nodeIdx];
 
         bool isLeaf = (n.child[0] == -1);
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
-                statsIsecs++;
-                Triangle tri = triangles[n.triIdx + i];
+                if (USE_STATS) statsIsecs++;
+                uvec4 triIndices = triangleIndices[n.triIdx + i];
 
-                vec3 v0 = vertices[tri.indices.x].position.xyz;
-                vec3 v1 = vertices[tri.indices.y].position.xyz;
-                vec3 v2 = vertices[tri.indices.z].position.xyz;
+                vec3 v0 = vertexPositions[triIndices.x].xyz;
+                vec3 v1 = vertexPositions[triIndices.y].xyz;
+                vec3 v2 = vertexPositions[triIndices.z].xyz;
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
                 if (miss(isec.x)) continue;
@@ -537,7 +531,7 @@ struct SpaceContext {
 
 void TraversalKdTree(Ray ray, inout Hit hit) {
     //if(USE_STATS) atomicAdd(statistics.rays, 1ul);
-    statsRays++;
+    if (USE_STATS) statsRays++;
     vec3 invDir = 1.0 / ray.dir;
     SpaceContext stack[MAX_TRAVERSAL_DEPTH];
     int stkptr = 0;
@@ -545,7 +539,7 @@ void TraversalKdTree(Ray ray, inout Hit hit) {
 
     while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH) {
         //if(USE_STATS) atomicAdd(statistics.traversals, 1ul);
-        statsTraversals++;
+        if (USE_STATS) statsTraversals++;
         SpaceContext sc = stack[--stkptr];
         KdNode n = kdNodes[sc.node];
 
@@ -555,12 +549,12 @@ void TraversalKdTree(Ray ray, inout Hit hit) {
         if (isLeaf) {
             for (uint i = 0; i < n.triCount; ++i) {
                 //if(USE_STATS) atomicAdd(statistics.isecs, 1ul);
-                statsIsecs++;
-                Triangle tri = triangles[kdtreeIndices[n.triIdx + i]];
+                if (USE_STATS) statsIsecs++;
+                uvec4 triIndices = triangleIndices[kdtreeIndices[n.triIdx + i]];
 
-                vec3 v0 = vertices[tri.indices.x].position.xyz;
-                vec3 v1 = vertices[tri.indices.y].position.xyz;
-                vec3 v2 = vertices[tri.indices.z].position.xyz;
+                vec3 v0 = vertexPositions[triIndices.x].xyz;
+                vec3 v1 = vertexPositions[triIndices.y].xyz;
+                vec3 v2 = vertexPositions[triIndices.z].xyz;
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
                 if (miss(isec.x)) continue;
@@ -602,11 +596,11 @@ void TraversalKdTree(Ray ray, inout Hit hit) {
 */
 
 void TraversalBruteForce(Ray ray, inout Hit hit) {
-    for (uint tIdx = 0; tIdx < triangles.length(); ++tIdx) {
-        Triangle tri = triangles[tIdx];
-        vec3 v0 = vertices[tri.indices.x].position.xyz;
-        vec3 v1 = vertices[tri.indices.y].position.xyz;
-        vec3 v2 = vertices[tri.indices.z].position.xyz;
+    for (uint tIdx = 0; tIdx < triangleIndices.length(); ++tIdx) {
+        uvec4 triIndices = triangleIndices[tIdx];
+        vec3 v0 = vertexPositions[triIndices.x].xyz;
+        vec3 v1 = vertexPositions[triIndices.y].xyz;
+        vec3 v2 = vertexPositions[triIndices.z].xyz;
         vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
         
         if (miss(isec.x)) continue;
@@ -619,11 +613,11 @@ void TraversalBruteForce(Ray ray, inout Hit hit) {
 }
 
 void EmissiveTraversalBF(Ray ray, inout Hit hit) {
-    for (uint tIdx = 0; tIdx < eTriangles.length(); ++tIdx) {
-        Triangle tri = eTriangles[tIdx];
-        vec3 v0 = vertices[tri.indices.x].position.xyz;
-        vec3 v1 = vertices[tri.indices.y].position.xyz;
-        vec3 v2 = vertices[tri.indices.z].position.xyz;
+    for (uint tIdx = 0; tIdx < emissiveIndices.length(); ++tIdx) {
+        uvec4 triIndices = emissiveIndices[tIdx];
+        vec3 v0 = vertexPositions[triIndices.x].xyz;
+        vec3 v1 = vertexPositions[triIndices.y].xyz;
+        vec3 v2 = vertexPositions[triIndices.z].xyz;
         vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
         if (miss(isec.x)) continue;
         if (isec.x < hit.t) {
@@ -703,15 +697,15 @@ struct LightSample {
 };
 
 float computeLightPdf(vec3 curPos, vec3 prevPos, uint triIdx) {
-    Triangle tri = eTriangles[triIdx];
+    uvec4 triIndices = emissiveIndices[triIdx];
 
-    vec3 v0 = vertices[tri.indices.x].position.xyz;
-    vec3 v1 = vertices[tri.indices.y].position.xyz;
-    vec3 v2 = vertices[tri.indices.z].position.xyz;
+    vec3 v0 = vertexPositions[triIndices.x].xyz;
+    vec3 v1 = vertexPositions[triIndices.y].xyz;
+    vec3 v2 = vertexPositions[triIndices.z].xyz;
 
     vec3 lightNormal = normalize(cross(v1 - v0, v2 - v0));
 
-    float area = tri.area.x;
+    float area = emissiveAreas[triIdx].x;
 
     vec3 toLight = curPos - prevPos;
     float dist2 = dot(toLight, toLight);
@@ -721,7 +715,7 @@ float computeLightPdf(vec3 curPos, vec3 prevPos, uint triIdx) {
     float cosL = max(dot(lightNormal, -wi), 0.0); // abs(dot(lightNormal, -wi)); => double sided
     if (cosL <= 0.0) return 0.0;
 
-    float denom = max(area * cosL * float(eTriangles.length()), 1e-6);
+    float denom = max(area * cosL * float(emissiveIndices.length()), 1e-6);
     return dist2 / denom;
 }
 
@@ -731,16 +725,16 @@ LightSample sampleNEE(vec3 hitPos, vec3 N) {
     ls.Le  = vec3(0.0);
     ls.wi  = vec3(0.0);
 
-    uint lightCount = eTriangles.length();
+    uint lightCount = emissiveIndices.length();
     if (lightCount == 0) return ls;
     
     // Uniform triangle sampling
     uint lidx = min(uint(RandomFloat01(seed) * float(lightCount)), lightCount - 1u);
-    Triangle tri = eTriangles[lidx];
+    uvec4 triIndices = emissiveIndices[lidx];
 
-    vec3 v0 = vertices[tri.indices.x].position.xyz;
-    vec3 v1 = vertices[tri.indices.y].position.xyz;
-    vec3 v2 = vertices[tri.indices.z].position.xyz;
+    vec3 v0 = vertexPositions[triIndices.x].xyz;
+    vec3 v1 = vertexPositions[triIndices.y].xyz;
+    vec3 v2 = vertexPositions[triIndices.z].xyz;
 
     float u = RandomFloat01(seed);
     float v = RandomFloat01(seed);
@@ -763,14 +757,14 @@ LightSample sampleNEE(vec3 hitPos, vec3 N) {
     shadow.origin = hitPos + N * NORMAL_OFFSET;
     shadow.dir = wi;
 
-    statsShadowRays++;
+    if (USE_STATS) statsShadowRays++;
     Hit sh = world(shadow);
     if (sh.t < dist - 2.0*NORMAL_OFFSET) return ls;
 
     ls.wi = wi;
     ls.pdf = computeLightPdf(lightPos, hitPos, lidx);
 
-    Material lm = mats[tri.indices.w];
+    Material lm = mats[triIndices.w];
     ls.Le = lm.emissiveColor * lm.emissivePower;
 
     return ls;
@@ -890,8 +884,10 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
     float prevPdfBSDF = 1.0;
     for(int i = 0; i < pc.lightBounces; i++) {
-        if (i == 0) statsPrimaryRays++;
-        else statsSecondaryRays++;
+        if (USE_STATS) {
+            if (i == 0) statsPrimaryRays++;
+            else statsSecondaryRays++;
+        }
         hit = world(ray);
         if(hit.t >= MAX_DIST) { 
             radiance += throughput * skyColor(uv).rgb; 
@@ -900,15 +896,15 @@ RenderData worldRender(vec2 uv, Ray ray) {
 
         uint triIdx = (hit.triIdx&(~(1u<<30)));
         bool isLightHit = (hit.triIdx&(1u<<30)) != 0;
-        Triangle tri = !isLightHit ? triangles[triIdx] : eTriangles[triIdx];
+        uvec4 triIndices = !isLightHit ? triangleIndices[triIdx] : emissiveIndices[triIdx];
 
-        vec3 v0 = vertices[tri.indices.x].position.xyz;
-        vec3 v1 = vertices[tri.indices.y].position.xyz;
-        vec3 v2 = vertices[tri.indices.z].position.xyz;
+        vec3 v0 = vertexPositions[triIndices.x].xyz;
+        vec3 v1 = vertexPositions[triIndices.y].xyz;
+        vec3 v2 = vertexPositions[triIndices.z].xyz;
 
         vec3 hitPoint = ray.origin + ray.dir * hit.t;
         vec3 N = normalize(cross(v1-v0, v2-v0));
-        Material mat = mats[tri.indices.w];
+        Material mat = mats[triIndices.w];
 
         // Emission if hit light
         if(mat.emissivePower > 0.0) {
@@ -996,6 +992,9 @@ void main()
     cameraPos = pathtracerState.camera.cameraPos.xyz;
     cameraRot = pathtracerState.camera.cameraRot.xyz;
     uvec2 localID = gl_GlobalInvocationID.xy;
+    if (localID.x >= pc.ct.tileSize.x || localID.y >= pc.ct.tileSize.y)
+        return;
+
     uvec2 pixel = pc.ct.tileOffset + localID;
 
     if (pixel.x >= iResolution.x || pixel.y >= iResolution.y)
@@ -1003,10 +1002,13 @@ void main()
 
     iSampleFrame = uint(iFrame) / PIXEL_SAMPLE_STRIDE;
     bool doPixel = (((pixel.x ^ pixel.y ^ uint(iFrame)) & 1u) == 0u);
-    vec3 lastFrame = texelFetch(lastFrameTex, ivec2(pixel), 0).rgb;
-    if (iFrame == 0) lastFrame = vec3(0.0);
+    uint pixelParity = (pixel.x ^ pixel.y) & 1u;
+    uint frameParity = uint(iFrame) & 1u;
+    uint pixelSampleCount = iSampleFrame + ((pixelParity == 0u || frameParity == 1u) ? 1u : 0u);
     if (!doPixel) {
-        imageStore(outImage, ivec2(pixel), vec4(lastFrame, 1.0));
+        vec4 lastSum = imageLoad(accImage, ivec2(pixel));
+        vec3 color = (pixelSampleCount == 0u) ? vec3(0.0) : (lastSum.rgb / float(pixelSampleCount));
+        imageStore(outImage, ivec2(pixel), vec4(color, 1.0));
         return;
     }
 
@@ -1046,14 +1048,14 @@ void main()
     imageStore(accImage, ivec2(pixel), newSum);
 
     if(USE_STATS) {
-        atomicAdd(statistics.rays, statsRays);
-        atomicAdd(statistics.traversals, statsTraversals);
-        atomicAdd(statistics.isecs, statsIsecs);
-        atomicAdd(statistics.primaryRays, statsPrimaryRays);
-        atomicAdd(statistics.secondaryRays, statsSecondaryRays);
-        atomicAdd(statistics.shadowRays, statsShadowRays);
+        atomicAdd(statistics.rays, uint64_t(statsRays));
+        atomicAdd(statistics.traversals, uint64_t(statsTraversals));
+        atomicAdd(statistics.isecs, uint64_t(statsIsecs));
+        atomicAdd(statistics.primaryRays, uint64_t(statsPrimaryRays));
+        atomicAdd(statistics.secondaryRays, uint64_t(statsSecondaryRays));
+        atomicAdd(statistics.shadowRays, uint64_t(statsShadowRays));
     }
 
-    finalColor = mix(lastFrame, finalRender.rgb, 1.0 / float(iSampleFrame + 1u));
+    finalColor = newSum.rgb / float(pixelSampleCount);
     imageStore(outImage, ivec2(pixel), vec4(finalColor, 1.0));
 }

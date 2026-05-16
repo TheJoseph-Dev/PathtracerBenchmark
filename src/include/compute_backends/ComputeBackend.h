@@ -27,7 +27,7 @@ namespace Pathtracer {
             VkCommandBuffer commandBuffer{ VK_NULL_HANDLE };
             uint32_t currentFrame;
             uint32_t textureIndex;
-            glm::vec2 tileSize;
+            glm::uvec2 tileSize;
             uint32_t lightBounces;
         };
 

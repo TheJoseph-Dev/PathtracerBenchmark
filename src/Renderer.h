@@ -687,7 +687,6 @@ private:
         };
 
         if (this->pathtracerConfig.GetComputeBackendType() == Pathtracer::SPIRV_T) {
-            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 * PING_PONG_FRAMES });  // 1 lastFrameTex
             poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 * PING_PONG_FRAMES });          // Only for compute UBO
             poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 * PING_PONG_FRAMES });           // compute output image + acc image framebuffer
             poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, Pathtracer::SPIRV::SSBOsCount * PING_PONG_FRAMES }); // SSBOs
