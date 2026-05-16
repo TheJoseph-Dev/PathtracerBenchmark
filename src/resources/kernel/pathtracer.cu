@@ -17,7 +17,7 @@ using namespace Kernel;
 #define INF 1e9f
 
 #define MAX_DIST 100.0f
-#define MAX_TRAVERSAL_DEPTH 64
+#define MAX_TRAVERSAL_DEPTH 32
 #define MIN_TRACE_DIST 0.0001f
 #define NORMAL_OFFSET 0.0001f
 

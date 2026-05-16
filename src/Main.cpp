@@ -26,7 +26,7 @@ static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::Accel
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
-    benchmarkInfo.spp = 64;
+    benchmarkInfo.spp = 32;
 
     Config pathtracerConfig(
         acctype,
@@ -156,20 +156,21 @@ void test() {
         //App pathtracer(warmupConfig());
         //pathtracer.run();
     }
-    /*
+    
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::CUDA_T, glm::uvec2(1024, 1024)));
         pathtracer.run();
     }
-    */
     
+    
+    /*
     {
         using namespace Pathtracer;
         App pathtracer(qaConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::CUDA_T));
         pathtracer.run();
     }
-    
+    */
 }
 
 void custom() {

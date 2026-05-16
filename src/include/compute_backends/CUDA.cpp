@@ -351,54 +351,36 @@ void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 		break;
 	}
 
-	Kernel::ComputeTile ct = { .tileSize = uint2(dispatchCtx.tileSize.x, dispatchCtx.tileSize.y) };
+	Kernel::ComputeTile ct = {
+		.tileSize = uint2(WIDTH, HEIGHT),
+		.tileOffset = uint2(0, 0)
+	};
 
 	cudaEventRecord(this->startEvents[dispatchCtx.currentFrame], this->computeStream);
 
-	const uint32_t TILE_Y = this->pathtracerConfig.GetTileSize().y;
-	const uint32_t TILE_X = this->pathtracerConfig.GetTileSize().x;
-	for (uint32_t tileY = 0; tileY < HEIGHT; tileY += TILE_Y) {
-		for (uint32_t tileX = 0; tileX < WIDTH; tileX += TILE_X) {
-			ct.tileOffset = { tileX, tileY };
-			//nvtxRangePush("CUDA Pathtracer Tile");
-            
-			Kernel::dispatchCUDAPathtracerKernel(
-				this->cudaImages[dispatchCtx.currentFrame].surface,
-				(Kernel::vec4*)this->d_accImage,
-				bvhNodes,
-				bvh4Nodes,
-				kdNodes,
-				(uint32_t*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_INDICES],
-				(Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLES],
-				(Kernel::Vertex*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTICES],
-				(Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::EMISSIVES],
-				(Kernel::Material*)this->sceneDeviceBuffers[DeviceBufferIndex::MATERIALS],
-				(Kernel::Statistics*)this->d_gpuStats,
-				ct,
-				(Kernel::PathtracerState*)this->d_frameContext,
-				triangleCount,
-				emissiveTriangleCount,
-				dispatchCtx.lightBounces,
-				accelerationStructureType,
-				USE_STATS
-			);
-			//nvtxRangePop();
-			#ifdef DEBUG
-			//cudaStreamSynchronize(this->computeStream);
-			/*cudaError_t err = cudaGetLastError();
-			if (err != cudaSuccess)
-				printf("Kernel launch error: %s (%d, %d)\n", cudaGetErrorString(err), tileX, tileY);*/
-			#endif
-		}
-	}
+	Kernel::dispatchCUDAPathtracerKernel(
+		this->cudaImages[dispatchCtx.currentFrame].surface,
+		(Kernel::vec4*)this->d_accImage,
+		bvhNodes,
+		bvh4Nodes,
+		kdNodes,
+		(uint32_t*)this->sceneDeviceBuffers[DeviceBufferIndex::KDTREE_INDICES],
+		(Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::TRIANGLES],
+		(Kernel::Vertex*)this->sceneDeviceBuffers[DeviceBufferIndex::VERTICES],
+		(Kernel::Triangle*)this->sceneDeviceBuffers[DeviceBufferIndex::EMISSIVES],
+		(Kernel::Material*)this->sceneDeviceBuffers[DeviceBufferIndex::MATERIALS],
+		(Kernel::Statistics*)this->d_gpuStats,
+		ct,
+		(Kernel::PathtracerState*)this->d_frameContext,
+		triangleCount,
+		emissiveTriangleCount,
+		dispatchCtx.lightBounces,
+		accelerationStructureType,
+		USE_STATS
+	);
 
-	if (USE_STATS) { // Required to measure the accurate kernel time
-		cudaDeviceSynchronize();
-		cudaEventSynchronize(this->stopEvents[dispatchCtx.currentFrame]);
-	}
-
+	cudaDeviceSynchronize();
 	cudaEventRecord(this->stopEvents[dispatchCtx.currentFrame], this->computeStream);
-    
 	/*
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
