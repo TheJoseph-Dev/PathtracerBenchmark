@@ -3,13 +3,45 @@ setlocal EnableDelayedExpansion
 
 :: ---- Settings ----
 set "ARCHITECTURE=x64"
-set "BUILD_TYPE=Debug"
+set "BUILD_TYPE=Release"
+set "ENABLE_CUDA=OFF"
+set "CMAKE_EXE=cmake"
+
+:: ----------------------------------------
+:: Locate Visual Studio (if available)
+:: ----------------------------------------
+
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if exist "%VSWHERE%" (
+    for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -property installationPath`) do (
+        set "VS_INSTALL=%%i"
+    )
+)
+
+if defined VS_INSTALL (
+    set "VS_DEVENV=%VS_INSTALL%\Common7\IDE\devenv.exe"
+    set "VS_CMAKE=%VS_INSTALL%\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+)
 
 :: ----------------------------------------
 :: Detect Generator
 :: ----------------------------------------
 
 echo [Detect] Searching for available generators...
+
+if defined VS_DEVENV if exist "%VS_DEVENV%" (
+    set "GENERATOR=Visual Studio 17 2022"
+    set "GENERATOR_TYPE=multi"
+    if defined VS_CMAKE if exist "%VS_CMAKE%" set "CMAKE_EXE=%VS_CMAKE%"
+    goto generator_found
+)
+
+where devenv >nul 2>nul
+if %ERRORLEVEL%==0 (
+    set "GENERATOR=Visual Studio 17 2022"
+    set "GENERATOR_TYPE=multi"
+    goto generator_found
+)
 
 where ninja >nul 2>nul
 if %ERRORLEVEL%==0 (
@@ -25,19 +57,7 @@ if %ERRORLEVEL%==0 (
     goto generator_found
 )
 
-where devenv >nul 2>nul
-if %ERRORLEVEL%==0 (
-    set "GENERATOR=Visual Studio 17 2022"
-    set "GENERATOR_TYPE=multi"
-    goto generator_found
-)
-
 echo [Error] No supported generator found.
-echo.
-echo Install one of:
-echo   - Ninja
-echo   - MinGW
-echo   - Visual Studio Build Tools
 exit /b 1
 
 :generator_found
@@ -45,86 +65,59 @@ exit /b 1
 echo [Detect] Using generator: %GENERATOR%
 
 :: ----------------------------------------
-:: Create project folders
+:: Create folders
 :: ----------------------------------------
 
-echo [Setup] Creating project folders...
-
-if not exist src (
-    mkdir src || (
-        echo [Error] Failed to create src directory.
-        exit /b 1
-    )
-)
-
-if not exist vendor (
-    mkdir vendor || (
-        echo [Error] Failed to create vendor directory.
-        exit /b 1
-    )
-)
+if not exist src mkdir src
+if not exist vendor mkdir vendor
 
 :: ----------------------------------------
-:: Download GLFW
-:: ----------------------------------------
-if exist vendor\glm (
-    echo [Cleanup] Removing existing GLM folder...
-
-    rmdir /s /q vendor\glm
-
-    if exist vendor\glm (
-        echo [Error] Failed to remove vendor\glm
-        exit /b 1
-    )
-)
-
-echo [Clone] Cloning GLM...
-
-git clone --depth 1 https://github.com/g-truc/glm vendor/glm || (
-    echo [Error] Failed to clone GLM.
-    exit /b 1
-)
-
-:: ----------------------------------------
-:: Create build directory
+:: Clone GLFW
 :: ----------------------------------------
 
-if not exist build (
-    mkdir build || (
-        echo [Error] Failed to create build directory.
-        exit /b 1
-    )
-)
+if exist vendor\glfw rmdir /s /q vendor\glfw
 
-cd build || (
-    echo [Error] Failed to change to build directory.
-    exit /b 1
-)
+echo [Clone] GLFW...
+git clone --depth 1 https://github.com/glfw/glfw vendor/glfw || exit /b 1
+
+:: ----------------------------------------
+:: Clone GLM
+:: ----------------------------------------
+
+if exist vendor\glm rmdir /s /q vendor\glm
+
+echo [Clone] GLM...
+git clone --depth 1 https://github.com/g-truc/glm vendor/glm || exit /b 1
+
+:: ----------------------------------------
+:: Clone Vulkan Headers (NO SDK)
+:: ----------------------------------------
+
+if exist vendor\Vulkan-Headers rmdir /s /q vendor\Vulkan-Headers
+
+echo [Clone] Vulkan-Headers...
+git clone --depth 1 https://github.com/KhronosGroup/Vulkan-Headers vendor/Vulkan-Headers || exit /b 1
+
+:: ----------------------------------------
+:: Build directory
+:: ----------------------------------------
+
+if not exist build mkdir build
+cd build
 
 :: ----------------------------------------
 :: Configure
 :: ----------------------------------------
 
-echo [CMake] Configuring project...
+echo [CMake] Configuring...
 
 if "%GENERATOR_TYPE%"=="multi" (
-
-    cmake .. ^
-        -G "%GENERATOR%" ^
-        -A %ARCHITECTURE%
-
+    "%CMAKE_EXE%" .. -G "%GENERATOR%" -A %ARCHITECTURE% -DENABLE_CUDA=%ENABLE_CUDA%
 ) else (
-
-    cmake .. ^
-        -G "%GENERATOR%" ^
-        -DCMAKE_BUILD_TYPE=%BUILD_TYPE%
-
+    "%CMAKE_EXE%" .. -G "%GENERATOR%" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DENABLE_CUDA=%ENABLE_CUDA%
 )
 
-if errorlevel 1 (
-    echo [Error] CMake configuration failed.
-    exit /b 1
-)
+if errorlevel 1 exit /b 1
 
 :: ----------------------------------------
 :: Build
@@ -133,24 +126,17 @@ if errorlevel 1 (
 echo [Build] Building...
 
 if "%GENERATOR_TYPE%"=="multi" (
-
-    cmake --build . --config %BUILD_TYPE%
-
+    "%CMAKE_EXE%" --build . --config %BUILD_TYPE%
 ) else (
-
-    cmake --build .
-
+    "%CMAKE_EXE%" --build .
 )
 
-if errorlevel 1 (
-    echo [Error] Build failed.
-    exit /b 1
-)
+if errorlevel 1 exit /b 1
 
 echo.
-echo [Done] Vulkan app built successfully!
+echo [Done] Release build complete
 echo.
-echo Executable should be inside:
+echo Output is in:
 echo   build/
-echo.
+
 pause

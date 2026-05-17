@@ -81,6 +81,7 @@ public:
         case COMPUTE:  return VK_SHADER_STAGE_COMPUTE_BIT;
         default: assert(false);
         }
+        return VK_SHADER_STAGE_ALL;
     }
 
     inline VkShaderModule GetShaderModule() const { return this->shaderModule; }

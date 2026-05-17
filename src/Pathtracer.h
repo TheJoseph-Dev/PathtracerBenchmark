@@ -321,27 +321,4 @@ namespace Pathtracer {
     };
 }
 
-/*
-[Configuration]
-CPU:  Intel Core i5 (11th Gen, 2.40 GHz)
-GPU:  NVIDIA GeForce MX350 (2 GB VRAM)
-API:  Vulkan
-Scene: Cornell Box
-Resolution: 720 � 480
-Samples per Pixel: 1024
-Max Path Length: 6
-Acceleration Structure: Binned SAH BVH
-
-[Performance Statistics]
-Total Rays Traced:        1.99 x 10^9
-Rays per Second:          3.25 x 10^7
-Average Nodes per Ray:    5.29
-Average Intersections per Ray: 16.30
-Total Render Time:        61.10 s
-
-[Acceleration Structure]
-Build Time:               < 1 ms
-Memory Usage:             5.6 KB
-*/
-
 #endif

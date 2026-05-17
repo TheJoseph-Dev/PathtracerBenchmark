@@ -1502,7 +1502,7 @@ public:
 
         
         if (binfo.btype == Pathtracer::IMGREF) {
-            std::string filepath = RESOURCE_PATH_PREFIX + "outputs\\" + this->pathtracerConfig.GetScene() + "\\ref.exr";
+            std::string filepath = RESOURCE("outputs\\") + this->pathtracerConfig.GetScene() + "\\ref.exr";
             std::vector<glm::vec4> groundTruth;
             uint32_t w, h;
             EXR::Load(filepath, groundTruth, w, h);
@@ -1522,7 +1522,7 @@ public:
         }
         
         if (this->pathtracerConfig.ShouldSaveImage()) {
-            std::string filepath = RESOURCE_PATH_PREFIX + "outputs\\" + (binfo.btype != Pathtracer::IMGREF ? "output" : this->pathtracerConfig.GetScene() + "\\output" + this->pathtracerConfig.InlineString());
+            std::string filepath = RESOURCE("outputs\\") + (binfo.btype != Pathtracer::IMGREF ? "output" : this->pathtracerConfig.GetScene() + "\\output" + this->pathtracerConfig.InlineString());
             EXR::Save(filepath + ".exr", pixels, this->WIDTH, this->HEIGHT);
             PPM::Save(filepath + ".ppm", pixels, this->WIDTH, this->HEIGHT, false);
             //if(binfo.btype != Pathtracer::IMGREF) PPM::Save(filepath + "-g.ppm", pixels, this->WIDTH, this->HEIGHT, true);

@@ -11,14 +11,23 @@ Download [CMake](https://cmake.org/download/)
 Download [Git](
 https://git-scm.com/install/windows)
 
+Download a CMake generator:
+- [Ninja](https://ninja-build.org/)
+- [Visual Studio (required for CUDA)]()
+
 Run:
 > auto-setup
 
 This will build the project using cmake with either Visual Studio, Ninja or MinGW generator. Thus, you must have one of them installed.
 
+Then:
+> run
+
 For Dev:
 
 - Download [Vulkan SDK](https://vulkan.lunarg.com/sdk/home)
+
+- Download [CUDA SDK](https://developer.nvidia.com/cuda-12-8-0-download-archive?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local)
 
 ## Milestones
 
@@ -85,7 +94,7 @@ For Dev:
 
 🟩 SAH
 
-🟨 SoA
+🟩 SoA
 
 🟩 Large BVHs
 

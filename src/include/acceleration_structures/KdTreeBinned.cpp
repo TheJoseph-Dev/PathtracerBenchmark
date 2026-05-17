@@ -1,7 +1,7 @@
 #include "KdTreeBinned.h"
 #include <algorithm>
 #include <queue>
-
+#include <cstring>
 
 KdTreeBinned::KdTreeBinned(const OBJLoader::MeshGeometry& meshgeo): AccelerationStructure(meshgeo) {
 	static_assert(alignof(Node) == 16);
