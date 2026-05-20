@@ -7,6 +7,7 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <utility>
 
 namespace Pathtracer {
 
@@ -67,7 +68,8 @@ namespace Pathtracer {
         CORNELL_BOX = 0,
         SIBENIK = 1,
         BUNNY = 2,
-        DRAGON = 3
+        DRAGON = 3,
+        SPONZA = 4
     };
 
     enum Resolution {
@@ -91,11 +93,22 @@ namespace Pathtracer {
         const bool saveOutputImage;
         const bool getStatsAS; // Enables or not the atomics
         const bool saveStatistics;
+        const std::string customScenePath;
+        const std::string customSceneLabel;
+
+        static std::string BuildSceneLabel(const std::string& path) {
+            if (path.empty()) return "";
+            const size_t slash = path.find_last_of("\\/");
+            const size_t start = (slash == std::string::npos) ? 0 : slash + 1;
+            size_t end = path.find_last_of('.');
+            if (end == std::string::npos || end < start) end = path.size();
+            return path.substr(start, end - start);
+        }
 
     public:
 
-        Config(AccelerationStructureType as, ComputeBackendType cbType, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false, bool getStatsAS = true, bool saveStatistics = true)
-            : accelerationStructureType(as), cbType(cbType), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize), getStatsAS(getStatsAS), saveStatistics(saveStatistics)
+        Config(AccelerationStructureType as, ComputeBackendType cbType, Scene scene, Resolution resolution, uint32_t lightBounces, Benchmark benchmarkInfo, glm::uvec2 tileSize = glm::uvec2(8, 8), bool saveOutputImage = false, bool getStatsAS = true, bool saveStatistics = true, std::string customScenePath = {})
+            : accelerationStructureType(as), cbType(cbType), scene(scene), resolution(resolution), lightBounces(lightBounces), benchmarkInfo(benchmarkInfo), saveOutputImage(saveOutputImage), tileSize(tileSize), getStatsAS(getStatsAS), saveStatistics(saveStatistics), customScenePath(std::move(customScenePath)), customSceneLabel(BuildSceneLabel(this->customScenePath))
         {
         }
 
@@ -114,13 +127,24 @@ namespace Pathtracer {
         */
 
         std::string GetScene() const {
+            if (!customSceneLabel.empty())
+                return customSceneLabel;
             switch (this->scene) {
             case Scene::CORNELL_BOX: return "cornell_box";
             case Scene::SIBENIK: return "sibenik2";
             case Scene::BUNNY: return "bunny-cbx";
             case Scene::DRAGON: return "dragon-cbx";
+            case Scene::SPONZA: return "sponza";
             default: throw std::runtime_error("Unknown scene");
             }
+        }
+
+        bool HasCustomScene() const {
+            return !customScenePath.empty();
+        }
+
+        const std::string& GetCustomScenePath() const {
+            return customScenePath;
         }
 
         glm::uvec2 GetResolution() const {

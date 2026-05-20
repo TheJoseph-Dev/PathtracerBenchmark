@@ -40,7 +40,8 @@ private:
         bool getStatsAS,
         bool saveStatistics,
         bool useSPPLadder,
-        float rmseThreshold);
+        float rmseThreshold,
+        const std::string& customScenePath);
 };
 
 #endif

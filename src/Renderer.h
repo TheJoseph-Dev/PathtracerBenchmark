@@ -11,6 +11,7 @@
 #include <direct.h>
 #include <optional>
 #include <chrono>
+#include <filesystem>
 #include <glm/glm.hpp>
 #include "include/io/OBJLoader.h"
 #include "include/io/EXR.h"
@@ -797,7 +798,14 @@ private:
     }
 
     void initComputeBackend() {
-        std::string sceneFilepath = RESOURCE("scenes\\") + this->pathtracerConfig.GetScene();
+        std::string sceneFilepath;
+        if (this->pathtracerConfig.HasCustomScene()) {
+            const std::filesystem::path inputPath(this->pathtracerConfig.GetCustomScenePath());
+            const std::string baseName = inputPath.stem().string();
+            sceneFilepath = RESOURCE("scenes\\") + baseName;
+        } else {
+            sceneFilepath = RESOURCE("scenes\\") + this->pathtracerConfig.GetScene();
+        }
         OBJLoader objloader((sceneFilepath + ".obj").c_str());
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
         std::vector<OBJLoader::Vertex> objVertices = objloader.GetObjVertices();

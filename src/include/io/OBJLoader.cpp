@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <string>
+#include <filesystem>
 
 namespace {
 	inline const char* SkipSpaces(const char* p) {
@@ -52,13 +53,14 @@ namespace {
 
 OBJLoader::OBJLoader(const char* filepath) {
 	std::cout << filepath << "\n\n";
+	const std::filesystem::path objPath(filepath);
 
 	std::size_t positionCount = 0;
 	std::size_t texCoordCount = 0;
 	std::size_t normalCount = 0;
 	std::size_t faceCount = 0;
 	{
-		std::ifstream countStream = std::ifstream(filepath);
+		std::ifstream countStream(objPath);
 		if (countStream) {
 			std::string countLine;
 			while (std::getline(countStream, countLine)) {
@@ -75,7 +77,7 @@ OBJLoader::OBJLoader(const char* filepath) {
 		}
 	}
 
-	std::ifstream stream = std::ifstream(filepath);
+	std::ifstream stream(objPath);
 	if (!stream) { std::cerr << "ERROR: OBJLoader got a NULL directory\n"; return; }
 
 	if (positionCount) positions.reserve(positionCount);
@@ -89,11 +91,9 @@ OBJLoader::OBJLoader(const char* filepath) {
 
 	std::string line;
 
-	std::string mtlFilepath = std::string(filepath);
-	mtlFilepath[mtlFilepath.size() - 1] = 'l';
-	mtlFilepath[mtlFilepath.size() - 2] = 't';
-	mtlFilepath[mtlFilepath.size() - 3] = 'm';
-	std::ifstream matStream = std::ifstream(mtlFilepath);
+	std::filesystem::path mtlPath = objPath;
+	mtlPath.replace_extension(".mtl");
+	std::ifstream matStream(mtlPath);
 	
 	// Load Materials
 	if(matStream)
