@@ -134,7 +134,7 @@ namespace Pathtracer {
             case Scene::SIBENIK: return "sibenik2";
             case Scene::BUNNY: return "bunny-cbx";
             case Scene::DRAGON: return "dragon-cbx";
-            case Scene::SPONZA: return "sponza";
+            case Scene::SPONZA: return "sponza2";
             default: throw std::runtime_error("Unknown scene");
             }
         }

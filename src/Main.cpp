@@ -159,7 +159,7 @@ void test() {
     
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::DRAGON, AccelerationStructureType::BVH, ComputeBackendType::CUDA_T, glm::uvec2(256, 256)));
+        App pathtracer(debugConfig(Scene::SPONZA, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
     
