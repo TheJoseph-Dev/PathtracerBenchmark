@@ -120,7 +120,7 @@ static Pathtracer::Config qaConfig(Pathtracer::Scene scene, Pathtracer::Accelera
         glm::uvec2(256, 256),
         false,
         false,
-        false
+        true
     );
     return pathtracerConfig;
 }
@@ -132,8 +132,8 @@ void benchmark() {
         pathtracer.run();
     }
 
-    std::array<Scene, 5> scenes = {Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::SIBENIK};
-    std::array<glm::vec2, 5> tileSizes = { glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{32, 32}, glm::vec2{256, 256} , glm::vec2{256, 256} };
+    std::array<Scene, 5> scenes = {Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::SIBENIK, Scene::SPONZA};
+    std::array<glm::vec2, 5> tileSizes = { glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256} , glm::vec2{256, 256} };
 #ifdef HAS_CUDA
     std::array<ComputeBackendType, 2> computeBackends = {ComputeBackendType::SPIRV_T, ComputeBackendType::CUDA_T};
 #else
@@ -159,18 +159,17 @@ void test() {
     
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::SPONZA, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
     
     
-    /*
+    
     {
         using namespace Pathtracer;
-        App pathtracer(qaConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::CUDA_T));
+        App pathtracer(qaConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
         pathtracer.run();
     }
-    */
 }
 
 void custom() {

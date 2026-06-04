@@ -286,7 +286,7 @@ struct RenderData {
     vec4 color;
 };
 
-#define MAX_DIST 100.0
+#define MAX_DIST INF
 //#define MAX_LIGHT_BOUNCES 4 /*8*/
 #define MAX_TRAVERSAL_DEPTH 32
 #define MIN_TRACE_DIST 0.0001

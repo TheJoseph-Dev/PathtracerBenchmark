@@ -854,6 +854,8 @@ private:
             reorderTriangles(bvh4.GetTriangles());
             bvh4Nodes = bvh4.GetTree();
             pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(bvh4Nodes.size() * sizeof(BVH4::Node));
+            pathtracerStatistics.accStructHeight = static_cast<uint32_t>(bvh4.GetHeight());
+            printf("\nBVH4 Height: %d\n", bvh4.GetHeight());
             break;
         }
         case Pathtracer::AccelerationStructureType::BVH: {
@@ -862,6 +864,8 @@ private:
             reorderTriangles(bvh.GetTriangles());
             bvhNodes = bvh.GetTree();
             pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(bvhNodes.size() * sizeof(BVH::Node));
+            pathtracerStatistics.accStructHeight = static_cast<uint32_t>(bvh.GetHeight());
+            printf("\BVH Height: %d\n", bvh.GetHeight());
             break;
         }
         case Pathtracer::AccelerationStructureType::KD_TREE:
@@ -870,7 +874,9 @@ private:
             measureBuildTime([&]() { kdh.Build(); });
             kdNodes = kdh.GetTree();
             pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(kdNodes.size() * sizeof(KdTree::Node));
+            pathtracerStatistics.accStructHeight = static_cast<uint32_t>(kdh.GetHeight());
             indices = kdh.GetIndices();
+            printf("\nKdTree Height: %d\n", kdh.GetHeight());
             break;
         }
         }
