@@ -1,7 +1,3 @@
-// ============================================================
-// pathtracer.cu
-// CUDA conversion of Vulkan GLSL path tracer
-// ============================================================
 #pragma unroll
 #include <stdio.h>
 #include <cuda.h>
@@ -17,7 +13,7 @@ using namespace Kernel;
 #define INF 1e9f
 
 #define MAX_DIST INF
-#define MAX_TRAVERSAL_DEPTH 32
+#define MAX_TRAVERSAL_DEPTH 64
 #define MIN_TRACE_DIST 0.0001f
 #define NORMAL_OFFSET 0.0001f
 

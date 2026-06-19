@@ -6907,3 +6907,309 @@
 
  Acc. Structure Memory: 8708576 bytes (Nodes only)
 
+[Config]
+ Date/Time: 2026-06-05 13:47:07
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 32x32
+ SPP: 64
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 2.424 s
+
+ FPS: 26.4026 spp/s
+
+ Avg. Kernel Time: 0 ms
+
+ Acc. Structure Build Time: 33.006001 s
+
+ Acc. Structure Memory: 20117984 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-05 13:47:54
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 32x32
+ SPP: 64
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 2.147 s
+
+ FPS: 29.809 spp/s
+
+ Avg. Kernel Time: 0 ms
+
+ Acc. Structure Build Time: 3.487000 s
+
+ Acc. Structure Memory: 4230096 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-05 13:48:58
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 8x8
+ SPP: 64
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 2.212 s
+
+ FPS: 28.9331 spp/s
+
+ Avg. Kernel Time: 0 ms
+
+ Acc. Structure Build Time: 3.579000 s
+
+ Acc. Structure Memory: 4230096 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-05 13:53:39
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 2.325 s
+
+ FPS: 27.5269 spp/s
+
+ Avg. Kernel Time: 0 ms
+
+ Acc. Structure Build Time: 32.793999 s
+
+ Acc. Structure Memory: 20117984 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-05 13:54:23
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 32x32
+ SPP: 64
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 2.203 s
+
+ FPS: 29.0513 spp/s
+
+ Avg. Kernel Time: 0 ms
+
+ Acc. Structure Build Time: 3.511000 s
+
+ Acc. Structure Memory: 4230096 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-05 14:10:25
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 2.439 s
+
+ FPS: 26.2403 spp/s
+
+ Avg. Kernel Time: 0 ms
+
+ Acc. Structure Build Time: 32.986000 s
+
+ Acc. Structure Memory: 20117984 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-05 14:48:27
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 2.373 s
+
+ FPS: 26.9701 spp/s
+
+ Avg. Kernel Time: 0 ms
+
+ Acc. Structure Build Time: 32.992001 s
+
+ Acc. Structure Memory: 20117984 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-18 16:32:03
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 4.858 s
+
+ FPS: 6.58707 spp/s
+
+ Avg. Kernel Time: 8.10974e+11 ms
+
+ Acc. Structure Build Time: 35.745998 s
+
+ Acc. Structure Memory: 20117984 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-18 16:33:31
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 128x128
+ SPP: 32
+ Max Light Bounces: 8
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 0
+ PRIMARY RAYS: 0
+ SECONDARY RAYS: 0
+ SHADOW RAYS: 0
+ TRAVERSALS: 0
+ ISECS: 0
+
+ RAYS/s: 0
+ NODES/RAY: -nan(ind)
+ ISECS/RAY: -nan(ind)
+
+ Total Elapsed Time: 2.663 s
+
+ FPS: 12.0165 spp/s
+
+ Avg. Kernel Time: 0 ms
+
+ Acc. Structure Build Time: 33.879002 s
+
+ Acc. Structure Memory: 20117984 bytes (Nodes only)
+
