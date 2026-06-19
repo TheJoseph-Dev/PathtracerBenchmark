@@ -7213,3 +7213,105 @@
 
  Acc. Structure Memory: 20117984 bytes (Nodes only)
 
+[Config]
+ Date/Time: 2026-06-19 15:42:02
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: SPIR-V
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 210263958
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 94589815
+ SHADOW RAYS: 82119711
+ TRAVERSALS: 16334605410
+ ISECS: 12292577755
+
+ RAYS/s: 2.25624e+06
+ NODES/RAY: 77.6862
+ ISECS/RAY: 58.4626
+
+ Total Elapsed Time: 93.192 s
+
+ FPS: 0.343377 spp/s
+
+ Avg. Kernel Time: 2817.37 ms
+
+ Acc. Structure Build Time: 34.125000 s
+
+ Acc. Structure Memory: 10058992 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-19 15:50:45
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: CUDA
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 210265700
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 94590986
+ SHADOW RAYS: 82120282
+ TRAVERSALS: 16334681326
+ ISECS: 12292612236
+
+ RAYS/s: 2.00614e+06
+ NODES/RAY: 77.6859
+ ISECS/RAY: 58.4623
+
+ Total Elapsed Time: 104.811 s
+
+ FPS: 0.305311 spp/s
+
+ Avg. Kernel Time: 3165.43 ms
+
+ Acc. Structure Build Time: 33.807999 s
+
+ Acc. Structure Memory: 10058992 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-19 16:11:22
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: sponza2
+ Compute Backend: CUDA
+ Acc. Structure: Havran SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 64x64
+ SPP: 128
+ Max Light Bounces: 32
+[STATS]
+ TRIANGLES: 262205
+ RAYS: 1420756722
+ PRIMARY RAYS: 134217728
+ SECONDARY RAYS: 738719561
+ SHADOW RAYS: 547819433
+ TRAVERSALS: 102461631657
+ ISECS: 82460410720
+
+ RAYS/s: 1.7359e+06
+ NODES/RAY: 72.1176
+ ISECS/RAY: 58.0398
+
+ Total Elapsed Time: 818.455 s
+
+ FPS: 0.156392 spp/s
+
+ Avg. Kernel Time: 6338.48 ms
+
+ Acc. Structure Build Time: 33.588001 s
+
+ Acc. Structure Memory: 10058992 bytes (Nodes only)
+

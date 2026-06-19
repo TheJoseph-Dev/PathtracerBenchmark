@@ -43,14 +43,16 @@ namespace Kernel {
     };
 
     struct alignas(16) KdNode {
+        union {
+            float splitPos;
+            unsigned int triIdx;
+        };
+        union {
+            unsigned int axis;
+            unsigned int triCount;
+        };
         int left;
         int right;
-        unsigned int triIdx;
-        unsigned int triCount;
-        float splitPos;
-        unsigned int axis;
-        int pad0;
-        int pad1;
     };
 
     struct alignas(16) Material {

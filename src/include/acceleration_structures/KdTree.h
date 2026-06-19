@@ -15,9 +15,17 @@ class KdTree: public AccelerationStructure {
 
     //OBJLoader::MeshGeometry meshgeo;
 public:
-    struct alignas(16) Node : public TreeNode {
-        float splitPos;
-        uint32_t axis;
+    struct alignas(16) Node {
+        union {
+            float splitPos;
+            uint32_t triIdx;
+        };
+        union {
+            uint32_t axis;
+            uint32_t triCount;
+        };
+        int32_t left;
+        int32_t right;
     };
 
     KdTree(const OBJLoader::MeshGeometry& meshgeo);
@@ -28,7 +36,13 @@ public:
     int GetHeight() const;
 
     void Print() const {
-        for (size_t i = 0; i < tree.size(); i++) printf("%d | (lidx: %d, ridx: %d | idx: %d, cnt: %d) => (axis: %d, split: %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].axis, tree[i].splitPos);
+        for (size_t i = 0; i < tree.size(); i++) {
+            const Node& node = tree[i];
+            if (node.left == -1)
+                printf("%d | leaf (idx: %d, cnt: %d)\n", i, node.triIdx, node.triCount);
+            else
+                printf("%d | inner (lidx: %d, ridx: %d) => (axis: %d, split: %.2f)\n", i, node.left, node.right, node.axis, node.splitPos);
+        }
     }
 
     const std::vector<Node>& GetTree() const {

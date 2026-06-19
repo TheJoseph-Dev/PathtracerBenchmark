@@ -93,14 +93,10 @@ struct BVH4Node {
 };
 
 struct KdNode {
-    int left;
-    int right;
     uint triIdx;
     uint triCount;
-    float splitPos;
-    uint axis;
-    int pad0;
-    int pad1;
+    int left;
+    int right;
 };
 
 
@@ -566,8 +562,10 @@ void TraversalKdTree(Ray ray, inout Hit hit) {
                 hit.triIdx = kdtreeIndices[n.triIdx + i];
             }
         } else {
-            float tsplit = (n.splitPos - ray.origin[n.axis]) * invDir[n.axis];
-            bool below = ray.origin[n.axis] < n.splitPos || (ray.origin[n.axis] == n.splitPos && ray.dir[n.axis] <= 0.0);
+            float splitPos = uintBitsToFloat(n.triIdx);
+            uint axis = n.triCount;
+            float tsplit = (splitPos - ray.origin[axis]) * invDir[axis];
+            bool below = ray.origin[axis] < splitPos || (ray.origin[axis] == splitPos && ray.dir[axis] <= 0.0);
             uint near = below ? n.left  : n.right;
             uint far  = below ? n.right : n.left;
             if (tsplit >= sc.tmax || tsplit <= 0) stack[stkptr++] = SpaceContext(near, sc.tmin, sc.tmax);

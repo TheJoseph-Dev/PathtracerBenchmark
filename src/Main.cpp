@@ -165,7 +165,7 @@ void test() {
 
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::SPONZA, AccelerationStructureType::KD_TREE, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
+        App pathtracer(debugConfig(Scene::SPONZA, AccelerationStructureType::KD_TREE, ComputeBackendType::CUDA_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
 
