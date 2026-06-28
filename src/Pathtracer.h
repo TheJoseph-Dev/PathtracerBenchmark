@@ -95,7 +95,7 @@ namespace Pathtracer {
         }
 
         void SaveMarkdownBenchmark(const Pathtracer::Statistics& stats, const Pathtracer::Benchmark& binfo) const {
-            std::ofstream md(RESOURCE("outputs\\benchmark-" + std::format("{:%Y%m%d%H%M%S}", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now())) + ".md"), std::ios::trunc);
+            std::ofstream md(RESOURCE("outputs\\benchmarks\\benchmark-" + std::format("{:%Y%m%d%H%M%S}", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now())) + ".md"), std::ios::trunc);
             if (!md.is_open()) return;
 
             const glm::uvec2 resolution = this->config.GetResolution();
@@ -163,12 +163,11 @@ namespace Pathtracer {
         void SaveCsvBenchmark(const Pathtracer::Statistics& stats, const Pathtracer::Benchmark& binfo) const {
             std::ofstream csv(RESOURCE("outputs\\benchmark.csv"), std::ios::app);
             if (!csv.is_open()) return;
-
-            if (csv.tellp() == 0) {
+            csv.seekp(0, std::ios::end);
+            if (csv.tellp() == 0)
                 csv << "DateTime,CPU,GPU,BenchmarkType,Scene,ComputeBackend,AccelerationStructure,Resolution,TileSize,SPP,LightBounces,"
                       "Triangles,Rays,PrimaryRays,SecondaryRays,ShadowRays,Traversals,Intersections,RaysPerSecond,NodesPerRay,IntersectionsPerRay,TotalElapsedSeconds,FPS,"
                        "AvgKernelMs,AccStructBuildSeconds,AccStructMemoryBytes,AccStructHeight,RMSE,PSNR,QARmseThreshold,QAResult\n";
-            }
 
             const glm::uvec2 resolution = this->config.GetResolution();
             const glm::uvec2 tileSize = this->config.GetTileSize();

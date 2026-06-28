@@ -6,4 +6,4 @@
 *.venv
 *.exp
 *.lib
-src/resources/outputs/*.md
+src/resources/outputs/benchmarks/*.md

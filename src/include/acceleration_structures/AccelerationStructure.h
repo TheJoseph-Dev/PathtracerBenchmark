@@ -65,13 +65,6 @@ protected:
 
     std::vector<Triangle> triangles;
 
-    struct alignas(16) TreeNode {
-        int32_t left;      // index of left child (-1 if leaf)
-        int32_t right;     // index of right child (-1 if leaf)
-        uint32_t triIdx;   // starting triangle index (valid if leaf)
-        uint32_t triCount; // number of triangles in leaf
-    };
-
     struct Bin {
         AABB bounds;
         int count = 0;

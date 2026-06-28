@@ -33,7 +33,7 @@ static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::Accel
         computeBackendType,
         scene,
         Resolution::R1024x1024,
-        4,
+        8,
         benchmarkInfo,
         tileSize,
         false,
@@ -165,7 +165,7 @@ void test() {
 
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::SPONZA, AccelerationStructureType::KD_TREE, ComputeBackendType::CUDA_T, glm::uvec2(256, 256)));
+        App pathtracer(debugConfig(Scene::SPONZA, AccelerationStructureType::KD_TREE, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
 

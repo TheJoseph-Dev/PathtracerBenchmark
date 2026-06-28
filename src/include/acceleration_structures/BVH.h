@@ -14,7 +14,11 @@ class BVH final : public AccelerationStructure {
     static constexpr uint8_t leafSize = 8;
 
 public:
-    struct alignas(16) Node : public TreeNode {
+    struct alignas(16) Node {
+        int32_t left;      // index of left child (-1 if leaf)
+        int32_t right;     // index of right child (-1 if leaf)
+        uint32_t triIdx;   // starting triangle index (valid if leaf)
+        uint32_t triCount; // number of triangles in leaf
         AABB bbox;
     };
 

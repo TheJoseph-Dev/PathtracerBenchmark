@@ -7315,3 +7315,105 @@
 
  Acc. Structure Memory: 10058992 bytes (Nodes only)
 
+[Config]
+ Date/Time: 2026-06-27 15:43:33
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 218473667
+ PRIMARY RAYS: 67108864
+ SECONDARY RAYS: 151364803
+ SHADOW RAYS: 124364154
+ TRAVERSALS: 1166315738
+ ISECS: 3650395314
+
+ RAYS/s: 7.75004e+07
+ NODES/RAY: 5.33847
+ ISECS/RAY: 16.7086
+
+ Total Elapsed Time: 2.819 s
+
+ FPS: 22.7031 spp/s
+
+ Avg. Kernel Time: 38.6476 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-27 15:44:06
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: cornell_box
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 342796908
+ PRIMARY RAYS: 67108864
+ SECONDARY RAYS: 151345793
+ SHADOW RAYS: 124342251
+ TRAVERSALS: 1819732713
+ ISECS: 5645327064
+
+ RAYS/s: 7.45859e+07
+ NODES/RAY: 5.30849
+ ISECS/RAY: 16.4684
+
+ Total Elapsed Time: 4.596 s
+
+ FPS: 13.9252 spp/s
+
+ Avg. Kernel Time: 68.415 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-06-27 15:47:12
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: cornell_box
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 64
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 218455130
+ PRIMARY RAYS: 67108864
+ SECONDARY RAYS: 151346266
+ SHADOW RAYS: 124342367
+ TRAVERSALS: 1166220185
+ ISECS: 3650112962
+
+ RAYS/s: 8.12101e+07
+ NODES/RAY: 5.33849
+ ISECS/RAY: 16.7088
+
+ Total Elapsed Time: 2.69 s
+
+ FPS: 23.7918 spp/s
+
+ Avg. Kernel Time: 38.9893 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+

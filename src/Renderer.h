@@ -18,7 +18,6 @@
 #include "include/io/PPM.h"
 #include "include/acceleration_structures/BVH.h"
 #include "include/acceleration_structures/BVH4.h"
-#include "include/acceleration_structures/KdTreeBinned.h"
 #include "include/acceleration_structures/KdTree.h"
 #include "include/vulkan/Buffer.h"
 #include "include/vulkan/Shader.h"
