@@ -33,7 +33,7 @@ static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::Accel
         computeBackendType,
         scene,
         Resolution::R1024x1024,
-        8,
+        4,
         benchmarkInfo,
         tileSize,
         false,
@@ -135,7 +135,7 @@ void benchmark() {
 
     std::array<Scene, 5> scenes = { Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::SIBENIK, Scene::SPONZA };
     std::array<glm::vec2, 5> tileSizes = { glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256} , glm::vec2{256, 256} };
-    std::array<AccelerationStructureType, 3> accStrs = { AccelerationStructureType::BVH, AccelerationStructureType::BVH4, AccelerationStructureType::KD_TREE };
+    std::array<AccelerationStructureType, 3> accStrs = { AccelerationStructureType::BVH, AccelerationStructureType::KD_TREE, AccelerationStructureType::BVH4 };
     const uint32_t benchmarkTypeCount = 2;
     std::array<uint32_t, 3> lightBounces = { 1, 4, 8 };
     std::array<uint32_t, 3> spps = { 1, 32, 64 };
@@ -165,7 +165,7 @@ void test() {
 
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::SPONZA, AccelerationStructureType::KD_TREE, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
 

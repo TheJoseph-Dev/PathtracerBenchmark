@@ -11,12 +11,12 @@ public:
 
 protected:
     struct AABB {
-        glm::vec4 min;
-        glm::vec4 max;
+        glm::vec3 min;
+        glm::vec3 max;
 
         AABB() {
-            min = glm::vec4({ FLT_MAX,FLT_MAX,FLT_MAX,0 });
-            max = glm::vec4({ -FLT_MAX,-FLT_MAX,-FLT_MAX,0 });
+            min = glm::vec3({ FLT_MAX,FLT_MAX,FLT_MAX});
+            max = glm::vec3({ -FLT_MAX,-FLT_MAX,-FLT_MAX});
         }
 
         AABB(const glm::vec4& min_, const glm::vec4& max_)
@@ -24,13 +24,12 @@ protected:
         }
 
         AABB(const glm::vec3& min_, const glm::vec3& max_)
-            : min({ min_.x,min_.y,min_.z,0 }), max({ max_.x,max_.y,max_.z,0 }) {
+            : min(min_), max(max_) {
         }
 
-        void expand(const glm::vec4& p) {
+        void expand(const glm::vec3& p) {
             min = glm::min(min, p);
             max = glm::max(max, p);
-            min.w = max.w = 0;
         }
 
         void expand(const AABB& box) {
@@ -38,16 +37,16 @@ protected:
             max = glm::max(max, box.max);
         }
 
-        glm::vec4 centroid() const {
+        glm::vec3 centroid() const {
             return (min + max) * 0.5f;
         }
 
-        glm::vec4 extent() const {
+        glm::vec3 extent() const {
             return max - min;
         }
 
         float surfaceArea() const {
-            glm::vec4 e = extent();
+            glm::vec3 e = extent();
             return 2.0f * (e.x * e.y + e.x * e.z + e.y * e.z);
         }
     };

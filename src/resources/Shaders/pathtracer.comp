@@ -1,5 +1,6 @@
 #version 450
 #extension GL_ARB_gpu_shader_int64 : enable
+#extension GL_EXT_scalar_block_layout : require
 
 #ifdef GL_EXT_shader_atomic_int64
 #extension GL_EXT_shader_atomic_int64 : enable
@@ -78,18 +79,19 @@ struct BVHNode {
     int right;
     uint triIdx;
     uint triCount;
-    vec4 bboxMin;
-    vec4 bboxMax;
+    vec3 lBboxMin;
+    vec3 lBboxMax;
+    vec3 rBboxMin;
+    vec3 rBboxMax;
 };
 
 struct BVH4Node {
     int child[4];
     uint triIdx;
     uint triCount;
-    uint pad0;
-    uint pad1;
-    vec4 bboxMin[4];
-    vec4 bboxMax[4];
+    vec3 bboxMin[4];
+    vec3 bboxMax[4];
+    int pad[2];
 };
 
 struct KdNode {
@@ -101,7 +103,7 @@ struct KdNode {
 
 
 
-layout(std430, binding = 3) readonly buffer BVHNodes { BVHNode bvhNodes[]; };
+layout(std430, scalar, binding = 3) readonly buffer BVHNodes { BVHNode bvhNodes[]; };
 layout(std430, binding = 4) readonly buffer KdTreeNodes { KdNode kdNodes[]; };
 layout(std430, binding = 5) readonly buffer KdTreeIndices { uint kdtreeIndices[]; };
 layout(std430, binding = 6) readonly buffer TriangleIndices { uvec4 triangleIndices[]; };
@@ -146,7 +148,7 @@ layout(std430, binding = 11) buffer Statistics {
     uint64_t secondaryRays;
     uint64_t shadowRays;
 } statistics;
-layout(std430, binding = 12) readonly buffer BVH4Nodes { BVH4Node bvh4Nodes[]; };
+layout(std430, scalar, binding = 12) readonly buffer BVH4Nodes { BVH4Node bvh4Nodes[]; };
 layout(std430, binding = 13) readonly buffer EmissiveIndices { uvec4 emissiveIndices[]; };
 layout(std430, binding = 14) readonly buffer EmissiveAreas { vec4 emissiveAreas[]; };
 
@@ -369,13 +371,6 @@ IsecInfo RayAABBIsec(Ray ray, vec3 bbMin, vec3 bbMax, vec3 invDir) {
     return info;
 }
 
-/* Optimizations
-    - Reduce the amount of RayAABBIsec
-    - Wide BVHs (BVH4 / BVH8)
-    - SOA layout instead of structs
-    - Pre-sorted triangles in leaves
-    - Quantized bounds
-*/
 void TraversalBVH(Ray ray, inout Hit hit) {
     //if(USE_STATS) atomicAdd(statistics.rays, 1ul);
     if (USE_STATS) statsRays++;
@@ -389,13 +384,6 @@ void TraversalBVH(Ray ray, inout Hit hit) {
         if (USE_STATS) statsTraversals++;
         int nodeIdx = stack[--stkptr];
         BVHNode n = bvhNodes[nodeIdx];
-
-        // Test current node
-        /*
-        IsecInfo isec = RayAABBIsec(ray, n, invDir);
-        if (isec.tmax < isec.tmin || isec.tmin > hit.t)
-            continue;
-        */
 
         bool isLeaf = (n.left == -1);
 
@@ -419,34 +407,31 @@ void TraversalBVH(Ray ray, inout Hit hit) {
                 hit.triIdx = n.triIdx + i;
             }
         } else {
-            int left = n.left;
-            int right = n.right;
-
             bool hitL = false, hitR = false;
             IsecInfo lIsec, rIsec;
 
-            if (left >= 0) {
-                lIsec = RayAABBIsec(ray, bvhNodes[left].bboxMin.xyz, bvhNodes[left].bboxMax.xyz, invDir);
+            if (n.left >= 0) {
+                lIsec = RayAABBIsec(ray, n.lBboxMin, n.lBboxMax, invDir);
                 hitL = !(lIsec.tmax < lIsec.tmin || lIsec.tmin > hit.t);
             }
 
-            if (right >= 0) {
-                rIsec = RayAABBIsec(ray, bvhNodes[right].bboxMin.xyz, bvhNodes[right].bboxMax.xyz, invDir);
+            if (n.right >= 0) {
+                rIsec = RayAABBIsec(ray, n.rBboxMin, n.rBboxMax, invDir);
                 hitR = !(rIsec.tmax < rIsec.tmin || rIsec.tmin > hit.t);
             }
 
             if (hitL && hitR) {
                 // push far first, near last
                 if (lIsec.tmin < rIsec.tmin) {
-                    stack[stkptr++] = right;
-                    stack[stkptr++] = left;
+                    stack[stkptr++] = n.right;
+                    stack[stkptr++] = n.left;
                 } else {
-                    stack[stkptr++] = left;
-                    stack[stkptr++] = right;
+                    stack[stkptr++] = n.left;
+                    stack[stkptr++] = n.right;
                 }
             } 
-            else if (hitL) stack[stkptr++] = left;
-            else if (hitR) stack[stkptr++] = right;
+            else if (hitL) stack[stkptr++] = n.left;
+            else if (hitR) stack[stkptr++] = n.right;
         }
     }
 }
@@ -493,7 +478,7 @@ void TraversalBVH4(Ray ray, inout Hit hit) {
                 if (childIdx < 0)
                     continue;
 
-                IsecInfo isec = RayAABBIsec(ray, n.bboxMin[i].xyz, n.bboxMax[i].xyz, invDir);
+                IsecInfo isec = RayAABBIsec(ray, n.bboxMin[i], n.bboxMax[i], invDir);
                 bool childHit = !(isec.tmax < isec.tmin || isec.tmin > hit.t);
                 if (!childHit)
                     continue;

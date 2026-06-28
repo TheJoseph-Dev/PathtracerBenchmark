@@ -234,8 +234,12 @@ private:
         VkPhysicalDeviceShaderAtomicInt64Features availableAtomic64{};
         availableAtomic64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
 
+        VkPhysicalDeviceScalarBlockLayoutFeatures availableScalar{};
+        availableScalar.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES;
+
         availableFeatures2.pNext = &availableDynamicRendering;
         availableDynamicRendering.pNext = &availableAtomic64;
+        availableAtomic64.pNext = &availableScalar;
         vkGetPhysicalDeviceFeatures2(candidateDevice, &availableFeatures2);
 
         missingFeatures.clear();
@@ -247,6 +251,8 @@ private:
             missingFeatures.emplace_back("shaderBufferInt64Atomics");
         if (availableAtomic64.shaderSharedInt64Atomics != VK_TRUE)
             missingFeatures.emplace_back("shaderSharedInt64Atomics");
+        if(availableScalar.scalarBlockLayout != VK_TRUE)
+            missingFeatures.emplace_back("scalarBlockLayout");
 
         return missingFeatures.empty();
     }
@@ -390,6 +396,9 @@ private:
         atomic64Feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
         atomic64Feature.shaderBufferInt64Atomics = VK_TRUE;
         atomic64Feature.shaderSharedInt64Atomics = VK_TRUE;
+        VkPhysicalDeviceScalarBlockLayoutFeatures scalarFeatures{};
+        scalarFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES;
+        scalarFeatures.scalarBlockLayout = VK_TRUE;
 
         for (const auto& candidateDevice : devices) {
             vkGetPhysicalDeviceProperties(candidateDevice, &deviceProperties);
@@ -517,6 +526,7 @@ private:
         dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
         dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
 
+        atomic64Feature.pNext = &scalarFeatures;
         dynamicRenderingFeatures.pNext = &atomic64Feature;
         deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         deviceFeatures2.features = {};

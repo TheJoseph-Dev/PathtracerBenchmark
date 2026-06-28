@@ -19,10 +19,9 @@ public:
         int32_t child[4];
         uint32_t triIdx;
         uint32_t triCount;
-        uint32_t pad0;
-        uint32_t pad1;
-        glm::vec4 bboxMin[4];
-        glm::vec4 bboxMax[4];
+        glm::vec3 bboxMin[4];
+        glm::vec3 bboxMax[4];
+        int32_t pad[2];
     };
 
     BVH4(const OBJLoader::MeshGeometry& meshgeo);
