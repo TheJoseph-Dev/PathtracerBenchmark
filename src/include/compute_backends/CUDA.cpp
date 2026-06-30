@@ -12,6 +12,7 @@ static_assert(sizeof(OBJLoader::Material) == sizeof(Kernel::Material));
 static_assert(sizeof(BVH::Node) == sizeof(Kernel::BVHNode));
 static_assert(sizeof(BVH4::Node) == sizeof(Kernel::BVH4Node));
 static_assert(sizeof(KdTree::Node) == sizeof(Kernel::KdNode));
+static_assert(sizeof(Kernel::KdNode) == 16);
 
 namespace Pathtracer {
 

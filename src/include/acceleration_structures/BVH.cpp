@@ -4,7 +4,8 @@
 #include <queue>
 
 BVH::BVH(const OBJLoader::MeshGeometry& meshgeo) : AccelerationStructure(meshgeo) {
-    static_assert(sizeof(Node) == 48);
+    //static_assert(sizeof(Node) == 48);
+    static_assert(sizeof(Node) == 64);
     static_assert(std::is_trivially_copyable_v<Node>);
     this->tree.resize(4*triangles.size()/leafSize);
     // Build => Made build public so it's easier to benchmark
@@ -141,7 +142,7 @@ uint32_t BVH::Build(int l, int r) {
     AABB bounds;
     for (int i = l; i < r; i++)
         bounds.expand(triangles[i].bbox);
-    node.bbox = bounds;
+    //node.bbox = bounds;
 
     const int triCount = r-l;
     if(triCount <= leafSize) {
@@ -152,6 +153,14 @@ uint32_t BVH::Build(int l, int r) {
     }
 
     int mid = SplitSAH(bounds, l, r);
+
+    AABB bl;
+    for (int i = l; i < mid; i++) bl.expand(triangles[i].bbox);
+    node.leftBbox = bl;
+
+    AABB br;
+    for (int i = mid; i < r; i++) br.expand(triangles[i].bbox);
+    node.rightBbox = br;
 
     node.left = Build(l, mid);
     node.right = Build(mid, r);

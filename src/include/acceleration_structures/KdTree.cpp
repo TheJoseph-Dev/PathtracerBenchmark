@@ -1,10 +1,12 @@
 #include "KdTree.h"
 #include <algorithm>
 #include <queue>
+#include <type_traits>
 
 
 KdTree::KdTree(const OBJLoader::MeshGeometry& meshgeo): AccelerationStructure(meshgeo) /*, meshgeo(meshgeo)*/ {
 	static_assert(alignof(Node) == 16);
+    static_assert(sizeof(Node) == 16);
     static_assert(std::is_trivially_copyable_v<Node>);
     size_t triCount = this->triangles.size();
 
@@ -125,8 +127,6 @@ uint32_t KdTree::Build(int l, int r, const AABB& bounds) {
     node.right = Build(r + nl, r + nl + nr, rB);
     node.left = Build(r, r + nl, lB);
 
-    node.triIdx = 0;
-    node.triCount = 0;
     return nodeIdx;
 }
 

@@ -19,15 +19,55 @@ namespace {
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         }
     }
+
+    std::string promptText(const std::string& label) {
+        while (true) {
+            std::cout << label << ": ";
+            std::string value;
+            std::getline(std::cin >> std::ws, value);
+            if (!value.empty())
+                return value;
+            std::cout << "Input cannot be empty. Try again.\n";
+        }
+    }
+
+    void printCliHelp() {
+        std::cout << "\n=== CLI Help ===\n"
+                  << "Run modes:\n"
+                  << "  1) test: quick dev run with preset config.\n"
+                  << "  2) benchmark: batch run across scenes/backends/AS types.\n"
+                  << "  3) custom: interactive config for a single run.\n\n"
+                  << "Custom scene input format:\n"
+                  << "  - Place files in src/resources/scenes/\n"
+                  << "  - Base name must include:\n"
+                  << "      <name>.obj (triangulated faces, v/vt/vn)\n"
+                  << "      <name>-light.obj (light geometry)\n"
+                  << "      <name>.mtl (materials)\n\n"
+                  << "Benchmark types:\n"
+                  << "  - SPP: fixed samples per pixel.\n"
+                  << "  - IMGREF: compares against reference image (SPP ladder by default).\n"
+                  << "  - QA: IMGREF with single SPP and RMSE threshold.\n\n"
+                  << "Common options:\n"
+                  << "  - Scene, acceleration structure, backend, resolution, tile size, light bounces.\n";
+    }
 }
 
 CLI::RunMode CLI::promptRunMode() const {
-    std::cout << "\nRun mode:\n"
-              << "  1) test\n"
-              << "  2) benchmark\n"
-              << "  3) custom\n";
+    while (true) {
+        std::cout << "\nRun mode:\n"
+                  << "  0) help\n"
+                  << "  1) test\n"
+                  << "  2) benchmark\n"
+                  << "  3) custom\n";
 
-    return static_cast<RunMode>(promptNumeric<int>("Choose mode", 1, 3));
+        int choice = promptNumeric<int>("Choose mode", 0, 3);
+        if (choice == 0) {
+            printCliHelp();
+            continue;
+        }
+
+        return static_cast<RunMode>(choice);
+    }
 }
 
 void CLI::printCustomHeader() const {
@@ -51,8 +91,14 @@ Pathtracer::Config CLI::promptCustomConfig() const {
               << "  1) CORNELL_BOX\n"
               << "  2) BUNNY\n"
               << "  3) DRAGON\n"
-              << "  4) SIBENIK\n";
-    int sceneChoice = promptNumeric<int>("Choose scene", 1, 4);
+              << "  4) SIBENIK\n"
+              << "  5) SPONZA\n"
+              << "  6) CUSTOM (filepath)\n";
+    int sceneChoice = promptNumeric<int>("Choose scene", 1, 6);
+
+    std::string customScenePath;
+    if (sceneChoice == 6)
+        customScenePath = promptText("OBJ filepath");
 
     std::cout << "\nAcceleration Structure:\n"
               << "  1) BVH\n"
@@ -95,8 +141,9 @@ Pathtracer::Config CLI::promptCustomConfig() const {
     bool saveStatistics = promptYesNo("Save benchmark statistics to files?", true);
 
     BenchmarkType btype = isSPP ? BenchmarkType::SPP : BenchmarkType::IMGREF;
+    const Scene scene = (sceneChoice == 6) ? Scene::CORNELL_BOX : sceneFromChoice(sceneChoice);
     return customConfig(
-        sceneFromChoice(sceneChoice),
+        scene,
         accStructFromChoice(accChoice),
         backendFromChoice(backendChoice),
         resolutionFromChoice(resolutionChoice),
@@ -108,7 +155,8 @@ Pathtracer::Config CLI::promptCustomConfig() const {
         getStatsAS,
         saveStatistics,
         isImgRefLadder,
-        rmseThreshold
+        rmseThreshold,
+        customScenePath
     );
 }
 
@@ -141,6 +189,7 @@ Pathtracer::Scene CLI::sceneFromChoice(int choice) {
     case 2: return Scene::BUNNY;
     case 3: return Scene::DRAGON;
     case 4: return Scene::SIBENIK;
+    case 5: return Scene::SPONZA;
     default: return Scene::CORNELL_BOX;
     }
 }
@@ -192,7 +241,8 @@ Pathtracer::Config CLI::customConfig(
     bool getStatsAS,
     bool saveStatistics,
     bool useSPPLadder,
-    float rmseThreshold)
+    float rmseThreshold,
+    const std::string& customScenePath)
 {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
@@ -211,6 +261,7 @@ Pathtracer::Config CLI::customConfig(
         tileSize,
         saveImage,
         getStatsAS,
-        saveStatistics
+        saveStatistics,
+        customScenePath
     );
 }

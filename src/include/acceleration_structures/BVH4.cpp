@@ -7,8 +7,7 @@
 BVH4::BVH4(const OBJLoader::MeshGeometry& meshgeo) : AccelerationStructure(meshgeo) {
     static_assert(alignof(Node) == 16);
     static_assert(std::is_trivially_copyable_v<Node>);
-    static_assert(sizeof(Node) == 160);
-    static_assert(offsetof(Node, bboxMin) == 32);
+    static_assert(sizeof(Node) == 128);
 
     const size_t reserveCount = std::max<size_t>(1, this->triangles.size() * 2);
     this->tree.resize(reserveCount);
@@ -129,8 +128,6 @@ uint32_t BVH4::Build(int l, int r) {
 
     node.triIdx = 0;
     node.triCount = 0;
-    node.pad0 = 0;
-    node.pad1 = 0;
     for (int i = 0; i < 4; i++) {
         node.child[i] = -1;
         node.bboxMin[i] = glm::vec4(0.0f);
@@ -192,7 +189,7 @@ uint32_t BVH4::Build(int l, int r) {
         rangeCount = 2;
     }
 
-    glm::vec4 e = parentBounds.extent();
+    glm::vec3 e = parentBounds.extent();
     int axis = 0;
     if (e.y > e.x && e.y > e.z) axis = 1;
     else if (e.z > e.x) axis = 2;

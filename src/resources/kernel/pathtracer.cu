@@ -1,7 +1,3 @@
-// ============================================================
-// pathtracer.cu
-// CUDA conversion of Vulkan GLSL path tracer
-// ============================================================
 #pragma unroll
 #include <stdio.h>
 #include <cuda.h>
@@ -16,8 +12,8 @@ using namespace Kernel;
 #define INV_PI 0.31830988618f
 #define INF 1e9f
 
-#define MAX_DIST 100.0f
-#define MAX_TRAVERSAL_DEPTH 32
+#define MAX_DIST INF
+#define MAX_TRAVERSAL_DEPTH 64
 #define MIN_TRACE_DIST 0.0001f
 #define NORMAL_OFFSET 0.0001f
 
@@ -98,6 +94,10 @@ __device__ vec3 triIntersect(const vec3& ro, const vec3& rd, const vec3& v0, con
         t = -1.0f;
 
     return vec3(t, u, v);
+}
+
+__device__ inline vec3 vec4to3(const vec4& v4) {
+    return vec3(v4.x, v4.y, v4.z);
 }
 
 struct IsecInfo {
@@ -189,29 +189,14 @@ __device__ void TraversalBVH(
 
         bool isLeaf = (n.left == -1);
 
-        if (isLeaf)
-        {
-            for (unsigned int i = 0; i < n.triCount; ++i)
-            {
+        if (isLeaf) {
+            for (unsigned int i = 0; i < n.triCount; ++i) {
                 statsIsecs++;
 
                 uint4 triIndices = triangleIndices[n.triIdx + i];
-
-                vec3 v0 = vec3(
-                    vertexPositions[triIndices.x].x,
-                    vertexPositions[triIndices.x].y,
-                    vertexPositions[triIndices.x].z
-                );
-                vec3 v1 = vec3(
-                    vertexPositions[triIndices.y].x,
-                    vertexPositions[triIndices.y].y,
-                    vertexPositions[triIndices.y].z
-                );
-                vec3 v2 = vec3(
-                    vertexPositions[triIndices.z].x,
-                    vertexPositions[triIndices.z].y,
-                    vertexPositions[triIndices.z].z
-                );
+                vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+                vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+                vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
 
@@ -229,63 +214,34 @@ __device__ void TraversalBVH(
                 hit.triIdx = n.triIdx + i;
             }
         }
-        else
-        {
-            int left = n.left;
-            int right = n.right;
-
+        else {
             bool hitL = false;
             bool hitR = false;
 
             IsecInfo lIsec, rIsec;
 
-            if (left >= 0)
-            {
-                lIsec = RayAABBIsec(
-                    ray,
-                    vec3(bvhNodes[left].bboxMin.x,
-                         bvhNodes[left].bboxMin.y,
-                         bvhNodes[left].bboxMin.z),
-                    vec3(bvhNodes[left].bboxMax.x,
-                         bvhNodes[left].bboxMax.y,
-                         bvhNodes[left].bboxMax.z),
-                    invDir
-                );
-
+            if (n.left >= 0) {
+                lIsec = RayAABBIsec( ray, n.lBboxMin, n.lBboxMax, invDir );
                 hitL = !(lIsec.tmax < lIsec.tmin || lIsec.tmin > hit.t);
             }
 
-            if (right >= 0)
-            {
-                rIsec = RayAABBIsec(
-                    ray,
-                    vec3(bvhNodes[right].bboxMin.x,
-                         bvhNodes[right].bboxMin.y,
-                         bvhNodes[right].bboxMin.z),
-                    vec3(bvhNodes[right].bboxMax.x,
-                         bvhNodes[right].bboxMax.y,
-                         bvhNodes[right].bboxMax.z),
-                    invDir
-                );
-
+            if (n.right >= 0) {
+                rIsec = RayAABBIsec( ray, n.rBboxMin, n.rBboxMax, invDir );
                 hitR = !(rIsec.tmax < rIsec.tmin || rIsec.tmin > hit.t);
             }
 
-            if (hitL && hitR)
-            {
-                if (lIsec.tmin < rIsec.tmin)
-                {
-                    stack[stkptr++] = right;
-                    stack[stkptr++] = left;
+            if (hitL && hitR) {
+                if (lIsec.tmin < rIsec.tmin) {
+                    stack[stkptr++] = n.right;
+                    stack[stkptr++] = n.left;
                 }
-                else
-                {
-                    stack[stkptr++] = left;
-                    stack[stkptr++] = right;
+                else {
+                    stack[stkptr++] = n.left;
+                    stack[stkptr++] = n.right;
                 }
             }
-            else if (hitL) stack[stkptr++] = left;
-            else if (hitR) stack[stkptr++] = right;
+            else if (hitL) stack[stkptr++] = n.left;
+            else if (hitR) stack[stkptr++] = n.right;
         }
     }
 }
@@ -324,21 +280,9 @@ __device__ void TraversalBVH4(
 
                 uint4 triIndices = triangleIndices[n.triIdx + i];
 
-                vec3 v0 = vec3(
-                    vertexPositions[triIndices.x].x,
-                    vertexPositions[triIndices.x].y,
-                    vertexPositions[triIndices.x].z
-                );
-                vec3 v1 = vec3(
-                    vertexPositions[triIndices.y].x,
-                    vertexPositions[triIndices.y].y,
-                    vertexPositions[triIndices.y].z
-                );
-                vec3 v2 = vec3(
-                    vertexPositions[triIndices.z].x,
-                    vertexPositions[triIndices.z].y,
-                    vertexPositions[triIndices.z].z
-                );
+                vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+                vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+                vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
 
@@ -437,21 +381,9 @@ __device__ void TraversalKdTree(
 
                 uint4 triIndices = triangleIndices[kdtreeIndices[n.triIdx + i]];
 
-                vec3 v0 = vec3(
-                    vertexPositions[triIndices.x].x,
-                    vertexPositions[triIndices.x].y,
-                    vertexPositions[triIndices.x].z
-                );
-                vec3 v1 = vec3(
-                    vertexPositions[triIndices.y].x,
-                    vertexPositions[triIndices.y].y,
-                    vertexPositions[triIndices.y].z
-                );
-                vec3 v2 = vec3(
-                    vertexPositions[triIndices.z].x,
-                    vertexPositions[triIndices.z].y,
-                    vertexPositions[triIndices.z].z
-                );
+                vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+                vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+                vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
 
                 vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
 
@@ -499,15 +431,9 @@ __device__ void EmissiveTraversalBF(
     for (unsigned int tIdx = 0; tIdx < lightCount; ++tIdx) {
         uint4 triIndices = emissiveIndices[tIdx];
 
-        vec3 v0 = vec3(vertexPositions[triIndices.x].x,
-                       vertexPositions[triIndices.x].y,
-                       vertexPositions[triIndices.x].z);
-        vec3 v1 = vec3(vertexPositions[triIndices.y].x,
-                       vertexPositions[triIndices.y].y,
-                       vertexPositions[triIndices.y].z);
-        vec3 v2 = vec3(vertexPositions[triIndices.z].x,
-                       vertexPositions[triIndices.z].y,
-                       vertexPositions[triIndices.z].z);
+        vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+        vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+        vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
 
         vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
 
@@ -686,9 +612,9 @@ __device__ float computeLightPdf(
 
     uint4 triIndices = emissiveIndices[triIdx];
 
-    vec3 v0(vertexPositions[triIndices.x].x, vertexPositions[triIndices.x].y, vertexPositions[triIndices.x].z);
-    vec3 v1(vertexPositions[triIndices.y].x, vertexPositions[triIndices.y].y, vertexPositions[triIndices.y].z);
-    vec3 v2(vertexPositions[triIndices.z].x, vertexPositions[triIndices.z].y, vertexPositions[triIndices.z].z);
+    vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+    vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+    vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
 
     vec3 lightNormal = normalize(cross(v1 - v0, v2 - v0));
 
@@ -741,9 +667,9 @@ __device__ LightSample sampleNEE(
     unsigned int lidx = min((unsigned int)(RandomFloat01(seed) * float(lightCount)), lightCount - 1u);
     uint4 triIndices = emissiveIndices[lidx];
 
-    vec3 v0(vertexPositions[triIndices.x].x, vertexPositions[triIndices.x].y, vertexPositions[triIndices.x].z);
-    vec3 v1(vertexPositions[triIndices.y].x, vertexPositions[triIndices.y].y, vertexPositions[triIndices.y].z);
-    vec3 v2(vertexPositions[triIndices.z].x, vertexPositions[triIndices.z].y, vertexPositions[triIndices.z].z);
+    vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+    vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+    vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
 
     float u = RandomFloat01(seed);
     float v = RandomFloat01(seed);
@@ -877,21 +803,9 @@ __device__ RenderData worldRender(
         int triIdx = hit.triIdx&(~(1<<30));
         uint4 triIndices = !isLightHit ? triangleIndices[triIdx] : emissiveIndices[triIdx];
 
-        vec3 v0 = vec3(
-            vertexPositions[triIndices.x].x,
-            vertexPositions[triIndices.x].y,
-            vertexPositions[triIndices.x].z
-        );
-        vec3 v1 = vec3(
-            vertexPositions[triIndices.y].x,
-            vertexPositions[triIndices.y].y,
-            vertexPositions[triIndices.y].z
-        );
-        vec3 v2 = vec3(
-            vertexPositions[triIndices.z].x,
-            vertexPositions[triIndices.z].y,
-            vertexPositions[triIndices.z].z
-        );
+        vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+        vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+        vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
 
         vec3 N = normalize(cross(v1-v0,v2-v0));
         Material mat = mats[triIndices.w];

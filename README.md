@@ -13,7 +13,7 @@ https://git-scm.com/install/windows)
 
 Download a CMake generator:
 - [Ninja](https://ninja-build.org/)
-- [Visual Studio (required for CUDA)]()
+- [Visual Studio (required for CUDA)](https://visualstudio.microsoft.com/downloads/)
 
 Run:
 > auto-setup

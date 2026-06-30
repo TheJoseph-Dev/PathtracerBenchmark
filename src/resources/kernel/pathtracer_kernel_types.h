@@ -28,29 +28,32 @@ namespace Kernel {
         int right;
         unsigned int triIdx;
         unsigned int triCount;
-        vec4 bboxMin;
-        vec4 bboxMax;
+        vec3 lBboxMin;
+        vec3 lBboxMax;
+        vec3 rBboxMin;
+        vec3 rBboxMax;
     };
 
     struct alignas(16) BVH4Node {
         int child[4];
         unsigned int triIdx;
         unsigned int triCount;
-        unsigned int pad0;
-        unsigned int pad1;
-        vec4 bboxMin[4];
-        vec4 bboxMax[4];
+        vec3 bboxMin[4];
+        vec3 bboxMax[4];
+        int pad[2];
     };
 
     struct alignas(16) KdNode {
+        union {
+            float splitPos;
+            unsigned int triIdx;
+        };
+        union {
+            unsigned int axis;
+            unsigned int triCount;
+        };
         int left;
         int right;
-        unsigned int triIdx;
-        unsigned int triCount;
-        float splitPos;
-        unsigned int axis;
-        int pad0;
-        int pad1;
     };
 
     struct alignas(16) Material {

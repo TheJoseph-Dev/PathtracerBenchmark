@@ -11,13 +11,13 @@
 #include <direct.h>
 #include <optional>
 #include <chrono>
+#include <filesystem>
 #include <glm/glm.hpp>
 #include "include/io/OBJLoader.h"
 #include "include/io/EXR.h"
 #include "include/io/PPM.h"
 #include "include/acceleration_structures/BVH.h"
 #include "include/acceleration_structures/BVH4.h"
-#include "include/acceleration_structures/KdTreeBinned.h"
 #include "include/acceleration_structures/KdTree.h"
 #include "include/vulkan/Buffer.h"
 #include "include/vulkan/Shader.h"
@@ -234,8 +234,12 @@ private:
         VkPhysicalDeviceShaderAtomicInt64Features availableAtomic64{};
         availableAtomic64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
 
+        VkPhysicalDeviceScalarBlockLayoutFeatures availableScalar{};
+        availableScalar.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES;
+
         availableFeatures2.pNext = &availableDynamicRendering;
         availableDynamicRendering.pNext = &availableAtomic64;
+        availableAtomic64.pNext = &availableScalar;
         vkGetPhysicalDeviceFeatures2(candidateDevice, &availableFeatures2);
 
         missingFeatures.clear();
@@ -247,6 +251,8 @@ private:
             missingFeatures.emplace_back("shaderBufferInt64Atomics");
         if (availableAtomic64.shaderSharedInt64Atomics != VK_TRUE)
             missingFeatures.emplace_back("shaderSharedInt64Atomics");
+        if(availableScalar.scalarBlockLayout != VK_TRUE)
+            missingFeatures.emplace_back("scalarBlockLayout");
 
         return missingFeatures.empty();
     }
@@ -390,6 +396,9 @@ private:
         atomic64Feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
         atomic64Feature.shaderBufferInt64Atomics = VK_TRUE;
         atomic64Feature.shaderSharedInt64Atomics = VK_TRUE;
+        VkPhysicalDeviceScalarBlockLayoutFeatures scalarFeatures{};
+        scalarFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES;
+        scalarFeatures.scalarBlockLayout = VK_TRUE;
 
         for (const auto& candidateDevice : devices) {
             vkGetPhysicalDeviceProperties(candidateDevice, &deviceProperties);
@@ -517,6 +526,7 @@ private:
         dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
         dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
 
+        atomic64Feature.pNext = &scalarFeatures;
         dynamicRenderingFeatures.pNext = &atomic64Feature;
         deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         deviceFeatures2.features = {};
@@ -797,7 +807,14 @@ private:
     }
 
     void initComputeBackend() {
-        std::string sceneFilepath = RESOURCE("scenes\\") + this->pathtracerConfig.GetScene();
+        std::string sceneFilepath;
+        if (this->pathtracerConfig.HasCustomScene()) {
+            const std::filesystem::path inputPath(this->pathtracerConfig.GetCustomScenePath());
+            const std::string baseName = inputPath.stem().string();
+            sceneFilepath = RESOURCE("scenes\\") + baseName;
+        } else {
+            sceneFilepath = RESOURCE("scenes\\") + this->pathtracerConfig.GetScene();
+        }
         OBJLoader objloader((sceneFilepath + ".obj").c_str());
         std::vector<OBJLoader::Triangle> triangles = objloader.GetTriangles();
         std::vector<OBJLoader::Vertex> objVertices = objloader.GetObjVertices();
@@ -846,6 +863,8 @@ private:
             reorderTriangles(bvh4.GetTriangles());
             bvh4Nodes = bvh4.GetTree();
             pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(bvh4Nodes.size() * sizeof(BVH4::Node));
+            pathtracerStatistics.accStructHeight = static_cast<uint32_t>(bvh4.GetHeight());
+            printf("\nBVH4 Height: %d\n", bvh4.GetHeight());
             break;
         }
         case Pathtracer::AccelerationStructureType::BVH: {
@@ -854,6 +873,8 @@ private:
             reorderTriangles(bvh.GetTriangles());
             bvhNodes = bvh.GetTree();
             pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(bvhNodes.size() * sizeof(BVH::Node));
+            pathtracerStatistics.accStructHeight = static_cast<uint32_t>(bvh.GetHeight());
+            printf("\BVH Height: %d\n", bvh.GetHeight());
             break;
         }
         case Pathtracer::AccelerationStructureType::KD_TREE:
@@ -862,7 +883,9 @@ private:
             measureBuildTime([&]() { kdh.Build(); });
             kdNodes = kdh.GetTree();
             pathtracerStatistics.accStructMemoryUsage = static_cast<uint32_t>(kdNodes.size() * sizeof(KdTree::Node));
+            pathtracerStatistics.accStructHeight = static_cast<uint32_t>(kdh.GetHeight());
             indices = kdh.GetIndices();
+            printf("\nKdTree Height: %d\n", kdh.GetHeight());
             break;
         }
         }

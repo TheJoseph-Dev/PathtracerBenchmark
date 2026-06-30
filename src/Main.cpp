@@ -43,20 +43,21 @@ static Pathtracer::Config debugConfig(Pathtracer::Scene scene, Pathtracer::Accel
     return pathtracerConfig;
 }
 
-static Pathtracer::Config sppConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype, Pathtracer::ComputeBackendType computeBackendType) {
+static Pathtracer::Config sppConfig(Pathtracer::Scene scene, Pathtracer::AccelerationStructureType acctype, Pathtracer::ComputeBackendType computeBackendType, uint32_t spp = 64, uint32_t lightBounces = 12) {
     using namespace Pathtracer;
     Benchmark benchmarkInfo = {};
     benchmarkInfo.btype = BenchmarkType::SPP;
-    benchmarkInfo.spp = 64;
+    benchmarkInfo.spp = spp;
 
     Config pathtracerConfig(
         acctype,
         computeBackendType,
         scene,
         Resolution::R1024x1024,
-        12,
+        lightBounces,
         benchmarkInfo,
         glm::uvec2(256, 256),
+        true,
         true,
         true
     );
@@ -120,7 +121,7 @@ static Pathtracer::Config qaConfig(Pathtracer::Scene scene, Pathtracer::Accelera
         glm::uvec2(256, 256),
         false,
         false,
-        false
+        true
     );
     return pathtracerConfig;
 }
@@ -132,19 +133,24 @@ void benchmark() {
         pathtracer.run();
     }
 
-    std::array<Scene, 5> scenes = {Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::SIBENIK};
-    std::array<glm::vec2, 5> tileSizes = { glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{32, 32}, glm::vec2{256, 256} , glm::vec2{256, 256} };
+    std::array<Scene, 5> scenes = { Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::SIBENIK, Scene::SPONZA };
+    std::array<glm::vec2, 5> tileSizes = { glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256} , glm::vec2{256, 256} };
+    std::array<AccelerationStructureType, 3> accStrs = { AccelerationStructureType::BVH, AccelerationStructureType::KD_TREE, AccelerationStructureType::BVH4 };
+    const uint32_t benchmarkTypeCount = 2;
+    std::array<uint32_t, 3> lightBounces = { 1, 4, 8 };
+    std::array<uint32_t, 3> spps = { 1, 32, 64 };
 #ifdef HAS_CUDA
-    std::array<ComputeBackendType, 2> computeBackends = {ComputeBackendType::SPIRV_T, ComputeBackendType::CUDA_T};
+    std::array<ComputeBackendType, 2> computeBackends = { ComputeBackendType::SPIRV_T, ComputeBackendType::CUDA_T };
 #else
-    std::array<ComputeBackendType, 1> computeBackends = {ComputeBackendType::SPIRV_T};
+    std::array<ComputeBackendType, 1> computeBackends = { ComputeBackendType::SPIRV_T };
 #endif
-    std::array<AccelerationStructureType, 3> accStrs = {AccelerationStructureType::BVH, AccelerationStructureType::BVH4, AccelerationStructureType::KD_TREE};
     for (Scene scene : scenes) {
         for (ComputeBackendType computeBackend : computeBackends) {
             for (AccelerationStructureType accStr : accStrs) {
-                App pathtracer(sppConfig(scene, accStr, computeBackend));
-                pathtracer.run();
+                for (uint32_t i = 0; i < benchmarkTypeCount; i++) {
+                    App pathtracer(sppConfig(scene, accStr, computeBackend, spps[i], lightBounces[i]));
+                    pathtracer.run();
+                }
             }
         }
     }
@@ -156,21 +162,18 @@ void test() {
         App pathtracer(warmupConfig());
         pathtracer.run();
     }
-    
+
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::DRAGON, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
+        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
-    
-    
-    /*
+
     {
         using namespace Pathtracer;
-        App pathtracer(qaConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::CUDA_T));
-        pathtracer.run();
+        //App pathtracer(qaConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T));
+        //pathtracer.run();
     }
-    */
 }
 
 void custom() {

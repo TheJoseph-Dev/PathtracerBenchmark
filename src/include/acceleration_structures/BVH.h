@@ -14,8 +14,13 @@ class BVH final : public AccelerationStructure {
     static constexpr uint8_t leafSize = 8;
 
 public:
-    struct alignas(16) Node : public TreeNode {
-        AABB bbox;
+    struct alignas(16) Node {
+        int32_t left;      // index of left child (-1 if leaf)
+        int32_t right;     // index of right child (-1 if leaf)
+        uint32_t triIdx;   // starting triangle index (valid if leaf)
+        uint32_t triCount; // number of triangles in leaf
+        AABB leftBbox;
+        AABB rightBbox;
     };
 
     BVH(const OBJLoader::MeshGeometry& meshgeo);
@@ -26,7 +31,7 @@ public:
     int GetHeight() const;
 
     void Print() const {
-        for (size_t i = 0; i < tree.size(); i++) printf("%d | (%d, %d | %d, %d) => bbmin(%.2f %.2f %.2f) bbmax(%.2f %.2f %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].bbox.min.x, tree[i].bbox.min.y, tree[i].bbox.min.z, tree[i].bbox.max.x, tree[i].bbox.max.y, tree[i].bbox.max.z);
+        //for (size_t i = 0; i < tree.size(); i++) printf("%d | (%d, %d | %d, %d) => bbmin(%.2f %.2f %.2f) bbmax(%.2f %.2f %.2f)\n", i, tree[i].left, tree[i].right, tree[i].triIdx, tree[i].triCount, tree[i].bbox.min.x, tree[i].bbox.min.y, tree[i].bbox.min.z, tree[i].bbox.max.x, tree[i].bbox.max.y, tree[i].bbox.max.z);
     }
 
     const std::vector<Node>& GetTree() const {
