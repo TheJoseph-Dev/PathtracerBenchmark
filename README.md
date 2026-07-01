@@ -2,7 +2,7 @@
 
 A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdTree as well as Vulkan SPIR-V and CUDA API
 
-![Cornell Box render](Renders/cornellbox-mis.png)
+![Cornell Box render](renders/cornellbox-mis.png)
 
 ## How to Run
 

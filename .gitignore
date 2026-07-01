@@ -1,8 +1,10 @@
 **/.vs/
+**/.vscode
 **/build/
 **/out/
 *.blend1
 /debug
+/tests
 *.venv
 *.exp
 *.lib
