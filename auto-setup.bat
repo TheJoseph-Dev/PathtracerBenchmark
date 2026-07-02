@@ -4,8 +4,14 @@ setlocal EnableDelayedExpansion
 :: ---- Settings ----
 set "ARCHITECTURE=x64"
 set "BUILD_TYPE=Release"
-set "ENABLE_CUDA=OFF"
 set "CMAKE_EXE=cmake"
+
+choice /C YN /N /M "Enable CUDA support? [Y/N]: "
+if errorlevel 2 (
+    set "ENABLE_CUDA=OFF"
+) else (
+    set "ENABLE_CUDA=ON"
+)
 
 :: ----------------------------------------
 :: Locate Visual Studio (if available)
@@ -112,7 +118,11 @@ cd build
 echo [CMake] Configuring...
 
 if "%GENERATOR_TYPE%"=="multi" (
-    "%CMAKE_EXE%" .. -G "%GENERATOR%" -A %ARCHITECTURE% -DENABLE_CUDA=%ENABLE_CUDA%
+    if "%ENABLE_CUDA%"=="ON" (
+        "%CMAKE_EXE%" .. -G "%GENERATOR%" -A %ARCHITECTURE% -DENABLE_CUDA=%ENABLE_CUDA% -T "cuda=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8"
+    ) else (
+        "%CMAKE_EXE%" .. -G "%GENERATOR%" -A %ARCHITECTURE% -DENABLE_CUDA=%ENABLE_CUDA%
+    )
 ) else (
     "%CMAKE_EXE%" .. -G "%GENERATOR%" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DENABLE_CUDA=%ENABLE_CUDA%
 )

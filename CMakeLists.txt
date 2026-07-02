@@ -26,6 +26,8 @@ if(ENABLE_CUDA)
     if(NOT CUDAToolkit_FOUND)
         message(WARNING "ENABLE_CUDA is ON but CUDAToolkit was not found. Disabling CUDA backend.")
         set(ENABLE_CUDA_BACKEND OFF)
+    else()
+     	message(STATUS "Found CUDAToolkit. Enabling CUDA backend.")
     endif()
 endif()
 
@@ -149,7 +151,6 @@ if(ENABLE_CUDA_BACKEND)
         $<$<COMPILE_LANGUAGE:CUDA>:
             --use_fast_math
             -Xptxas -v
-            -Xptxas -d
             -lineinfo
             --maxrregcount=64
             -allow-unsupported-compiler
