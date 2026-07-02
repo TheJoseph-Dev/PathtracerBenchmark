@@ -1,1 +1,0 @@
-DateTime,CPU,GPU,BenchmarkType,Scene,ComputeBackend,AccelerationStructure,Resolution,TileSize,SPP,LightBounces,Triangles,Rays,PrimaryRays,SecondaryRays,ShadowRays,Traversals,Intersections,RaysPerSecond,NodesPerRay,IntersectionsPerRay,TotalElapsedSeconds,FPS,AvgKernelMs,AccStructBuildSeconds,AccStructMemoryBytes,AccStructHeight,RMSE,PSNR,QARmseThreshold,QAResult

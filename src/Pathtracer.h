@@ -167,7 +167,7 @@ namespace Pathtracer {
             if (csv.tellp() == 0)
                 csv << "DateTime,CPU,GPU,BenchmarkType,Scene,ComputeBackend,AccelerationStructure,Resolution,TileSize,SPP,LightBounces,"
                       "Triangles,Rays,PrimaryRays,SecondaryRays,ShadowRays,Traversals,Intersections,RaysPerSecond,NodesPerRay,IntersectionsPerRay,TotalElapsedSeconds,FPS,"
-                       "AvgKernelMs,AccStructBuildSeconds,AccStructMemoryBytes,AccStructHeight,RMSE,PSNR,QARmseThreshold,QAResult\n";
+                       "AvgKernelMs,AccStructBuildSeconds,AccStructMemoryBytes,AuxBytes,AccStructHeight,RMSE,PSNR,QARmseThreshold,QAResult\n";
 
             const glm::uvec2 resolution = this->config.GetResolution();
             const glm::uvec2 tileSize = this->config.GetTileSize();
@@ -214,6 +214,7 @@ namespace Pathtracer {
                 << stats.avgKernelTime << ','
                 << stats.accStructBuildTime << ','
                 << stats.accStructMemoryUsage << ','
+                << stats.accStructAuxBytes << ','
                 << stats.accStructHeight << ','
                 << rmseText << ','
                 << psnrText << ','
