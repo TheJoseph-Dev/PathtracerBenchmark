@@ -51,7 +51,7 @@ namespace Pathtracer {
             switch (type) {
             case Pathtracer::BVH: return "Binned SAH-BVH";
             case Pathtracer::BVH4: return "Binned SAH-BVH4";
-            case Pathtracer::KD_TREE: return "Havran SAH-KdTree";
+            case Pathtracer::KD_TREE: return "PBR SAH-KdTree";
             default: return "Unknown";
             }
         }

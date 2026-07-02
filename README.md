@@ -1,6 +1,6 @@
 # Pathtracer Benchmark
 
-A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdTree as well as Vulkan SPIR-V and CUDA API
+A benchmark of a custom offiline pathtracer comparing SAH-BVH and PBR SAH-KdTree as well as Vulkan SPIR-V and CUDA API
 
 ![Cornell Box render](renders/cornellbox-mis.png)
 
