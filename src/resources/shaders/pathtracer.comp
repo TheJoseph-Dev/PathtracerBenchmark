@@ -825,7 +825,7 @@ vec3 sampleGGX(vec3 N, vec3 V, float roughness, out float pdf) {
     vec3 T, B;
     buildTBN(N, T, B);
     vec3 bH = H_local.x*T + H_local.y*B + H_local.z*N;
-    if(dot(bH, bH) < 1e-9) return vec3(0.0);
+    if(dot(bH, bH) < 1e-9) { pdf = 1e-6; return vec3(0.0); }
     vec3 H = normalize(bH);
 
     vec3 L = reflect(-V, H);
