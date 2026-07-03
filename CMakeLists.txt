@@ -73,6 +73,10 @@ if(CUDAToolkit_FOUND AND ENABLE_CUDA)
     target_include_directories(PathtracerBenchmark PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 endif()
 
+target_compile_definitions(PathtracerBenchmark PRIVATE
+    RESOURCE_PATH_PREFIX="${CMAKE_SOURCE_DIR}/src/resources/"
+)
+
 # ============================================================
 # Compile shaders into resources/shaders
 # ============================================================

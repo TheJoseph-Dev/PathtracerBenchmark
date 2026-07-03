@@ -234,36 +234,6 @@ void CUDA::createImage2D(uint32_t width, uint32_t height) {
 		dataTextureInfo.subresourceRange.layerCount = 1;
 
 		vkCreateImageView(this->vkCtx.device, &dataTextureInfo, nullptr, &pathtracerImageViews[i]);
-
-		/*
-		VkCommandBuffer cmdbf = beginSingleTimeCommands();
-		//Vulkan::transitionImageLayout(this->pathtracerImages[i], VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, imgLayout, cmdbf);
-		VkImageMemoryBarrier barrier{};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.image = pathtracerImages[i];
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = 0;
-
-		vkCmdPipelineBarrier(
-			cmdbf,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
-
-		pathtracerImageLayouts[i] = VK_IMAGE_LAYOUT_GENERAL;
-		endSingleTimeCommands(cmdbf);
-		*/
 	}
 
 }
@@ -464,37 +434,7 @@ void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 	CUDA_CHECK(cudaGetLastError());
 	CUDA_CHECK(cudaDeviceSynchronize());
 	CUDA_CHECK(cudaEventRecord(this->stopEvents[dispatchCtx.currentFrame], this->computeStream));
-	/*
-	VkImageMemoryBarrier barrier{};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-
-	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-	barrier.srcAccessMask = 0; // external
-	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
-	barrier.dstQueueFamilyIndex = 0;
-
-	barrier.image = pathtracerImages[dispatchCtx.currentFrame];
-
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = 1;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-
-	vkCmdPipelineBarrier(
-		dispatchCtx.commandBuffer,
-		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier
-	);
-	*/
+	
 	cudaExternalSemaphoreSignalParams signalParams{};
 	CUDA_CHECK(cudaSignalExternalSemaphoresAsync(&this->cudaImages[dispatchCtx.currentFrame].cudaWaitSemaphore, &signalParams, 1, this->computeStream));
 }
@@ -544,4 +484,3 @@ void CUDA::getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) {
 } // namespace Pathtracer
 
 #endif
-

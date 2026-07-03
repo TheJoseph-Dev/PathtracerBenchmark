@@ -2,8 +2,8 @@
 #ifndef CUDA_BACKEND_H
 #define CUDA_BACKEND_H
 #include "ComputeBackend.h"
-#include "pathtracer_kernel_types.h"
 #include <cuda_runtime.h>
+#include "pathtracer_kernel_types.h"
 
 #ifdef DEBUG
 //#define NVTX_USE_ANSI_STRING

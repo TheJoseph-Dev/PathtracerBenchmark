@@ -1,8 +1,8 @@
 # Pathtracer Benchmark
 
-A benchmark of a custom offiline pathtracer comparing SAH-BVH and Havran SAH-KdTree as well as Vulkan SPIR-V and CUDA API
+A benchmark of a custom offiline pathtracer comparing SAH-BVH and PBR SAH-KdTree as well as Vulkan SPIR-V and CUDA API
 
-![Cornell Box render](Renders/cornellbox-mis.png)
+![Cornell Box render](renders/cornellbox-mis.png)
 
 ## How to Run
 
@@ -13,7 +13,7 @@ https://git-scm.com/install/windows)
 
 Download a CMake generator:
 - [Ninja](https://ninja-build.org/)
-- [Visual Studio (required for CUDA)]()
+- [Visual Studio (required for CUDA)](https://visualstudio.microsoft.com/downloads/)
 
 Run:
 > auto-setup

@@ -51,7 +51,7 @@ namespace Pathtracer {
             switch (type) {
             case Pathtracer::BVH: return "Binned SAH-BVH";
             case Pathtracer::BVH4: return "Binned SAH-BVH4";
-            case Pathtracer::KD_TREE: return "Havran SAH-KdTree";
+            case Pathtracer::KD_TREE: return "PBR SAH-KdTree";
             default: return "Unknown";
             }
         }
@@ -167,7 +167,7 @@ namespace Pathtracer {
             if (csv.tellp() == 0)
                 csv << "DateTime,CPU,GPU,BenchmarkType,Scene,ComputeBackend,AccelerationStructure,Resolution,TileSize,SPP,LightBounces,"
                       "Triangles,Rays,PrimaryRays,SecondaryRays,ShadowRays,Traversals,Intersections,RaysPerSecond,NodesPerRay,IntersectionsPerRay,TotalElapsedSeconds,FPS,"
-                       "AvgKernelMs,AccStructBuildSeconds,AccStructMemoryBytes,AccStructHeight,RMSE,PSNR,QARmseThreshold,QAResult\n";
+                       "AvgKernelMs,AccStructBuildSeconds,AccStructMemoryBytes,AuxBytes,AccStructHeight,RMSE,PSNR,QARmseThreshold,QAResult\n";
 
             const glm::uvec2 resolution = this->config.GetResolution();
             const glm::uvec2 tileSize = this->config.GetTileSize();
@@ -214,6 +214,7 @@ namespace Pathtracer {
                 << stats.avgKernelTime << ','
                 << stats.accStructBuildTime << ','
                 << stats.accStructMemoryUsage << ','
+                << stats.accStructAuxBytes << ','
                 << stats.accStructHeight << ','
                 << rmseText << ','
                 << psnrText << ','
@@ -321,28 +322,5 @@ namespace Pathtracer {
         }
     };
 }
-
-/*
-[Configuration]
-CPU:  Intel Core i5 (11th Gen, 2.40 GHz)
-GPU:  NVIDIA GeForce MX350 (2 GB VRAM)
-API:  Vulkan
-Scene: Cornell Box
-Resolution: 720 � 480
-Samples per Pixel: 1024
-Max Path Length: 6
-Acceleration Structure: Binned SAH BVH
-
-[Performance Statistics]
-Total Rays Traced:        1.99 x 10^9
-Rays per Second:          3.25 x 10^7
-Average Nodes per Ray:    5.29
-Average Intersections per Ray: 16.30
-Total Render Time:        61.10 s
-
-[Acceleration Structure]
-Build Time:               < 1 ms
-Memory Usage:             5.6 KB
-*/
 
 #endif

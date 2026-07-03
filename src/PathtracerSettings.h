@@ -198,7 +198,7 @@ namespace Pathtracer {
                 accStructName = "Binned SAH-BVH4";
                 break;
             case AccelerationStructureType::KD_TREE:
-                accStructName = "Havran SAH-KdTree";
+                accStructName = "PBR SAH-KdTree";
                 break;
             default:
                 accStructName = "Unknown";
@@ -274,6 +274,7 @@ namespace Pathtracer {
 
         float accStructBuildTime = 0.0f;
         uint32_t accStructMemoryUsage = 0;
+        uint32_t accStructAuxBytes = 0;
         uint32_t accStructHeight = 0;
 
         uint32_t sceneTriangles = 0;
