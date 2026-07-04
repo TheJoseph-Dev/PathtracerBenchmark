@@ -93,11 +93,13 @@ Pathtracer::Config CLI::promptCustomConfig() const {
               << "  3) DRAGON\n"
               << "  4) SIBENIK\n"
               << "  5) SPONZA\n"
-              << "  6) CUSTOM (filepath)\n";
-    int sceneChoice = promptNumeric<int>("Choose scene", 1, 6);
+              << "  6) LUCY\n"
+              << "  7) BISTRO\n"
+              << "  8) CUSTOM (filepath)\n";
+    int sceneChoice = promptNumeric<int>("Choose scene", 1, 8);
 
     std::string customScenePath;
-    if (sceneChoice == 6)
+    if (sceneChoice == 8)
         customScenePath = promptText("OBJ filepath");
 
     std::cout << "\nAcceleration Structure:\n"
@@ -141,7 +143,7 @@ Pathtracer::Config CLI::promptCustomConfig() const {
     bool saveStatistics = promptYesNo("Save benchmark statistics to files?", true);
 
     BenchmarkType btype = isSPP ? BenchmarkType::SPP : BenchmarkType::IMGREF;
-    const Scene scene = (sceneChoice == 6) ? Scene::CORNELL_BOX : sceneFromChoice(sceneChoice);
+    const Scene scene = sceneFromChoice(sceneChoice);
     return customConfig(
         scene,
         accStructFromChoice(accChoice),
@@ -190,6 +192,8 @@ Pathtracer::Scene CLI::sceneFromChoice(int choice) {
     case 3: return Scene::DRAGON;
     case 4: return Scene::SIBENIK;
     case 5: return Scene::SPONZA;
+    case 6: return Scene::LUCY;
+    case 7: return Scene::BISTRO;
     default: return Scene::CORNELL_BOX;
     }
 }

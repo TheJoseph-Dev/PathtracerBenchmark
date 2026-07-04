@@ -7927,3 +7927,411 @@
 
  Acc. Structure Memory: 448 bytes (Nodes only)
 
+[Config]
+ Date/Time: 2026-07-04 00:12:39
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: cornell_box
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 171402563
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 75676645
+ SHADOW RAYS: 62171486
+ TRAVERSALS: 900101058
+ ISECS: 2729798238
+
+ RAYS/s: 8.36518e+07
+ NODES/RAY: 5.25139
+ ISECS/RAY: 15.9262
+
+ Total Elapsed Time: 2.049 s
+
+ FPS: 15.6174 spp/s
+
+ Avg. Kernel Time: 60.0006 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 448 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 00:13:04
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: cornell_box
+ Compute Backend: SPIR-V
+ Acc. Structure: PBR SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 171401727
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 75676118
+ SHADOW RAYS: 62171177
+ TRAVERSALS: 1189545818
+ ISECS: 2541546746
+
+ RAYS/s: 4.18359e+07
+ NODES/RAY: 6.9401
+ ISECS/RAY: 14.828
+
+ Total Elapsed Time: 4.097 s
+
+ FPS: 7.81059 spp/s
+
+ Avg. Kernel Time: 121.761 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 00:13:22
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: cornell_box
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH4
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 171402909
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 75677240
+ SHADOW RAYS: 62171237
+ TRAVERSALS: 561024291
+ ISECS: 2755925168
+
+ RAYS/s: 5.63825e+07
+ NODES/RAY: 3.27313
+ ISECS/RAY: 16.0786
+
+ Total Elapsed Time: 3.04 s
+
+ FPS: 10.5263 spp/s
+
+ Avg. Kernel Time: 88.9497 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 640 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 00:14:01
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: cornell_box
+ Compute Backend: CUDA
+ Acc. Structure: PBR SAH-KdTree
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 30
+ RAYS: 171411772
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 75677348
+ SHADOW RAYS: 62179992
+ TRAVERSALS: 1189734792
+ ISECS: 2542094346
+
+ RAYS/s: 2.80222e+07
+ NODES/RAY: 6.9408
+ ISECS/RAY: 14.8303
+
+ Total Elapsed Time: 6.117 s
+
+ FPS: 5.23132 spp/s
+
+ Avg. Kernel Time: 180.839 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 336 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 01:31:33
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: lucy-cbx
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 10
+ RAYS: 182916430
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 77280512
+ SHADOW RAYS: 72081486
+ TRAVERSALS: 548749278
+ ISECS: 1829164240
+
+ RAYS/s: 1.2268e+08
+ NODES/RAY: 3
+ ISECS/RAY: 10
+
+ Total Elapsed Time: 1.491 s
+
+ FPS: 21.4621 spp/s
+
+ Avg. Kernel Time: 42.7219 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 192 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 01:34:01
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: bistro
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 2829226
+ RAYS: 78647150
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 26859543
+ SHADOW RAYS: 18233175
+ TRAVERSALS: 3351656894
+ ISECS: 2573771342
+
+ RAYS/s: 6.00635e+06
+ NODES/RAY: 42.6164
+ ISECS/RAY: 32.7256
+
+ Total Elapsed Time: 13.094 s
+
+ FPS: 2.44387 spp/s
+
+ Avg. Kernel Time: 394.102 ms
+
+ Acc. Structure Build Time: 45.445999 s
+
+ Acc. Structure Memory: 64771648 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 04:16:11
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: lucy-cbx
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 10
+ RAYS: 182916611
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 77280429
+ SHADOW RAYS: 72081750
+ TRAVERSALS: 548749823
+ ISECS: 1829166060
+
+ RAYS/s: 1.20737e+08
+ NODES/RAY: 3
+ ISECS/RAY: 10
+
+ Total Elapsed Time: 1.515 s
+
+ FPS: 21.1221 spp/s
+
+ Avg. Kernel Time: 43.5668 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 192 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 13:45:34
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: lucy-cbx
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 10
+ RAYS: 182915588
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 77279934
+ SHADOW RAYS: 72081222
+ TRAVERSALS: 548746754
+ ISECS: 1829155830
+
+ RAYS/s: 9.46278e+07
+ NODES/RAY: 3
+ ISECS/RAY: 10
+
+ Total Elapsed Time: 1.933 s
+
+ FPS: 16.5546 spp/s
+
+ Avg. Kernel Time: 56.1088 ms
+
+ Acc. Structure Build Time: < 1 ms s
+
+ Acc. Structure Memory: 192 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 13:54:15
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: lucy-cbx
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 2005086
+ RAYS: 180131898
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 77341115
+ SHADOW RAYS: 69236351
+ TRAVERSALS: 4951068418
+ ISECS: 1231076496
+
+ RAYS/s: 1.68395e+07
+ NODES/RAY: 27.4858
+ ISECS/RAY: 6.83431
+
+ Total Elapsed Time: 10.697 s
+
+ FPS: 2.99149 spp/s
+
+ Avg. Kernel Time: 321.21 ms
+
+ Acc. Structure Build Time: 34.116001 s
+
+ Acc. Structure Memory: 44852928 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 15:45:36
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: bistro
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 2829226
+ RAYS: 160666305
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 68268368
+ SHADOW RAYS: 58843505
+ TRAVERSALS: 13024623769
+ ISECS: 9689955093
+
+ RAYS/s: 2.29209e+06
+ NODES/RAY: 81.0663
+ ISECS/RAY: 60.3111
+
+ Total Elapsed Time: 70.096 s
+
+ FPS: 0.456517 spp/s
+
+ Avg. Kernel Time: 2111.18 ms
+
+ Acc. Structure Build Time: 55.938999 s
+
+ Acc. Structure Memory: 64739392 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 15:53:42
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: bistro
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 2829226
+ RAYS: 158274293
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 68268337
+ SHADOW RAYS: 56451524
+ TRAVERSALS: 12741538168
+ ISECS: 8879358658
+
+ RAYS/s: 2.3969e+06
+ NODES/RAY: 80.5029
+ ISECS/RAY: 56.1011
+
+ Total Elapsed Time: 66.033 s
+
+ FPS: 0.484606 spp/s
+
+ Avg. Kernel Time: 1992.45 ms
+
+ Acc. Structure Build Time: 56.617001 s
+
+ Acc. Structure Memory: 64739392 bytes (Nodes only)
+
+[Config]
+ Date/Time: 2026-07-04 15:59:55
+ CPU: Intel64 Family 6 Model 140 Stepping 1, GenuineIntel
+ GPU: NVIDIA GeForce MX350
+ Scene: bistro
+ Compute Backend: SPIR-V
+ Acc. Structure: Binned SAH-BVH
+ Resolution: 1024x1024
+ Tile Size: 256x256
+ SPP: 32
+ Max Light Bounces: 4
+[STATS]
+ TRIANGLES: 2829226
+ RAYS: 158872133
+ PRIMARY RAYS: 33554432
+ SECONDARY RAYS: 68268227
+ SHADOW RAYS: 57049474
+ TRAVERSALS: 13175743950
+ ISECS: 9514459727
+
+ RAYS/s: 2.31255e+06
+ NODES/RAY: 82.933
+ ISECS/RAY: 59.8875
+
+ Total Elapsed Time: 68.7 s
+
+ FPS: 0.465793 spp/s
+
+ Avg. Kernel Time: 2059.43 ms
+
+ Acc. Structure Build Time: 56.991001 s
+
+ Acc. Structure Memory: 64739392 bytes (Nodes only)
+

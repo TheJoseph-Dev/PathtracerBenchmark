@@ -1,0 +1,2114 @@
+# Blender 5.0.1 MTL File: 'None'
+# www.blender.org
+
+newmtl Antenna_Metal
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Metal_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Metal_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Metal_Normal.dds
+
+newmtl Antenna_Plastic
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Plastic_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Plastic_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Plastic_Normal.dds
+
+newmtl Antenna_Plastic_Blue
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Plastic_Blue_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Plastic_Blue_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Antenna_Plastic_Blue_Normal.dds
+
+newmtl Ashtray
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Ashtray_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Ashtray_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Ashtray_Normal.dds
+
+newmtl Awnings_Beams
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Beams_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Beams_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Beams_Normal.dds
+
+newmtl Awnings_Fabric
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Fabric_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Fabric_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Fabric_Normal.dds
+
+newmtl Awnings_Hotel_Fabric
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Hotel_Fabric_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Hotel_Fabric_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Awnings_Hotel_Fabric_Normal.dds
+
+newmtl Balcony_Concrete
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Concrete_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Concrete_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Concrete_Normal.dds
+
+newmtl Balcony_Green_Wood
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Green_Wood_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Green_Wood_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Green_Wood_Normal.dds
+
+newmtl Balcony_Ornaments
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Ornaments_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Ornaments_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Ornaments_Normal.dds
+
+newmtl Balcony_Trims
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Trims_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Trims_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Balcony_Trims_Normal.dds
+
+newmtl Banner_Metal
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Banner_Metal_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Banner_Metal_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Banner_Metal_Normal.dds
+
+newmtl Bistro_Sign_Letters
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bistro_Sign_Letters_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bistro_Sign_Letters_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bistro_Sign_Letters_Normal.dds
+
+newmtl Bistro_Sign_Main
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bistro_Sign_Main_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bistro_Sign_Main_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bistro_Sign_Main_Normal.dds
+
+newmtl Bollards
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bollards_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bollards_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Bollards_Normal.dds
+
+newmtl Chimneys_Metal
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Chimneys_Metal_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Chimneys_Metal_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Chimneys_Metal_Normal.dds
+
+newmtl Concrete
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete_Normal.dds
+
+newmtl Concrete2
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete2_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete2_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete2_Normal.dds
+
+newmtl Concrete3
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete3_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete3_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete3_Normal.dds
+
+newmtl Concrete_Striped
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete_Striped_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete_Striped_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Concrete_Striped_Normal.dds
+
+newmtl ElectricBox
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/ElectricBox_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/ElectricBox_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/ElectricBox_Normal.dds
+
+newmtl Emissive_StreetLight
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Emissive_StreetLight_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Emissive_StreetLight_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Emissive_StreetLight_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Emissive_StreetLight_Normal.dds
+
+newmtl Foliage_Bux_Hedges46.DoubleSided
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Bux_Hedges46_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Bux_Hedges46_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Bux_Hedges46_Normal.dds
+
+newmtl Foliage_Flowers.DoubleSided
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Flowers_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Flowers_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Flowers_Normal.dds
+
+newmtl Foliage_Ivy_branches
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Ivy_branches_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Ivy_branches_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Ivy_branches_Normal.dds
+
+newmtl Foliage_Ivy_leaf_a.DoubleSided
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Ivy_leaf_a_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Ivy_leaf_a_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Ivy_leaf_a_Normal.dds
+
+newmtl Foliage_Leaves.DoubleSided
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Leaves_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Leaves_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Leaves_Normal.dds
+
+newmtl Foliage_Linde_Tree_Large_Green_Leaves.DoubleSided
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Green_Leaves_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Green_Leaves_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Green_Leaves_Normal.dds
+
+newmtl Foliage_Linde_Tree_Large_Orange_Leaves.DoubleSided
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Orange_Leaves_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Orange_Leaves_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Orange_Leaves_Normal.dds
+
+newmtl Foliage_Linde_Tree_Large_Trunk
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Trunk_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Trunk_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Linde_Tree_Large_Trunk_Normal.dds
+
+newmtl Foliage_Paris_Flowers
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Paris_Flowers_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Paris_Flowers_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Paris_Flowers_Normal.dds
+
+newmtl Foliage_Trunk
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Trunk_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Trunk_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Foliage_Trunk_Normal.dds
+
+newmtl LanternEmissive
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/LanternEmissive_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/LanternEmissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/LanternEmissive_Normal.dds
+
+newmtl MASTER_Awning_Beams
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Beams_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Beams_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Beams_Normal.dds
+
+newmtl MASTER_Awning_Fabric_Cyan
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Fabric_Cyan_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Fabric_Cyan_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Fabric_Cyan_Normal.dds
+
+newmtl MASTER_Awning_Fabric_Red
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Fabric_Red_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Fabric_Red_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Awning_Fabric_Red_Normal.dds
+
+newmtl MASTER_Bistro_Main_Door
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Bistro_Main_Door_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Bistro_Main_Door_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Bistro_Main_Door_Normal.dds
+
+newmtl MASTER_Black_Metal
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Black_Metal_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Black_Metal_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Black_Metal_Normal.dds
+
+newmtl MASTER_Book_Covers
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Book_Covers_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Book_Covers_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Book_Covers_Normal.dds
+
+newmtl MASTER_Boulangerie
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Boulangerie_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Boulangerie_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Boulangerie_Normal.dds
+
+newmtl MASTER_Brick_Large_Beige_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Large_Beige_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Large_Beige_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Large_Beige_BLENDSHADER_Normal.dds
+
+newmtl MASTER_Brick_Large_White
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Large_White_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Large_White_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Large_White_Normal.dds
+
+newmtl MASTER_Brick_Small_Red
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Small_Red_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Small_Red_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Small_Red_Normal.dds
+
+newmtl MASTER_Brick_Small_Red_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Small_Red_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Small_Red_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Brick_Small_Red_BLENDSHADER_Normal.dds
+
+newmtl MASTER_Bronze_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Bronze_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Bronze_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Bronze_BLENDSHADER_Normal.dds
+
+newmtl MASTER_Building_Details
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Building_Details_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Building_Details_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Building_Details_Normal.dds
+
+newmtl MASTER_Concrete
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Normal.dds
+
+newmtl MASTER_Concrete1
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete1_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete1_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete1_Normal.dds
+
+newmtl MASTER_Concrete_Grooved
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Grooved_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Grooved_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Grooved_Normal.dds
+
+newmtl MASTER_Concrete_Plaster
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Plaster_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Plaster_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Plaster_Normal.dds
+
+newmtl MASTER_Concrete_Plaster1_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Plaster1_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Plaster1_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Plaster1_BLENDSHADER_Normal.dds
+
+newmtl MASTER_Concrete_Smooth
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Smooth_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Smooth_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Smooth_Normal.dds
+
+newmtl MASTER_Concrete_Smooth_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Smooth_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Smooth_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Smooth_BLENDSHADER_Normal.dds
+
+newmtl MASTER_Concrete_White
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_White_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_White_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_White_Normal.dds
+
+newmtl MASTER_Concrete_Yellow
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Yellow_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Yellow_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Concrete_Yellow_Normal.dds
+
+newmtl MASTER_Curtains
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Curtains_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Curtains_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Curtains_Normal.dds
+
+newmtl MASTER_Details_Dark
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Details_Dark_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Details_Dark_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Details_Dark_Normal.dds
+
+newmtl MASTER_Doors
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Doors_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Doors_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Doors_Normal.dds
+
+newmtl MASTER_Focus
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Focus_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Focus_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Focus_Normal.dds
+
+newmtl MASTER_Focus_Ornament
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Focus_Ornament_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Focus_Ornament_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Focus_Ornament_Normal.dds
+
+newmtl MASTER_Forge_Metal
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Forge_Metal_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Forge_Metal_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Forge_Metal_Normal.dds
+
+newmtl MASTER_Frosted_Glass
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Frosted_Glass_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Frosted_Glass_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Frosted_Glass_Normal.dds
+
+newmtl MASTER_Glass_Dirty
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Dirty_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Dirty_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Dirty_Normal.dds
+
+newmtl MASTER_Glass_Dirty_MASKED
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Dirty_MASKED_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Dirty_MASKED_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Dirty_MASKED_Normal.dds
+
+newmtl MASTER_Glass_Exterior
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Exterior_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Exterior_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Glass_Exterior_Normal.dds
+
+newmtl MASTER_Grain_Metal
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Grain_Metal_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Grain_Metal_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Grain_Metal_Normal.dds
+
+newmtl MASTER_Light_Bulb
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Light_Bulb_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Light_Bulb_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Light_Bulb_Normal.dds
+
+newmtl MASTER_Metal
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Metal_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Metal_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Metal_Normal.dds
+
+newmtl MASTER_Metal_Pipe
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Metal_Pipe_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Metal_Pipe_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Metal_Pipe_Normal.dds
+
+newmtl MASTER_Plastic
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Plastic_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Plastic_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Plastic_Normal.dds
+
+newmtl MASTER_Rollup_Door
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Rollup_Door_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Rollup_Door_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Rollup_Door_Normal.dds
+
+newmtl MASTER_Roofing_Metal_01
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Metal_01_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Metal_01_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Metal_01_Normal.dds
+
+newmtl MASTER_Roofing_Shingle_Green
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Shingle_Green_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Shingle_Green_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Shingle_Green_Normal.dds
+
+newmtl MASTER_Roofing_Shingle_Grey
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Shingle_Grey_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Shingle_Grey_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Roofing_Shingle_Grey_Normal.dds
+
+newmtl MASTER_Room_Interior
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Room_Interior_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Room_Interior_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Room_Interior_Normal.dds
+
+newmtl MASTER_Side_Letters
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Side_Letters_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Side_Letters_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Side_Letters_Normal.dds
+
+newmtl MASTER_Trim_Cornice
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Trim_Cornice_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Trim_Cornice_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Trim_Cornice_Normal.dds
+
+newmtl MASTER_Wood_Brown
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Brown_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Brown_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Brown_Normal.dds
+
+newmtl MASTER_Wood_Painted3
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted3_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted3_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted3_Normal.dds
+
+newmtl MASTER_Wood_Painted_Cyan
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Cyan_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Cyan_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Cyan_Normal.dds
+
+newmtl MASTER_Wood_Painted_Green
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Green_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Green_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Green_Normal.dds
+
+newmtl MASTER_Wood_Painted_Green_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Green_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Green_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Painted_Green_BLENDSHADER_Normal.dds
+
+newmtl MASTER_Wood_Polished
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Polished_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Polished_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MASTER_Wood_Polished_Normal.dds
+
+newmtl MenuSign_01
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_01_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_01_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_01_Normal.dds
+
+newmtl MenuSign_02_Glass
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_02_Glass_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_02_Glass_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_02_Glass_Normal.dds
+
+newmtl MenuSign_02_Mesh
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_02_Mesh_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_02_Mesh_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/MenuSign_02_Mesh_Normal.dds
+
+newmtl NapkinHolder
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/NapkinHolder_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/NapkinHolder_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/NapkinHolder_Normal.dds
+
+newmtl Paris_Chair_01
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_Chair_01_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_Chair_01_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_Chair_01_Normal.dds
+
+newmtl Paris_LiquorBottle_01_Caps
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Caps_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Caps_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Caps_Normal.dds
+
+newmtl Paris_LiquorBottle_01_Glass_Wine
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Glass_Wine_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Glass_Wine_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Glass_Wine_Normal.dds
+
+newmtl Paris_LiquorBottle_01_Labels
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Labels_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Labels_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_LiquorBottle_01_Labels_Normal.dds
+
+newmtl Paris_StreetPivot
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StreetPivot_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StreetPivot_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StreetPivot_Normal.dds
+
+newmtl Paris_StreetSign_01
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StreetSign_01_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StreetSign_01_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StreetSign_01_Normal.dds
+
+newmtl Paris_StringLights_01_Blue_Color_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Blue_Color_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Blue_Color_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Blue_Color_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Blue_Color_Emissive_Normal.dds
+
+newmtl Paris_StringLights_01_Green_Color_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Green_Color_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Green_Color_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Green_Color_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Green_Color_Emissive_Normal.dds
+
+newmtl Paris_StringLights_01_Orange_Color_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Orange_Color_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Orange_Color_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Orange_Color_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Orange_Color_Emissive_Normal.dds
+
+newmtl Paris_StringLights_01_Pink_Color_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Pink_Color_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Pink_Color_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Pink_Color_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Pink_Color_Emissive_Normal.dds
+
+newmtl Paris_StringLights_01_Red_Color_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Red_Color_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Red_Color_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Red_Color_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_Red_Color_Emissive_Normal.dds
+
+newmtl Paris_StringLights_01_White_Color
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_White_Color_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_White_Color_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_White_Color_Normal.dds
+
+newmtl Paris_StringLights_01_White_Color_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_White_Color_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_White_Color_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_White_Color_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_StringLights_01_White_Color_Emissive_Normal.dds
+
+newmtl Paris_Table_Terrace
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_Table_Terrace_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_Table_Terrace_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_Table_Terrace_Normal.dds
+
+newmtl Paris_TrafficSign_A
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_TrafficSign_A_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_TrafficSign_A_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Paris_TrafficSign_A_Normal.dds
+
+newmtl Pavement_Brick_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Brick_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Brick_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Brick_BLENDSHADER_Normal.dds
+
+newmtl Pavement_Cobble_Leaves_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobble_Leaves_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobble_Leaves_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobble_Leaves_BLENDSHADER_Normal.dds
+
+newmtl Pavement_Cobblestone_01_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_01_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_01_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_01_BLENDSHADER_Normal.dds
+
+newmtl Pavement_Cobblestone_02
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_02_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_02_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_02_Normal.dds
+
+newmtl Pavement_Cobblestone_Big_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Big_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Big_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Big_BLENDSHADER_Normal.dds
+
+newmtl Pavement_Cobblestone_Small_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Small_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Small_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Small_BLENDSHADER_Normal.dds
+
+newmtl Pavement_Cobblestone_Wet_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Wet_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Wet_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Wet_BLENDSHADER_Normal.dds
+
+newmtl Pavement_Cobblestone_Wet_Leaves_BLENDSHADER
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Wet_Leaves_BLENDSHADER_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Wet_Leaves_BLENDSHADER_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Cobblestone_Wet_Leaves_BLENDSHADER_Normal.dds
+
+newmtl Pavement_Curbstones
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Curbstones_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Curbstones_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Curbstones_Normal.dds
+
+newmtl Pavement_Ground_Wet
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Ground_Wet_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Ground_Wet_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Ground_Wet_Normal.dds
+
+newmtl Pavement_Manhole_Cover
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Manhole_Cover_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Manhole_Cover_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Pavement_Manhole_Cover_Normal.dds
+
+newmtl Plantpots
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Plantpots_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Plantpots_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Plantpots_Normal.dds
+
+newmtl Plaster
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Plaster_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Plaster_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Plaster_Normal.dds
+
+newmtl Shopsign_Bakery
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Bakery_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Bakery_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Bakery_Normal.dds
+
+newmtl Shopsign_Book_Store_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Book_Store_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Book_Store_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Book_Store_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Book_Store_Emissive_Normal.dds
+
+newmtl Shopsign_Pharmacy_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Pharmacy_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Pharmacy_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Pharmacy_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Pharmacy_Emissive_Normal.dds
+
+newmtl Shopsign_Ties_Shop
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Ties_Shop_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Ties_Shop_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Shopsign_Ties_Shop_Normal.dds
+
+newmtl Sidewalkbarrier
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Sidewalkbarrier_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Sidewalkbarrier_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Sidewalkbarrier_Normal.dds
+
+newmtl Spotlight_Emissive
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Emissive_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Emissive_Normal.dds
+
+newmtl Spotlight_Glass_Emissive
+Ks 1.000000 1.000000 1.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Glass_Emissive_BaseColor.dds
+map_Ke C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Glass_Emissive_Emissive.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Glass_Emissive_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Glass_Emissive_Normal.dds
+
+newmtl Spotlight_Main
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Main_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Main_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Spotlight_Main_Normal.dds
+
+newmtl Streetlight_Chains
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Chains_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Chains_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Chains_Normal.dds
+
+newmtl Streetlight_Metal
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Metal_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Metal_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Metal_Normal.dds
+
+newmtl Streetlight_Support_Bulb
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Support_Bulb_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Support_Bulb_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Streetlight_Support_Bulb_Normal.dds
+
+newmtl Stringlights
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Stringlights_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Stringlights_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Stringlights_Normal.dds
+
+newmtl Trashcan
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Trashcan_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Trashcan_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Trashcan_Normal.dds
+
+newmtl Vespa
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Normal.dds
+
+newmtl Vespa_Headlight
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Headlight_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Headlight_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Headlight_Normal.dds
+
+newmtl Vespa_Odometer
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Odometer_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Odometer_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Odometer_Normal.dds
+
+newmtl Vespa_Odometer_Glass
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+Pr 0.552786
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Odometer_Glass_BaseColor.dds
+map_d C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Odometer_Glass_BaseColor.dds
+map_Bump -bm 1.000000 C:/Users/jvvma/Downloads/Bistro_v5_2/Bistro_v5_2/Textures/Vespa_Odometer_Glass_Normal.dds

@@ -8,8 +8,9 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and PBR SAH-KdTree
 
 Download [CMake](https://cmake.org/download/)
 
-Download [Git](
-https://git-scm.com/install/windows)
+Download [Git](https://git-scm.com/install/windows)
+
+Download [Git-LFS](https://git-lfs.com/)
 
 Download a CMake generator:
 - [Ninja](https://ninja-build.org/)
@@ -28,11 +29,6 @@ For Dev:
 - Download [Vulkan SDK](https://vulkan.lunarg.com/sdk/home)
 
 - Download [CUDA SDK](https://developer.nvidia.com/cuda-12-8-0-download-archive?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local)
-
-To run a Nvidia Nsight profiling:
-> nvns
-
-After building the project
 
 ## Milestones
 

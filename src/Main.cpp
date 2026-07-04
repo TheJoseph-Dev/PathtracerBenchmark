@@ -133,7 +133,7 @@ void benchmark() {
         pathtracer.run();
     }
 
-    std::array<Scene, 5> scenes = { Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::SIBENIK, Scene::SPONZA };
+    std::array<Scene, 7> scenes = { Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::LUCY, Scene::SIBENIK, Scene::SPONZA, Scene::BISTRO };
     std::array<glm::vec2, 5> tileSizes = { glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256} , glm::vec2{256, 256} };
     std::array<AccelerationStructureType, 3> accStrs = { AccelerationStructureType::BVH, AccelerationStructureType::KD_TREE, AccelerationStructureType::BVH4 };
     const uint32_t benchmarkTypeCount = 2;
@@ -165,7 +165,7 @@ void test() {
 
     {
         using namespace Pathtracer;
-        App pathtracer(debugConfig(Scene::CORNELL_BOX, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
+        App pathtracer(debugConfig(Scene::BISTRO, AccelerationStructureType::BVH, ComputeBackendType::SPIRV_T, glm::uvec2(256, 256)));
         pathtracer.run();
     }
 
