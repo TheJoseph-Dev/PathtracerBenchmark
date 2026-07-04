@@ -286,7 +286,7 @@ struct RenderData {
 
 #define MAX_DIST INF
 //#define MAX_LIGHT_BOUNCES 4 /*8*/
-#define MAX_TRAVERSAL_DEPTH 64
+#define MAX_TRAVERSAL_DEPTH 80
 #define MIN_TRACE_DIST 0.0001
 #define NORMAL_OFFSET 0.0001
 

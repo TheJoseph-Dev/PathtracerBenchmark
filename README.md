@@ -8,8 +8,14 @@ A benchmark of a custom offiline pathtracer comparing SAH-BVH and PBR SAH-KdTree
 
 Download [CMake](https://cmake.org/download/)
 
-Download [Git](
-https://git-scm.com/install/windows)
+Download [Git](https://git-scm.com/install/windows)
+
+Download [Git-LFS](https://git-lfs.com/)
+
+```
+git lfs install
+git lfs pull
+```
 
 Download a CMake generator:
 - [Ninja](https://ninja-build.org/)

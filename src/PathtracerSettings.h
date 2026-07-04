@@ -69,7 +69,9 @@ namespace Pathtracer {
         SIBENIK = 1,
         BUNNY = 2,
         DRAGON = 3,
-        SPONZA = 4
+        SPONZA = 4,
+        LUCY = 5,
+        BISTRO = 6
     };
 
     enum Resolution {
@@ -135,6 +137,8 @@ namespace Pathtracer {
             case Scene::BUNNY: return "bunny-cbx";
             case Scene::DRAGON: return "dragon-cbx";
             case Scene::SPONZA: return "sponza2";
+            case Scene::LUCY: return "lucy-cbx";
+            case Scene::BISTRO: return "bistro";
             default: throw std::runtime_error("Unknown scene");
             }
         }
