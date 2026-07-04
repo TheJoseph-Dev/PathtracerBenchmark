@@ -464,6 +464,258 @@ __device__ vec4 skyColor(vec2 uv) {
     return color;
 }
 
+__device__ bool AnyHitBVH(
+    const Ray& ray,
+    float maxDist,
+    const BVHNode* __restrict__ bvhNodes,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ vertexPositions,
+    unsigned long long& statsRays,
+    unsigned long long& statsIsecs,
+    unsigned long long& statsTraversals
+)
+{
+    statsRays++;
+
+    vec3 invDir(1.0f / ray.dir.x, 1.0f / ray.dir.y, 1.0f / ray.dir.z );
+
+    int stack[MAX_TRAVERSAL_DEPTH];
+    int stkptr = 0;
+    stack[stkptr++] = 0;
+
+    while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH) {
+        statsTraversals++;
+
+        int nodeIdx = stack[--stkptr];
+        BVHNode n = bvhNodes[nodeIdx];
+
+        bool isLeaf = (n.left == -1);
+
+        if (isLeaf) {
+            for (unsigned int i = 0; i < n.triCount; ++i) {
+                statsIsecs++;
+
+                uint4 triIndices = triangleIndices[n.triIdx + i];
+                vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+                vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+                vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
+
+                vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+
+                if (miss(isec.x)) continue;
+                if (isec.x < maxDist) return true;
+            }
+        }
+        else {
+            bool hitL = false;
+            bool hitR = false;
+
+            IsecInfo lIsec, rIsec;
+
+            if (n.left >= 0) {
+                lIsec = RayAABBIsec( ray, n.lBboxMin, n.lBboxMax, invDir );
+                hitL = !(lIsec.tmax < lIsec.tmin || lIsec.tmin > maxDist);
+            }
+
+            if (n.right >= 0) {
+                rIsec = RayAABBIsec( ray, n.rBboxMin, n.rBboxMax, invDir );
+                hitR = !(rIsec.tmax < rIsec.tmin || rIsec.tmin > maxDist);
+            }
+            if (hitL && hitR) {
+                if (lIsec.tmin < rIsec.tmin) {
+                    stack[stkptr++] = n.right;
+                    stack[stkptr++] = n.left;
+                }
+                else {
+                    stack[stkptr++] = n.left;
+                    stack[stkptr++] = n.right;
+                }
+            }
+            else if (hitL) stack[stkptr++] = n.left;
+            else if (hitR) stack[stkptr++] = n.right;
+        }
+    }
+    return false;
+}
+
+__device__ bool AnyHitBVH4(
+    const Ray& ray,
+    float maxDist,
+    const BVH4Node* __restrict__ bvh4Nodes,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ vertexPositions,
+    unsigned long long& statsRays,
+    unsigned long long& statsIsecs,
+    unsigned long long& statsTraversals
+)
+{
+    statsRays++;
+
+    vec3 invDir(1.0f / ray.dir.x, 1.0f / ray.dir.y, 1.0f / ray.dir.z);
+
+    int stack[MAX_TRAVERSAL_DEPTH];
+    int stkptr = 0;
+    stack[stkptr++] = 0;
+
+    while (stkptr > 0) {
+        statsTraversals++;
+
+        int nodeIdx = stack[--stkptr];
+        BVH4Node n = bvh4Nodes[nodeIdx];
+
+        bool isLeaf = (n.child[0] == -1);
+
+        if (isLeaf) {
+            for (unsigned int i = 0; i < n.triCount; ++i) {
+                statsIsecs++;
+
+                uint4 triIndices = triangleIndices[n.triIdx + i];
+
+                vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+                vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+                vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
+
+                vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+
+                if (miss(isec.x)) continue;
+                if (isec.x < maxDist) return true;
+            }
+        }
+        else {
+            int childIds[4];
+            float childTmin[4];
+            int hitCount = 0;
+
+            for (int i = 0; i < 4; i++) {
+                int childIdx = n.child[i];
+                if (childIdx < 0)
+                    continue;
+
+                IsecInfo isec = RayAABBIsec(
+                    ray,
+                    vec3(n.bboxMin[i].x, n.bboxMin[i].y, n.bboxMin[i].z),
+                    vec3(n.bboxMax[i].x, n.bboxMax[i].y, n.bboxMax[i].z),
+                    invDir
+                );
+
+                bool childHit = !(isec.tmax < isec.tmin || isec.tmin > maxDist);
+                if (!childHit)
+                    continue;
+
+                int insertPos = hitCount;
+                while (insertPos > 0 && childTmin[insertPos - 1] > isec.tmin) {
+                    childTmin[insertPos] = childTmin[insertPos - 1];
+                    childIds[insertPos] = childIds[insertPos - 1];
+                    insertPos--;
+                }
+                childTmin[insertPos] = isec.tmin;
+                childIds[insertPos] = childIdx;
+                hitCount++;
+            }
+
+            const int freeSlots = MAX_TRAVERSAL_DEPTH - stkptr;
+            const int keepCount = min(hitCount, freeSlots);
+
+            // Keep nearest children when stack is near capacity.
+            for (int i = keepCount - 1; i >= 0; i--)
+                stack[stkptr++] = childIds[i];
+        }
+    }
+    return false;
+}
+
+__device__ bool AnyHitKdTree(
+    const Ray& ray,
+    float maxDist,
+    const KdNode* __restrict__ kdNodes,
+    const unsigned int* __restrict__ kdtreeIndices,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ vertexPositions,
+    unsigned long long& statsRays,
+    unsigned long long& statsIsecs,
+    unsigned long long& statsTraversals
+)
+{
+    statsRays++;
+    vec3 invDir(1.0f / ray.dir.x, 1.0f / ray.dir.y, 1.0f / ray.dir.z);
+
+    SpaceContext stack[MAX_TRAVERSAL_DEPTH];
+    int stkptr = 0;
+
+    stack[stkptr++] = {0, -INF, INF};
+
+    while (stkptr > 0 && stkptr + 2 < MAX_TRAVERSAL_DEPTH) {
+        statsTraversals++;
+
+        SpaceContext sc = stack[--stkptr];
+        KdNode n = kdNodes[sc.node];
+
+        if (sc.tmin >= maxDist || sc.tmin > sc.tmax) continue;
+
+        bool isLeaf = (n.left == -1);
+
+        if (isLeaf)
+            for (unsigned int i = 0; i < n.triCount; ++i) {
+                statsIsecs++;
+
+                uint4 triIndices = triangleIndices[kdtreeIndices[n.triIdx + i]];
+
+                vec3 v0 = vec4to3(vertexPositions[triIndices.x]);
+                vec3 v1 = vec4to3(vertexPositions[triIndices.y]);
+                vec3 v2 = vec4to3(vertexPositions[triIndices.z]);
+
+                vec3 isec = triIntersect(ray.origin, ray.dir, v0, v1, v2);
+
+                if (miss(isec.x)) continue;
+                if (isec.x < maxDist) return true;
+            }
+        else
+        {
+            float tsplit = (n.splitPos - ray.origin[n.axis]) * invDir[n.axis];
+
+            bool below = ray.origin[n.axis] < n.splitPos || (ray.origin[n.axis] == n.splitPos && ray.dir[n.axis] <= 0.0f);
+
+            unsigned int near = below ? n.left : n.right;
+            unsigned int far  = below ? n.right : n.left;
+
+            if (tsplit >= sc.tmax || tsplit <= 0.0f) stack[stkptr++] = {near, sc.tmin, sc.tmax};
+            else if (tsplit <= sc.tmin) stack[stkptr++] = {far, sc.tmin, sc.tmax};
+            else {
+                stack[stkptr++] = {far,  tsplit, sc.tmax};
+                stack[stkptr++] = {near, sc.tmin, tsplit};
+            }
+        }
+    }
+    return false;
+}
+
+__device__ bool worldAnyHit(
+    const Ray& ray,
+    const BVHNode* __restrict__ bvhNodes,
+    const BVH4Node* __restrict__ bvh4Nodes,
+    const KdNode* __restrict__ kdNodes,
+    const unsigned int* __restrict__ kdtreeIndices,
+    const uint4* __restrict__ triangleIndices,
+    const vec4* __restrict__ vertexPositions,
+    const int accelerationStructureType,
+    const float lightDist,
+    unsigned long long& statsRays,
+    unsigned long long& statsIsecs,
+    unsigned long long& statsTraversals
+)
+{
+    switch (accelerationStructureType) {
+    case AS_BVH:
+        return AnyHitBVH(ray, lightDist, bvhNodes, triangleIndices, vertexPositions, statsRays, statsIsecs, statsTraversals);
+    case AS_BVH4:
+        return AnyHitBVH4(ray, lightDist, bvh4Nodes, triangleIndices, vertexPositions, statsRays, statsIsecs, statsTraversals);
+    case AS_KD_TREE:
+    default:
+        return AnyHitKdTree(ray, lightDist, kdNodes, kdtreeIndices, triangleIndices, vertexPositions, statsRays, statsIsecs, statsTraversals);
+    }
+    return false;
+}
+
 __device__ Hit world(
     const Ray& ray,
     const BVHNode* __restrict__ bvhNodes,
@@ -473,8 +725,6 @@ __device__ Hit world(
     const uint4* __restrict__ triangleIndices,
     const vec4* __restrict__ triangleAreas,
     const vec4* __restrict__ vertexPositions,
-    const vec4* __restrict__ vertexUVs,
-    const vec4* __restrict__ vertexNormals,
     const uint4* __restrict__ emissiveIndices,
     const vec4* __restrict__ emissiveAreas,
     const Material* __restrict__ mats,
@@ -647,8 +897,6 @@ __device__ LightSample sampleNEE(
     const unsigned int* __restrict__ kdtreeIndices,
     const uint4* __restrict__ triangleIndices,
     const vec4* __restrict__ triangleAreas,
-    const vec4* __restrict__ vertexUVs,
-    const vec4* __restrict__ vertexNormals,
     unsigned int triangleCount,
     int accelerationStructureType,
     unsigned long long& statsRays,
@@ -690,9 +938,7 @@ __device__ LightSample sampleNEE(
     // Shadow ray
     Ray shadow(hitPos + N * NORMAL_OFFSET, wi);
     statsShadowRays++;
-    Hit sh = world(shadow, bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangleIndices, triangleAreas, vertexPositions, vertexUVs, vertexNormals, emissiveIndices, emissiveAreas, mats,
-                     triangleCount, lightCount, accelerationStructureType, statsRays, statsIsecs, statsTraversals);
-    if (sh.t < dist - 2.0f * NORMAL_OFFSET) return ls;
+    if(worldAnyHit(shadow, bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangleIndices, vertexPositions, accelerationStructureType, dist, statsRays, statsIsecs, statsTraversals)) return ls;
 
     ls.wi  = wi;
     ls.pdf = computeLightPdf(lightPos, hitPos, lidx, emissiveIndices, emissiveAreas, vertexPositions, lightCount);
@@ -785,7 +1031,7 @@ __device__ RenderData worldRender(
             ray,
             bvhNodes, bvh4Nodes, kdNodes,
             kdtreeIndices,
-            triangleIndices, triangleAreas, vertexPositions, vertexUVs, vertexNormals,
+            triangleIndices, triangleAreas, vertexPositions,
             emissiveIndices, emissiveAreas, mats,
             triangleCount, lightCount,
             accelerationStructureType,
@@ -833,7 +1079,7 @@ __device__ RenderData worldRender(
         LightSample ls = sampleNEE(
             hitPoint, N, seed,
             emissiveIndices, emissiveAreas, vertexPositions, mats, lightCount,
-            bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangleIndices, triangleAreas, vertexUVs, vertexNormals, triangleCount,
+            bvhNodes, bvh4Nodes, kdNodes, kdtreeIndices, triangleIndices, triangleAreas, triangleCount,
             accelerationStructureType, statsRays, statsIsecs, statsTraversals, statsShadowRays
         );
         bool didNEE = ls.pdf > 0.0f;
