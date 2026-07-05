@@ -70,6 +70,31 @@ CLI::RunMode CLI::promptRunMode() const {
     }
 }
 
+CLI::BenchmarkMode CLI::promptBenchmarkMode() const {
+    while (true) {
+        std::cout << "\nBenchmark options:\n"
+                  << "  0) exit\n"
+                  << "  1) all - runs all scenes benchmark\n"
+                  << "  2) scene - runs a benchmark in a specific scene\n";
+
+        int choice = promptNumeric<int>("Choose option", 0, 2);
+        return static_cast<BenchmarkMode>(choice);
+    }
+}
+
+Pathtracer::Scene CLI::promptBenchmarkScene() const {
+    std::cout << "\nChoose scene to benchmark:\n"
+              << "  1) CORNELL_BOX\n"
+              << "  2) BUNNY\n"
+              << "  3) DRAGON\n"
+              << "  4) SIBENIK\n"
+              << "  5) SPONZA\n"
+              << "  6) LUCY\n"
+              << "  7) BISTRO\n";
+    int choice = promptNumeric<int>("Choose scene", 1, 7);
+    return sceneFromChoice(choice);
+}
+
 void CLI::printCustomHeader() const {
     std::cout << "\n=== Custom Pathtracer Runner ===\n";
 }

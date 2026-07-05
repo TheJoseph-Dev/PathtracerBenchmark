@@ -13,7 +13,15 @@ public:
         Custom = 3
     };
 
+    enum class BenchmarkMode {
+        None = 0,
+        All = 1,
+        Scene = 2
+    };
+
     RunMode promptRunMode() const;
+    BenchmarkMode promptBenchmarkMode() const;
+    Pathtracer::Scene promptBenchmarkScene() const;
     void printCustomHeader() const;
     bool promptRunWarmup() const;
     Pathtracer::Config promptCustomConfig() const;

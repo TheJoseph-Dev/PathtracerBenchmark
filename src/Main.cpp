@@ -2,6 +2,8 @@
 #include "Pathtracer.h"
 #include "CLI.h"
 #include <array>
+#include <optional>
+#include <vector>
 
 static Pathtracer::Config refGenConfig(Pathtracer::Scene scene) {
     using namespace Pathtracer;
@@ -126,15 +128,17 @@ static Pathtracer::Config qaConfig(Pathtracer::Scene scene, Pathtracer::Accelera
     return pathtracerConfig;
 }
 
-void benchmark() {
+void benchmark(std::optional<Pathtracer::Scene> selectedScene = std::nullopt) {
     using namespace Pathtracer;
     {
         App pathtracer(warmupConfig());
         pathtracer.run();
     }
 
-    std::array<Scene, 7> scenes = { Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::LUCY, Scene::SIBENIK, Scene::SPONZA, Scene::BISTRO };
-    std::array<glm::vec2, 5> tileSizes = { glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256} , glm::vec2{256, 256} };
+    std::vector<Scene> scenes;
+    if (selectedScene.has_value()) scenes = { selectedScene.value() };
+    else scenes = { Scene::CORNELL_BOX, Scene::BUNNY, Scene::DRAGON, Scene::LUCY, Scene::SIBENIK, Scene::SPONZA, Scene::BISTRO };
+    //std::array<glm::vec2, 5> tileSizes = { glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256}, glm::vec2{256, 256} , glm::vec2{256, 256} };
     std::array<AccelerationStructureType, 3> accStrs = { AccelerationStructureType::BVH, AccelerationStructureType::KD_TREE, AccelerationStructureType::BVH4 };
     const uint32_t benchmarkTypeCount = 2;
     std::array<uint32_t, 3> lightBounces = { 1, 4, 8 };
@@ -201,9 +205,13 @@ int main() {
     case CLI::RunMode::Test:
         test();
         break;
-    case CLI::RunMode::Benchmark:
-        benchmark();
+    case CLI::RunMode::Benchmark: {
+        CLI::BenchmarkMode bMode = cli.promptBenchmarkMode();
+        if (bMode == CLI::BenchmarkMode::None) break;
+        if (bMode == CLI::BenchmarkMode::Scene) benchmark(cli.promptBenchmarkScene());
+        else benchmark();
         break;
+    }
     case CLI::RunMode::Custom:
         custom();
         break;

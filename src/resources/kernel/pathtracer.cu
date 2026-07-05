@@ -30,12 +30,12 @@ __device__ unsigned int pcg_hash(unsigned int& seed) {
     return (word >> 22u) ^ word;
 }
 
-__device__ float RandomFloat01(unsigned int& state) {
+__device__ inline float RandomFloat01(unsigned int& state) {
     return (float)pcg_hash(state) / 4294967296.0f;
 }
 
 // Hash function for seed generation
-__device__ unsigned int hash(unsigned int x) {
+__device__ inline unsigned int hash(unsigned int x) {
     x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16; return x;
 }
 
@@ -55,7 +55,7 @@ __device__ void rotate2D(float& a, float& b, float angle) {
     b = nb;
 }
 
-__device__ bool miss(float t) {
+__device__ inline bool miss(float t) {
     return (t <= MIN_TRACE_DIST || t > MAX_DIST);
 }
 
