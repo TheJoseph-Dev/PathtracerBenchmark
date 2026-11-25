@@ -47,15 +47,6 @@ if(NOT TARGET Vulkan::Headers)
 endif()
 
 # ------------------------------------------------------------
-# GLFW
-# ------------------------------------------------------------
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-
-add_subdirectory(vendor/glfw)
-
-# ------------------------------------------------------------
 # Target
 # ------------------------------------------------------------
 file(GLOB_RECURSE SOURCES "src/*.cpp")
@@ -72,17 +63,16 @@ target_compile_definitions(PathtracerBenchmark PRIVATE
 )
 
 if(WIN32)
-    target_compile_definitions(PathtracerBenchmark PRIVATE
-        NOMINMAX
-        VK_USE_PLATFORM_WIN32_KHR
-    )
+    target_compile_definitions(PathtracerBenchmark PRIVATE NOMINMAX)
+    if(ENABLE_CUDA_BACKEND)
+        target_compile_definitions(PathtracerBenchmark PRIVATE VK_USE_PLATFORM_WIN32_KHR)
+    endif()
 endif()
 
 # ------------------------------------------------------------
 # Includes
 # ------------------------------------------------------------
 target_include_directories(PathtracerBenchmark PRIVATE
-    vendor/glfw/include
     vendor/glm
     vendor/io
     ${CMAKE_SOURCE_DIR}/src
@@ -105,7 +95,6 @@ else()
         set(VULKAN_LOADER_TARGET ${VULKAN_LIB})
     elseif(USE_FETCHED_VULKAN_LOADER)
         set(VULKAN_LOADER_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
-        set(VULKAN_LOADER_ENABLE_WSI_WIN32 ON CACHE BOOL "" FORCE)
         FetchContent_Declare(
             VulkanLoader
             GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Loader.git
@@ -127,7 +116,6 @@ if(NOT VULKAN_LOADER_TARGET)
 endif()
 
 target_link_libraries(PathtracerBenchmark PRIVATE
-    glfw
     Vulkan::Headers
     ${VULKAN_LOADER_TARGET}
 )
@@ -172,8 +160,6 @@ set(SHADER_DIR "${CMAKE_SOURCE_DIR}/src/resources/shaders")
 
 set(SPIRV_FILES
     "${SHADER_DIR}/pathtracer.spv"
-    "${SHADER_DIR}/vert.spv"
-    "${SHADER_DIR}/frag.spv"
 )
 
 foreach(SPIRV ${SPIRV_FILES})

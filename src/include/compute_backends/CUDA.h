@@ -104,9 +104,8 @@ namespace Pathtracer {
         void createDeviceMemory(void** dst, const void* src, size_t size);
 		void init(const SceneData& sceneData) override;
         void dispatch(const DispatchConext& dispatchCtx) override;
-        void dispatchBeforeGraphicsSubmit(const DispatchConext&) override;
-        void dispatchAfterGraphicsSubmit(const DispatchConext& dispatchCtx) override;
-        VkImageLayout getFragmentSampledImageLayout() const override;
+        void dispatchBeforeQueueSubmit(const DispatchConext&) override;
+        void dispatchAfterQueueSubmit(const DispatchConext& dispatchCtx) override;
 		void updateFrameContext(const FrameContext* newData, uint64_t size) const override;
         void sync(const SyncContext& syncCtx) const override;
         double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const override;

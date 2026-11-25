@@ -11,19 +11,11 @@ namespace Pathtracer {
 
     class App {
 
-        GLFWwindow* window;
         Config config;
         std::optional<Renderer> vulkanRenderer;
 
     public:
-        App(const Pathtracer::Config& config): config(config) {
-            initWindow();
-        }
-
-        ~App() {
-            glfwDestroyWindow(window);
-            glfwTerminate();
-        }
+        App(const Pathtracer::Config& config): config(config) {}
 
         void run() {
             Pathtracer::Benchmark binfo = config.GetBenchmarkInfo();
@@ -222,25 +214,17 @@ namespace Pathtracer {
                 << (qaResultText.empty() ? "" : CsvEscape(qaResultText)) << '\n';
         }
 
-        void initWindow() {
-            glfwInit();
-            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-            glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-            this->window = glfwCreateWindow(config.GetResolution().x, config.GetResolution().y, "PathtracerBenchmark", nullptr, nullptr);
-        }
-
         void sppBenchmark() {
             vulkanRenderer.emplace(config);
-            vulkanRenderer->init(window);
+            vulkanRenderer->init();
 
             uint32_t currentFrame = 0;
             uint32_t frameCounter = 0;
             Pathtracer::Benchmark binfo = config.GetBenchmarkInfo();
             const uint32_t sppStride = Pathtracer::pixel_sample_stride ? Pathtracer::pixel_sample_stride : 1u;
             auto t0 = std::chrono::high_resolution_clock::now();
-            while (!glfwWindowShouldClose(window) && (!binfo.btype || (frameCounter / sppStride) < binfo.spp)) {
+            while (!binfo.btype || (frameCounter / sppStride) < binfo.spp) {
                 vulkanRenderer->run(currentFrame);
-                glfwPollEvents();
                 frameCounter++;
             }
             vulkanRenderer->wait();

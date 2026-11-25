@@ -63,8 +63,8 @@ void CUDA::endSingleTimeCommands(VkCommandBuffer commandBuffer) const {
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
 
-	vkQueueSubmit(this->vkCtx.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(this->vkCtx.graphicsQueue);
+	vkQueueSubmit(this->vkCtx.computeQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(this->vkCtx.computeQueue);
 
 	vkFreeCommandBuffers(this->vkCtx.device, this->vkCtx.commandPool, 1, &commandBuffer);
 }
@@ -439,14 +439,10 @@ void CUDA::dispatch(const DispatchConext& dispatchCtx) {
 	CUDA_CHECK(cudaSignalExternalSemaphoresAsync(&this->cudaImages[dispatchCtx.currentFrame].cudaWaitSemaphore, &signalParams, 1, this->computeStream));
 }
 
-void CUDA::dispatchBeforeGraphicsSubmit(const DispatchConext&) {}
+void CUDA::dispatchBeforeQueueSubmit(const DispatchConext&) {}
 
-void CUDA::dispatchAfterGraphicsSubmit(const DispatchConext& dispatchCtx) {
+void CUDA::dispatchAfterQueueSubmit(const DispatchConext& dispatchCtx) {
 	dispatch(dispatchCtx);
-}
-
-VkImageLayout CUDA::getFragmentSampledImageLayout() const {
-	return VK_IMAGE_LAYOUT_GENERAL;
 }
 
 void CUDA::updateFrameContext(const FrameContext* newData, uint64_t size) const {
@@ -454,7 +450,7 @@ void CUDA::updateFrameContext(const FrameContext* newData, uint64_t size) const 
 }
 
 void CUDA::sync(const SyncContext& syncCtx) const {
-	syncCtx.waitStages.push_back(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	syncCtx.waitStages.push_back(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 	syncCtx.waitSemaphores.push_back(this->cudaImages[syncCtx.currentFrame].vkWaitSemaphore);
 	syncCtx.signalSemaphores.push_back(this->cudaImages[syncCtx.currentFrame].vkSignalSemaphore);
 }

@@ -15,15 +15,11 @@ ComputeBackend::~ComputeBackend() {
     vkDestroySampler(this->vkCtx.device, this->pathtracerImageSampler, nullptr);
 }
 
-void ComputeBackend::dispatchBeforeGraphicsSubmit(const DispatchConext& dispatchCtx) {
+void ComputeBackend::dispatchBeforeQueueSubmit(const DispatchConext& dispatchCtx) {
     dispatch(dispatchCtx);
 }
 
-void ComputeBackend::dispatchAfterGraphicsSubmit(const DispatchConext&) {}
-
-VkImageLayout ComputeBackend::getFragmentSampledImageLayout() const {
-    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-}
+void ComputeBackend::dispatchAfterQueueSubmit(const DispatchConext&) {}
 
 VkImageView ComputeBackend::getPathtracerImageView(uint32_t index) const {
     return this->pathtracerImageViews[index];

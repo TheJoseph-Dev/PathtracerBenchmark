@@ -74,8 +74,8 @@ void SPIRV::endSingleTimeCommands(VkCommandBuffer commandBuffer) const {
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
 
-	vkQueueSubmit(this->vkCtx.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(this->vkCtx.graphicsQueue);
+	vkQueueSubmit(this->vkCtx.computeQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(this->vkCtx.computeQueue);
 
 	vkFreeCommandBuffers(this->vkCtx.device, this->vkCtx.commandPool, 1, &commandBuffer);
 }
@@ -410,7 +410,7 @@ void SPIRV::init(const SceneData& sceneData) {
 
 void SPIRV::dispatch(const DispatchConext& dispatchCtx) {
 	const uint32_t WIDTH = this->pathtracerConfig.GetResolution().x, HEIGHT = this->pathtracerConfig.GetResolution().y;
-	// Transition SHADER_READ_ONLY_OPTIMAL -> GENERAL for compute
+	// Transition the previous frame image for compute access.
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.image = pathtracerImages[dispatchCtx.textureIndex];
@@ -430,7 +430,7 @@ void SPIRV::dispatch(const DispatchConext& dispatchCtx) {
 
 	vkCmdPipelineBarrier(
 		dispatchCtx.commandBuffer,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 		0,
 		0, nullptr,
@@ -468,7 +468,7 @@ void SPIRV::dispatch(const DispatchConext& dispatchCtx) {
 
 	vkCmdWriteTimestamp(dispatchCtx.commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestampPools[dispatchCtx.currentFrame % PING_PONG_FRAMES], 1);
 
-	// Transition GENERAL -> SHADER_READ_ONLY_OPTIMAL for graphics
+	// Leave the output readable by the next compute dispatch.
 	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -477,7 +477,7 @@ void SPIRV::dispatch(const DispatchConext& dispatchCtx) {
 	vkCmdPipelineBarrier(
 		dispatchCtx.commandBuffer,
 		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 		0,
 		0, nullptr,
 		0, nullptr,
@@ -516,7 +516,7 @@ Pathtracer::GPUStatistics SPIRV::getBackendStatistics() {
 	submitInfo.pCommandBuffers = &cmdbf;
 
 	endSingleTimeCommands(cmdbf);
-	vkQueueWaitIdle(this->vkCtx.graphicsQueue);
+	vkQueueWaitIdle(this->vkCtx.computeQueue);
 
 	void* mappedStats = nullptr;
 	vkMapMemory(this->vkCtx.device, stagingStats.memory, 0, sizeof(Pathtracer::GPUStatistics), 0, &mappedStats);
@@ -548,7 +548,7 @@ void SPIRV::getBackendAccOutImgPixels(std::vector<glm::vec4>& pixels) {
 	vkCmdCopyImageToBuffer(cmdbf, accImg, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->stagingBuffers[STAGING_ACC].buffer, 1, &imgCopy);
 
 	endSingleTimeCommands(cmdbf);
-	vkQueueWaitIdle(this->vkCtx.graphicsQueue);
+	vkQueueWaitIdle(this->vkCtx.computeQueue);
 
 	void* mappedPixels = nullptr;
 	vkMapMemory(this->vkCtx.device, this->stagingBuffers[STAGING_ACC].memory, 0, VK_WHOLE_SIZE, 0, &mappedPixels);

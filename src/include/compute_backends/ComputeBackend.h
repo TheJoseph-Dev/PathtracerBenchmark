@@ -19,7 +19,7 @@ namespace Pathtracer {
             VkPhysicalDevice physicalDevice;
             VkDevice device;
             VkCommandPool commandPool;
-            VkQueue graphicsQueue;
+            VkQueue computeQueue;
             VkDescriptorPool descriptorPool;
         };
 
@@ -57,13 +57,10 @@ namespace Pathtracer {
         //virtual void cleanup() = 0;
         virtual void sync(const SyncContext& syncCtx) const = 0;
 
-        // Default behavior: dispatch before graphics submit.
-        virtual void dispatchBeforeGraphicsSubmit(const DispatchConext& dispatchCtx);
-        // Backends that need post-submit execution can override this.
-        virtual void dispatchAfterGraphicsSubmit(const DispatchConext&);
-
-        // Fragment shader sampling layout for pathtracer output images.
-        virtual VkImageLayout getFragmentSampledImageLayout() const;
+        // Default behavior: record compute work before queue submission.
+        virtual void dispatchBeforeQueueSubmit(const DispatchConext& dispatchCtx);
+        // Backends that submit external compute work can override this.
+        virtual void dispatchAfterQueueSubmit(const DispatchConext&);
 
         [[nodiscard]]
         virtual double queryDispatchTime(uint32_t frameIdx, float deviceTimestampPeriod) const = 0;
